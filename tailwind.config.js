@@ -7,6 +7,17 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        yellow: {
+          primary: "#ffeb3b",
+        },
+        purple: {
+          primary: "#9d3bff",
+        },
+        blue: {
+          primary: "#3b4fff",
+        },
+      },
       fontFamily: {
         inter: ["Inter", "sans-serif"],
         mono: ["Roboto Mono", "monospace"],
