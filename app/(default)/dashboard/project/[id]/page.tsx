@@ -5,22 +5,18 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 
-// Mock data for the chart to simulate the "dashboard" look
-const MOCK_CHART_DATA = [
-  { day: "Mon", views: 120 },
-  { day: "Tue", views: 145 },
-  { day: "Wed", views: 200 },
-  { day: "Thu", views: 180 },
-  { day: "Fri", views: 250 },
-  { day: "Sat", views: 190 },
-  { day: "Sun", views: 210 },
-];
-
 export default function ProjectDetails() {
   const [project, setProject] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newRequest, setNewRequest] = useState("");
+
+  // Analytics State
+  const [stats, setStats] = useState({
+    totalViews: 0,
+    totalClicks: 0,
+    chartData: [] as { day: string; views: number; date: string }[],
+  });
 
   const supabase = createClient();
   const router = useRouter();
@@ -56,13 +52,57 @@ export default function ProjectDetails() {
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });
 
+      // 3. Fetch Analytics Events (Last 7 Days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // Include today + 6 days back
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+
+      const { data: events } = await supabase
+        .from("analytics_events")
+        .select("event_type, created_at")
+        .eq("project_id", projectId)
+        .gte("created_at", sevenDaysAgo.toISOString());
+
+      // 4. Process Analytics Data
+      const processedStats = processAnalytics(events || [], sevenDaysAgo);
+
       setProject(projectData);
       if (requestsData) setRequests(requestsData);
+      setStats(processedStats);
       setLoading(false);
     };
 
     if (projectId) fetchData();
   }, [projectId, router, supabase]);
+
+  // Helper to aggregate raw events into daily chart data
+  const processAnalytics = (events: any[], startDate: Date) => {
+    const totalViews = events.filter((e) => e.event_type === "view").length;
+    const totalClicks = events.filter((e) => e.event_type === "click").length;
+
+    // Create an array of the last 7 days
+    const chartData = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" }); // Mon, Tue
+      const dateString = d.toISOString().split("T")[0]; // YYYY-MM-DD for comparison
+
+      // Count views for this specific day
+      const dailyViews = events.filter((e) => {
+        const eventDate = e.created_at.split("T")[0];
+        return eventDate === dateString && e.event_type === "view";
+      }).length;
+
+      chartData.push({
+        day: dayLabel,
+        views: dailyViews,
+        date: dateString,
+      });
+    }
+
+    return { totalViews, totalClicks, chartData };
+  };
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +131,6 @@ export default function ProjectDetails() {
     }
   };
 
-  // Helper to fix the Supabase link on the fly
   const getDatabaseLink = (url: string) => {
     if (!url) return "";
     if (url.includes("supabase.com/dashboard")) return url;
@@ -106,6 +145,9 @@ export default function ProjectDetails() {
 
   if (loading)
     return <div className="pt-32 text-center">Loading Project...</div>;
+
+  // Calculate max views for chart scaling
+  const maxViews = Math.max(...stats.chartData.map((d) => d.views), 10);
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-32 sm:px-6 mb-20">
@@ -157,7 +199,6 @@ export default function ProjectDetails() {
               </a>
             )}
 
-            {/* Added Database Button */}
             {project.database_url && (
               <a
                 href={getDatabaseLink(project.database_url)}
@@ -195,8 +236,8 @@ export default function ProjectDetails() {
         </div>
       </div>
 
-      {/* Bento Grid Layout (Same as before) */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
+      {/* 1. KPIs Row */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 mb-6">
         {/* KPI Card 1: Total Views */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
           <div className="flex items-center justify-between">
@@ -225,11 +266,10 @@ export default function ProjectDetails() {
           </div>
           <div className="mt-4 flex items-baseline">
             <p className="text-3xl font-bold text-gray-900">
-              {project.analytics_data?.views || 0}
+              {stats.totalViews}
             </p>
-            <span className="ml-2 text-sm font-medium text-green-600">
-              +12%{" "}
-              <span className="text-gray-400 font-normal">vs last week</span>
+            <span className="ml-2 text-sm font-medium text-gray-500">
+              Last 7 days
             </span>
           </div>
         </div>
@@ -256,21 +296,18 @@ export default function ProjectDetails() {
           </div>
           <div className="mt-4 flex items-baseline">
             <p className="text-3xl font-bold text-gray-900">
-              {project.analytics_data?.clicks || 0}
+              {stats.totalClicks}
             </p>
-            <span className="ml-2 text-sm font-medium text-green-600">
-              +5%{" "}
-              <span className="text-gray-400 font-normal">vs last week</span>
+            <span className="ml-2 text-sm font-medium text-gray-500">
+              Last 7 days
             </span>
           </div>
         </div>
 
-        {/* KPI Card 3: Engagement (Mocked calculation) */}
+        {/* KPI Card 3: Avg Engagement */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-500">
-              Avg. Engagement
-            </h3>
+            <h3 className="text-sm font-medium text-gray-500">Click Rate</h3>
             <span className="rounded-full bg-yellow-50 p-2 text-yellow-600">
               <svg
                 className="h-4 w-4"
@@ -282,50 +319,65 @@ export default function ProjectDetails() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                 />
               </svg>
             </span>
           </div>
           <div className="mt-4 flex items-baseline">
-            <p className="text-3xl font-bold text-gray-900">2m 14s</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {stats.totalViews > 0
+                ? ((stats.totalClicks / stats.totalViews) * 100).toFixed(1)
+                : 0}
+              %
+            </p>
             <span className="ml-2 text-sm font-medium text-gray-500">
-              0% <span className="text-gray-400 font-normal">vs last week</span>
+              Engagement
             </span>
           </div>
         </div>
+      </div>
 
+      {/* 2. Main Content Row: Chart + Requests */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Main Chart Area */}
-        <div className="col-span-1 md:col-span-3 lg:col-span-3 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="col-span-1 lg:col-span-3 flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-sm h-full">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="font-bold text-gray-900">Traffic Overview</h3>
-            <select className="form-select rounded-lg border-gray-200 py-1 text-sm text-gray-500">
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-            </select>
+            <div className="text-sm text-gray-500">Last 7 Days</div>
           </div>
 
-          <div className="flex h-64 items-end justify-between gap-2">
-            {MOCK_CHART_DATA.map((item, i) => (
-              <div
-                key={i}
-                className="group relative flex w-full flex-col items-center"
-              >
-                <div className="absolute -top-10 hidden rounded bg-gray-900 px-2 py-1 text-xs text-white group-hover:block">
-                  {item.views} Views
-                </div>
-                <div
-                  className="w-full max-w-[40px] rounded-t-lg bg-gray-900 opacity-80 transition-all hover:bg-blue-600 hover:opacity-100"
-                  style={{ height: `${(item.views / 250) * 100}%` }}
-                ></div>
-                <span className="mt-2 text-xs text-gray-500">{item.day}</span>
+          <div className="flex h-64 items-end justify-between gap-2 px-2 mt-auto">
+            {stats.chartData.length === 0 ? (
+              <div className="w-full text-center text-gray-400">
+                No data available for this period.
               </div>
-            ))}
+            ) : (
+              stats.chartData.map((item, i) => (
+                <div
+                  key={i}
+                  className="group relative flex w-full flex-col items-center justify-end h-full"
+                >
+                  <div className="absolute bottom-full mb-2 hidden rounded bg-gray-900 px-2 py-1 text-xs text-white group-hover:block z-10 whitespace-nowrap">
+                    {item.views} Views <br /> {item.date}
+                  </div>
+                  <div
+                    className="w-full max-w-[40px] rounded-t-lg bg-gray-900 opacity-80 transition-all hover:bg-blue-600 hover:opacity-100 min-h-[4px]"
+                    style={{
+                      height: `${(item.views / maxViews) * 100}%`,
+                    }}
+                  ></div>
+                  <span className="mt-3 text-xs font-medium text-gray-500">
+                    {item.day}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
         {/* Request/Activity Feed */}
-        <div className="col-span-1 md:col-span-3 lg:col-span-1 row-span-2 flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="col-span-1 lg:col-span-1 flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm h-full">
           <h3 className="mb-4 font-bold text-gray-900">Project Requests</h3>
 
           <form onSubmit={handleSubmitRequest} className="mb-6">
