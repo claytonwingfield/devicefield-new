@@ -1,4 +1,5 @@
 import ServiceLayout from "@/components/service-layout";
+import { WebsiteVisual } from "@/components/service-visuals";
 
 export const metadata = {
   title: "Website Development - DeviceField",
@@ -10,33 +11,23 @@ export default function WebsiteDevelopmentPage() {
   return (
     <ServiceLayout
       title="Website Development"
-      description="We create robust, visually appealing websites customized to meet your unique business objectives. From initial design to full-scale deployment, we guarantee flawless performance, user-centric layouts, and adaptable solutions that enhance user engagement and foster business expansion."
+      description="We create robust, visually appealing websites customized to meet your unique business objectives. From initial design to full-scale deployment, we guarantee flawless performance, user-centric layouts, and adaptable solutions."
+      visual={<WebsiteVisual />}
       icon={
         <svg
           width={48}
           height={48}
-          xmlns="http://www.w3.org/2000/svg"
-          id="Html"
-          x="0"
-          y="0"
-          enableBackground="new 0 0 48 48"
-          version="1.1"
-          viewBox="0 0 48 48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="text-yellow-primary"
         >
-          <g fill="#000000" className="color000000 svgShape">
-            <path
-              fill="#ffeb3b"
-              d="M24,47.5C11,47.5,0.5,37,0.5,24S11,0.5,24,0.5S47.5,11,47.5,24S37,47.5,24,47.5z M24,4.4   C13.2,4.4,4.4,13.2,4.4,24c0,10.8,8.8,19.6,19.6,19.6c10.8,0,19.6-8.8,19.6-19.6C43.6,13.2,34.8,4.4,24,4.4z"
-              className="color010101 svgShape"
-            ></path>
-            <g fill="#000000" className="color000000 svgShape">
-              <path
-                fill="#ffeb3b"
-                d="M29.2 33.2c-.5 0-1-.2-1.4-.6-.8-.8-.8-2 0-2.8l5.8-5.8-5.8-5.8c-.8-.8-.8-2 0-2.8.8-.8 2-.8 2.8 0l7.2 7.2c.8.8.8 2 0 2.8l-7.2 7.2C30.2 33 29.7 33.2 29.2 33.2zM18.8 33.2c-.5 0-1-.2-1.4-.6l-7.2-7.2c-.8-.8-.8-2 0-2.8l7.2-7.2c.8-.8 2-.8 2.8 0 .8.8.8 2 0 2.8L14.3 24l5.8 5.8c.8.8.8 2 0 2.8C19.8 33 19.3 33.2 18.8 33.2z"
-                className="color010101 svgShape"
-              ></path>
-            </g>
-          </g>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"
+          />
         </svg>
       }
       features={[
@@ -56,11 +47,11 @@ export default function WebsiteDevelopmentPage() {
         "Scalable architecture that grows with your business",
       ]}
       useCases={[
-        "Business websites and corporate portals",
-        "E-commerce stores and online marketplaces",
-        "Portfolio sites for creative professionals",
-        "Blog and content publishing platforms",
-        "Landing pages for marketing campaigns",
+        "Business websites",
+        "E-commerce stores",
+        "Portfolio sites",
+        "Blogs",
+        "Landing pages",
       ]}
     />
   );

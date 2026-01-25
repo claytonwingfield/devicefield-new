@@ -1,9 +1,9 @@
 import ServiceLayout from "@/components/service-layout";
+import { AnalyticsVisual } from "@/components/service-visuals";
 
 export const metadata = {
   title: "Instant Analytics - DeviceField",
-  description:
-    "Real-time analytics and insights for your digital platforms",
+  description: "Real-time analytics and insights for your digital platforms",
 };
 
 export default function AnalyticsPage() {
@@ -11,14 +11,22 @@ export default function AnalyticsPage() {
     <ServiceLayout
       title="Instant Analytics"
       description="Collect essential insights about how visitors are using your site with in-depth page view metrics like pages, referring sites, and more."
+      visual={<AnalyticsVisual />}
       icon={
         <svg
-          className="fill-yellow-primary"
-          xmlns="http://www.w3.org/2000/svg"
           width={48}
           height={48}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="text-yellow-primary"
         >
-          <path d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm2-4a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4H4Zm1 10a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H5Z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+          />
         </svg>
       }
       features={[
@@ -38,11 +46,11 @@ export default function AnalyticsPage() {
         "Export data for deeper analysis and reporting",
       ]}
       useCases={[
-        "Website performance monitoring",
-        "Marketing campaign tracking",
-        "User experience optimization",
-        "Content strategy planning",
-        "Conversion funnel analysis",
+        "Performance monitoring",
+        "Campaign tracking",
+        "UX optimization",
+        "Content strategy",
+        "Conversion analysis",
       ]}
     />
   );

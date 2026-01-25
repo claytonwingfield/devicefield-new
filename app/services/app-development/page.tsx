@@ -1,4 +1,5 @@
 import ServiceLayout from "@/components/service-layout";
+import { AppVisual } from "@/components/service-visuals";
 
 export const metadata = {
   title: "App Development - DeviceField",
@@ -10,20 +11,20 @@ export default function AppDevelopmentPage() {
   return (
     <ServiceLayout
       title="App Development"
-      description="We build high-performance, user-friendly mobile applications tailored to your business needs. From concept to deployment, we ensure seamless functionality, intuitive interfaces, and scalable solutions that drive engagement and growth."
+      description="We build high-performance, user-friendly mobile applications tailored to your business needs. From concept to deployment, we ensure seamless functionality, intuitive interfaces, and scalable solutions that drive engagement."
+      visual={<AppVisual />}
       icon={
         <svg
           width={48}
           height={48}
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 200 200"
-          id="app"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="text-yellow-primary"
         >
-          <path
-            fill="#ffeb3b"
-            d="M81.19 42.0925v39h-39v-39h39m13-13h-65v65h65v-65zM157.6076 42.0925v39h-39v-39h39m13-13h-65v65h65v-65zM81.19 118.51v39h-39v-39h39m13-13h-65v65h65v-65zM157.6076 118.51v39h-39v-39h39m13-13h-65v65h65v-65z"
-            className="color050b1e svgShape"
-          ></path>
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+          <line x1="12" y1="18" x2="12.01" y2="18" />
         </svg>
       }
       features={[
@@ -43,11 +44,11 @@ export default function AppDevelopmentPage() {
         "Data-driven insights to improve user engagement",
       ]}
       useCases={[
-        "Business productivity apps",
-        "E-commerce and shopping applications",
-        "Social networking platforms",
-        "Fitness and health tracking apps",
-        "On-demand service applications",
+        "Business productivity",
+        "Shopping applications",
+        "Social networking",
+        "Fitness tracking",
+        "On-demand services",
       ]}
     />
   );

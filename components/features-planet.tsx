@@ -7,6 +7,7 @@ import React, { useRef, useEffect } from "react";
 import * as THREE from "three";
 import ThreeGlobe from "three-globe";
 import BusinessCategories from "@/components/business-categories";
+
 export default function FeaturesPlanet() {
   const globeContainerRef = useRef<HTMLDivElement>(null);
 
@@ -15,8 +16,8 @@ export default function FeaturesPlanet() {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const globeRef = useRef<any>(null); // three-globe object
-  const orbitGroupRef = useRef<THREE.Group | null>(null);
   const animationIdRef = useRef<number | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     // ——————————————————————————
@@ -28,19 +29,23 @@ export default function FeaturesPlanet() {
 
     if (!globeContainerRef.current) return;
 
-    const camera = new THREE.PerspectiveCamera(
-      40,
-      globeContainerRef.current.clientWidth /
-        globeContainerRef.current.clientHeight,
-      0.1,
-      1000
-    );
+    // Clear any existing children to prevent duplication on re-mounts
+    while (globeContainerRef.current.firstChild) {
+      globeContainerRef.current.removeChild(
+        globeContainerRef.current.firstChild,
+      );
+    }
+
+    const width = globeContainerRef.current.clientWidth;
+    const height = globeContainerRef.current.clientHeight;
+
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+
+    // FIX: Adjusted Z values to zoom in closer (Lower number = Bigger Globe)
     if (window.innerWidth < 768) {
-      // Mobile screen
-      camera.position.z = 550; // Move farther back on mobile
+      camera.position.z = 350; // Mobile: Closer
     } else {
-      // Larger screens
-      camera.position.z = 350; // Default position for desktop
+      camera.position.z = 280; // Desktop: Closer
     }
 
     cameraRef.current = camera;
@@ -49,10 +54,15 @@ export default function FeaturesPlanet() {
     // 2) RENDERER
     // ——————————————————————————
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(
-      globeContainerRef.current.clientWidth,
-      globeContainerRef.current.clientHeight
-    );
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Fix: Ensure canvas is block level to prevent inline spacing issues
+    renderer.domElement.style.display = "block";
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.domElement.style.outline = "none";
+
     globeContainerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -61,7 +71,7 @@ export default function FeaturesPlanet() {
     // ——————————————————————————
     const globe = new ThreeGlobe()
       .globeImageUrl(
-        "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+        "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg",
       )
       .bumpImageUrl("//unpkg.com/three-globe/example/img/earth-topology.png");
     globeRef.current = globe;
@@ -78,14 +88,9 @@ export default function FeaturesPlanet() {
     directionalLight.position.set(400, 200, 200);
     scene.add(directionalLight);
 
-    // ——————————————————————————
-    // 4) “SATELLITE ORBITS” RINGS
-    // ——————————————————————————
-
     // —————————————————————————————————————
-    // 5) ARCS: “Satellites traveling” lines
+    // ARCS Logic
     // —————————————————————————————————————
-    // 5.1) Function to get random arcs
     function getRandomArcs(count = 5) {
       const colors = ["#ffeb3b"];
       return [...Array(count)].map(() => {
@@ -98,10 +103,8 @@ export default function FeaturesPlanet() {
       });
     }
 
-    // 5.2) Function to spawn arcs, animate them across the globe, then remove
     function spawnArcs() {
       const arcs = getRandomArcs(5);
-
       globe
         .arcsData(arcs)
         .arcColor((arc: any) => arc.color)
@@ -109,9 +112,7 @@ export default function FeaturesPlanet() {
         .arcStroke(0.7)
         .arcDashLength(0.3)
         .arcDashGap(1)
-        // Start arcs "off screen"
         .arcDashInitialGap(-1)
-        // 2-second travel time across the entire arc
         .arcDashAnimateTime(5000);
     }
 
@@ -121,26 +122,61 @@ export default function FeaturesPlanet() {
     function animate() {
       animationIdRef.current = requestAnimationFrame(animate);
       const delta = clock.getDelta();
-
-      // Rotate the globe
       globe.rotation.y += delta * 0.05;
-      // Rotate the “orbit rings”
-
       renderer.render(scene, camera);
     }
     animate();
 
     // ——————————————————————————
+    // HANDLE RESIZE (ResizeObserver)
+    // ——————————————————————————
+    // This is the key fix for the "jumping" issue. It watches the container size
+    // and updates the renderer immediately when the layout settles.
+    const onResize = (entries: ResizeObserverEntry[]) => {
+      if (!Array.isArray(entries) || !entries.length) return;
+
+      const { contentRect } = entries[0];
+      const newWidth = contentRect.width;
+      const newHeight = contentRect.height;
+
+      if (cameraRef.current && rendererRef.current) {
+        cameraRef.current.aspect = newWidth / newHeight;
+        cameraRef.current.updateProjectionMatrix();
+        rendererRef.current.setSize(newWidth, newHeight);
+
+        // Re-check breakpoints on resize to adjust zoom level
+        if (window.innerWidth < 768) {
+          cameraRef.current.position.z = 350;
+        } else {
+          cameraRef.current.position.z = 280;
+        }
+      }
+    };
+
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(globeContainerRef.current);
+    resizeObserverRef.current = resizeObserver;
+
+    // ——————————————————————————
     // CLEANUP
     // ——————————————————————————
     return () => {
+      if (resizeObserverRef.current) resizeObserverRef.current.disconnect();
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
       if (renderer) renderer.dispose();
+
+      // Cleanup DOM
       if (globeContainerRef.current) {
-        globeContainerRef.current.removeChild(renderer.domElement);
+        // Remove all children to be safe
+        while (globeContainerRef.current.firstChild) {
+          globeContainerRef.current.removeChild(
+            globeContainerRef.current.firstChild,
+          );
+        }
       }
     };
   }, []);
+
   return (
     <section
       id="services"
@@ -178,19 +214,21 @@ export default function FeaturesPlanet() {
 
         {/* Globe Container + Grid Wrapper */}
         <div className="relative">
-          {/* Globe Container */}
+          {/* Globe Container Wrapper */}
+          {/* FIX: Added 'relative' here to act as the anchor for the absolute child */}
           <div
-            className="flex items-center justify-center h-[300px] sm:h-[400px] md:h-[500px]"
+            className="relative flex items-center justify-center h-[300px] sm:h-[400px] md:h-[500px]"
             data-aos="zoom-y-out"
             data-aos-delay={300}
           >
+            {/* FIX: Changed to absolute inset-0 to force perfect fit and ignore flex alignment issues */}
             <div
               ref={globeContainerRef}
-              style={{ width: "100%", height: "650px", position: "relative" }}
+              className="absolute inset-0 w-full h-full"
             />
           </div>
 
-          {/* Grid Section with Negative Margin to Overlap Globe */}
+          {/* Grid Section... (Same as before) */}
           <div
             className="
             relative
