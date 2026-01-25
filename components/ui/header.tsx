@@ -1,7 +1,66 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // Added for redirect
 import Logo from "./logo";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Header() {
+  const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const supabase = createClient();
+  const router = useRouter();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (user) {
+        checkAdminStatus(user.id);
+      }
+    };
+
+    const checkAdminStatus = async (userId: string) => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
+
+      setIsAdmin(profile?.role === "admin");
+    };
+
+    getUser();
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+
+      if (currentUser) {
+        checkAdminStatus(currentUser.id);
+      } else {
+        setIsAdmin(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsAdmin(false);
+    router.push("/signin");
+    router.refresh();
+  };
+
   return (
     <header className="fixed top-2 z-30 w-full md:top-6">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -13,22 +72,60 @@ export default function Header() {
 
           {/* Desktop sign in links */}
           <ul className="flex flex-1 items-center justify-end gap-3">
-            <li>
-              <Link
-                href="/signin"
-                className="btn-sm bg-white text-gray-800 shadow hover:bg-gray-50"
-              >
-                Login
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/signup"
-                className="btn-sm bg-black text-gray-200 shadow hover:bg-gray-900"
-              >
-                Register
-              </Link>
-            </li>
+            {user ? (
+              <>
+                {/* Admin Button (Left of Dashboard) */}
+                {isAdmin && (
+                  <li>
+                    <Link
+                      href="/admin"
+                      className="btn-sm bg-black text-white shadow hover:bg-black/90"
+                    >
+                      Admin
+                    </Link>
+                  </li>
+                )}
+
+                {/* Dashboard Button */}
+                <li>
+                  <Link
+                    href="/dashboard"
+                    className="btn-sm bg-gray-900 text-white shadow hover:bg-gray-800"
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+
+                {/* Sign Out Button (Right of Dashboard) */}
+                <li>
+                  <button
+                    onClick={handleSignOut}
+                    className="btn-sm bg-white text-red-600 shadow hover:bg-gray-50 border border-gray-200"
+                  >
+                    Sign Out
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <Link
+                    href="/signin"
+                    className="btn-sm bg-white text-gray-800 shadow hover:bg-gray-50"
+                  >
+                    Login
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/signup"
+                    className="btn-sm bg-black text-gray-200 shadow hover:bg-gray-900"
+                  >
+                    Register
+                  </Link>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       </div>
