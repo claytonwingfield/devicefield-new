@@ -570,7 +570,7 @@ export default function FeaturesPlanet() {
             <div className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center">
               <Link
                 className="btn group mb-4 w-full bg-gradient-to-t from-yellow-primary to-yellow-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto"
-                href="/signup"
+                href="/get-started"
               >
                 <span className="relative inline-flex items-center text-black">
                   Get Started{" "}

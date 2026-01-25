@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageIllustration from "@/components/page-illustration";
 import BusinessCategories from "@/components/business-categories";
 import WebsiteAnimation from "./websiteAnimation";
+
 export default function HeroHome() {
   return (
     <section className="relative lg:mb-12 mb-16">
@@ -32,21 +33,14 @@ export default function HeroHome() {
                 need.
               </p>
               <div
-            className="mx-auto max-w-md"
-            data-aos="zoom-y-out"
-            data-aos-delay={600}
-          >
-            
-            
-            
-
-            <div className="aspect-video w-full relative">
-  <WebsiteAnimation />
-</div>
-
-
-
-</div>
+                className="mx-auto max-w-md"
+                data-aos="zoom-y-out"
+                data-aos-delay={600}
+              >
+                <div className="aspect-video w-full relative">
+                  <WebsiteAnimation />
+                </div>
+              </div>
               <div className="relative before:absolute before:inset-0 before:border-y before:[border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
                 <div
                   className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center"
@@ -55,7 +49,7 @@ export default function HeroHome() {
                 >
                   <Link
                     className="btn group mb-4 w-full bg-gradient-to-t from-black to-gray-900  bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto"
-                    href="/signup"
+                    href="/get-started"
                   >
                     <span className="relative inline-flex items-center ">
                       Get Started{" "}
@@ -69,9 +63,9 @@ export default function HeroHome() {
                     href="#services"
                     onClick={(e) => {
                       e.preventDefault();
-                      const element = document.getElementById('services');
+                      const element = document.getElementById("services");
                       if (element) {
-                        element.scrollIntoView({ behavior: 'smooth' });
+                        element.scrollIntoView({ behavior: "smooth" });
                       }
                     }}
                   >
@@ -82,7 +76,6 @@ export default function HeroHome() {
             </div>
           </div>
           {/* Hero image */}
-          
         </div>
       </div>
     </section>

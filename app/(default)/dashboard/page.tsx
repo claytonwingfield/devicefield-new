@@ -30,7 +30,9 @@ export default function UserDashboard() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (data) setProjects(data);
+      if (data) {
+        setProjects(data);
+      }
       setLoading(false);
     };
 
@@ -62,20 +64,15 @@ export default function UserDashboard() {
     }
   };
 
-  // Helper to fix the Supabase link on the fly
   const getDatabaseLink = (url: string) => {
     if (!url) return "";
-    // If it's already a dashboard link, return it as is
     if (url.includes("supabase.com/dashboard")) return url;
-
-    // If it's an API link (e.g. https://[id].supabase.co), fix it
     if (url.includes(".supabase.co")) {
       const matches = url.match(/https?:\/\/([^.]+)\.supabase\.co/);
       if (matches && matches[1]) {
         return `https://supabase.com/dashboard/project/${matches[1]}`;
       }
     }
-    // Fallback
     return url;
   };
 
@@ -89,12 +86,42 @@ export default function UserDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Start New Project Card */}
+        <div className="flex flex-col justify-center items-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 shadow-sm transition hover:border-blue-500 hover:bg-blue-50 group cursor-pointer h-full min-h-[300px]">
+          <Link
+            href="/create-project"
+            className="flex flex-col items-center justify-center w-full h-full text-center"
+          >
+            <div className="mb-4 rounded-full bg-white p-4 shadow-sm group-hover:scale-110 transition-transform">
+              <svg
+                className="h-8 w-8 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Start a New Project
+            </h3>
+            <p className="text-sm text-gray-500">
+              Launch a new website, app, or integration.
+            </p>
+          </Link>
+        </div>
+
+        {/* Existing Projects */}
         {projects.map((project) => (
           <div
             key={project.id}
-            className="flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+            className="flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md h-full min-h-[300px]"
           >
-            {/* Wrap the top part in a Link to the details page */}
             <Link
               href={`/dashboard/project/${project.id}`}
               className="block group"
@@ -122,11 +149,10 @@ export default function UserDashboard() {
               <h2 className="mb-2 text-xl font-bold text-gray-900 group-hover:text-blue-600">
                 {project.name}
               </h2>
-              <p className="mb-4 text-sm text-gray-500">
+              <p className="mb-4 text-sm text-gray-500 line-clamp-3">
                 {project.description || "No description provided."}
               </p>
 
-              {/* Mini Analytics Preview */}
               <div className="mb-4 rounded-lg bg-gray-50 p-3 group-hover:bg-blue-50 transition-colors">
                 <div className="flex justify-between text-sm">
                   <div>
@@ -145,8 +171,7 @@ export default function UserDashboard() {
               </div>
             </Link>
 
-            {/* Action Buttons */}
-            <div className="mt-4 flex flex-col gap-2">
+            <div className="mt-auto flex flex-col gap-2">
               <Link
                 href={`/dashboard/project/${project.id}`}
                 className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -171,7 +196,7 @@ export default function UserDashboard() {
                     href={getDatabaseLink(project.database_url)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 rounded-lg bg-[#3ECF8E] px-4 py-2 text-center text-sm font-medium text-white hover:bg-[#34b27b]"
+                    className="flex-1 rounded-lg bg-blue-primary px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-primary/80"
                   >
                     Database
                   </a>
@@ -180,15 +205,9 @@ export default function UserDashboard() {
             </div>
           </div>
         ))}
-
-        {projects.length === 0 && (
-          <div className="col-span-full py-12 text-center rounded-xl border-2 border-dashed border-gray-300">
-            <p className="text-gray-500">No projects assigned yet.</p>
-          </div>
-        )}
       </div>
 
-      {/* Request Change Modal */}
+      {/* ... Request Changes Modal ... */}
       {selectedProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">

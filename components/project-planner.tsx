@@ -1,32 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
-export default function ProjectPlanner() {
+interface ProjectPlannerProps {
+  isAuthFlow?: boolean;
+  user?: any;
+}
+
+export default function ProjectPlanner({
+  isAuthFlow = false,
+  user: propUser,
+}: ProjectPlannerProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
-
-  // Form State
-  const [selections, setSelections] = useState<{
-    services: string[];
-    type: string;
-    budget: string;
-    pricingModel: "monthly" | "yearly"; // New State
-    timeline: string;
-  }>({
-    services: [],
-    type: "",
-    budget: "",
-    pricingModel: "monthly", // Default to Monthly
-    timeline: "",
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [contact, setContact] = useState({
     name: "",
     email: "",
     phone: "",
     message: "",
+  });
+
+  // Check auth status & Pre-fill if in Auth Flow
+  useEffect(() => {
+    const init = async () => {
+      const supabase = createClient();
+
+      // If user passed via props (from create-project page)
+      if (propUser) {
+        setIsLoggedIn(true);
+        setContact((prev) => ({
+          ...prev,
+          email: propUser.email || "",
+          name: propUser.user_metadata?.full_name || "",
+          phone: propUser.user_metadata?.phone || "",
+        }));
+        return;
+      }
+
+      // Otherwise check client side
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setIsLoggedIn(!!user);
+      if (user && isAuthFlow) {
+        setContact((prev) => ({
+          ...prev,
+          email: user.email || "",
+          name: user.user_metadata?.full_name || "",
+          phone: user.user_metadata?.phone || "",
+        }));
+      }
+    };
+    init();
+  }, [propUser, isAuthFlow]);
+
+  // Form State
+  const [selections, setSelections] = useState<{
+    services: string[];
+    type: string;
+    budget: string;
+    pricingModel: "monthly" | "yearly";
+    timeline: string;
+  }>({
+    services: [],
+    type: "",
+    budget: "",
+    pricingModel: "monthly",
+    timeline: "",
   });
 
   // Options Data
@@ -36,7 +81,7 @@ export default function ProjectPlanner() {
     { id: "api", label: "API Integration", icon: "🔌" },
     { id: "seo", label: "SEO & Performance", icon: "🚀" },
     { id: "design", label: "UI/UX Design", icon: "🎨" },
-    { id: "analytics", label: "Analytics Setup", icon: "cA" },
+    { id: "analytics", label: "Analytics Setup", icon: "📊" },
   ];
 
   // Dynamic Budget Options
@@ -77,7 +122,6 @@ export default function ProjectPlanner() {
   };
 
   const handleNext = () => {
-    // Validation
     if (step === 1 && selections.services.length === 0)
       return alert("Please select at least one service.");
     if (step === 2 && !selections.budget)
@@ -130,15 +174,42 @@ export default function ProjectPlanner() {
           Request Received!
         </h2>
         <p className="text-xl text-gray-600 mb-8">
-          Thanks {contact.name}. We've received your project details and will be
-          in touch shortly to discuss the next steps.
+          Thanks {contact.name || "for submitting"}. We've received your project
+          details and will be in touch shortly to discuss the next steps.
         </p>
-        <button
-          onClick={() => (window.location.href = "/")}
-          className="btn bg-gray-900 text-white hover:bg-gray-800"
-        >
-          Back to Home
-        </button>
+
+        {isAuthFlow || isLoggedIn ? (
+          <button
+            onClick={() => (window.location.href = "/dashboard")}
+            className="btn bg-gray-900 text-white hover:bg-gray-800"
+          >
+            Back to Dashboard
+          </button>
+        ) : (
+          <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-6 mb-8">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Track Your Project
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Create an account to track the status of this request and
+              communicate with our team.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Link
+                href="/signup"
+                className="btn bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Create Account
+              </Link>
+              <button
+                onClick={() => (window.location.href = "/")}
+                className="btn bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -151,7 +222,9 @@ export default function ProjectPlanner() {
           <span className={step >= 1 ? "text-yellow-600" : ""}>Services</span>
           <span className={step >= 2 ? "text-yellow-600" : ""}>Budget</span>
           <span className={step >= 3 ? "text-yellow-600" : ""}>Timeline</span>
-          <span className={step >= 4 ? "text-yellow-600" : ""}>Contact</span>
+          <span className={step >= 4 ? "text-yellow-600" : ""}>
+            {isAuthFlow ? "Details" : "Contact"}
+          </span>
         </div>
         <div className="h-2 w-full rounded-full bg-gray-200">
           <div
@@ -280,48 +353,53 @@ export default function ProjectPlanner() {
           </div>
         )}
 
-        {/* Step 4: Contact */}
+        {/* Step 4: Contact / Details */}
         {step === 4 && (
           <form onSubmit={handleSubmit} data-aos="fade-in">
             <h2 className="mb-6 text-2xl font-bold text-gray-900">
-              Last step! How can we reach you?
+              {isAuthFlow
+                ? "Final Details"
+                : "Last step! How can we reach you?"}
             </h2>
             <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Name *
-                  </label>
-                  <input
-                    required
-                    className="form-input w-full"
-                    type="text"
-                    placeholder="John Doe"
-                    value={contact.name}
-                    onChange={(e) =>
-                      setContact({ ...contact, name: e.target.value })
-                    }
-                  />
+              {!isAuthFlow && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Name *
+                    </label>
+                    <input
+                      required
+                      className="form-input w-full"
+                      type="text"
+                      placeholder="John Doe"
+                      value={contact.name}
+                      onChange={(e) =>
+                        setContact({ ...contact, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Email *
+                    </label>
+                    <input
+                      required
+                      className="form-input w-full"
+                      type="email"
+                      placeholder="john@company.com"
+                      value={contact.email}
+                      onChange={(e) =>
+                        setContact({ ...contact, email: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Email *
-                  </label>
-                  <input
-                    required
-                    className="form-input w-full"
-                    type="email"
-                    placeholder="john@company.com"
-                    value={contact.email}
-                    onChange={(e) =>
-                      setContact({ ...contact, email: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
+              )}
+
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Phone
+                  Phone {isAuthFlow && "(Optional)"}
                 </label>
                 <input
                   className="form-input w-full"
@@ -339,8 +417,8 @@ export default function ProjectPlanner() {
                 </label>
                 <textarea
                   className="form-textarea w-full"
-                  rows={3}
-                  placeholder="Anything else we should know?"
+                  rows={4}
+                  placeholder="Tell us about your project goals, competitors, or any specific requirements..."
                   value={contact.message}
                   onChange={(e) =>
                     setContact({ ...contact, message: e.target.value })
@@ -379,7 +457,11 @@ export default function ProjectPlanner() {
               disabled={loading}
               className="btn bg-yellow-primary text-gray-900 hover:bg-yellow-400 shadow-lg px-8 font-bold"
             >
-              {loading ? "Submitting..." : "Get My Quote"}
+              {loading
+                ? "Submitting..."
+                : isAuthFlow
+                  ? "Start Project"
+                  : "Get My Quote"}
             </button>
           )}
         </div>

@@ -1,5 +1,8 @@
 "use client";
 
+import Image from "next/image";
+import Logo from "@/public/images/logo.png";
+
 export default function AboutVisual() {
   return (
     <div className="relative mx-auto w-full max-w-[500px]">
@@ -7,8 +10,18 @@ export default function AboutVisual() {
         {/* Abstract "Global Network" Visualization */}
         <div className="relative h-[300px] w-full flex items-center justify-center">
           {/* Central Hub */}
-          <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-gray-900 shadow-xl animate-[breath_4s_ease-in-out_infinite]">
-            <span className="text-3xl font-bold text-white">DF</span>
+          {/* Removed 'overflow-hidden' so the spinning dot is visible outside the circle */}
+          <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-black shadow-xl animate-[breath_4s_ease-in-out_infinite]">
+            {/* Logo Wrapper - ensures perfect centering */}
+            <div className="relative h-8 w-8 flex items-center justify-center">
+              <Image
+                src={Logo}
+                alt="Devicefield Logo"
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-contain invert"
+              />
+            </div>
 
             {/* Orbiting Particles */}
             <div className="absolute inset-0 animate-[spin_10s_linear_infinite]">
@@ -52,7 +65,7 @@ export default function AboutVisual() {
           </div>
           <div className="text-center">
             <div className="text-xs text-gray-500 uppercase tracking-wide">
-              Global
+              Availabile
             </div>
             <div className="font-bold text-gray-900">24/7</div>
           </div>

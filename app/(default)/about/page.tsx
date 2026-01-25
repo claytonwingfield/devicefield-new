@@ -1,4 +1,5 @@
 import AboutVisual from "@/components/about-visual";
+import ContactForm from "@/components/contact-form";
 
 export const metadata = {
   title: "About Us - Devicefield",
@@ -14,8 +15,10 @@ export default function About() {
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-8 items-center mb-20">
             {/* Left: Text */}
             <div className="text-left" data-aos="fade-right">
-              <h1 className="h1 mb-6">We build the digital future</h1>
-              <p className="text-xl text-gray-600 mb-8">
+              <h1 className="mb-6 text-4xl font-bold md:text-5xl lg:text-6xl tracking-tight">
+                We build the digital future
+              </h1>
+              <p className="text-lg text-gray-700 mb-8 leading-relaxed">
                 At Devicefield, we believe that every vision deserves a
                 world-class digital platform. From robust APIs to stunning
                 mobile apps, we bridge the gap between idea and execution.
@@ -24,8 +27,9 @@ export default function About() {
                 <div className="rounded-lg bg-yellow-primary/10 px-4 py-2 text-yellow-800 font-medium">
                   Since 2020
                 </div>
+                {/* Changed Global Team to Oklahoma City */}
                 <div className="rounded-lg bg-blue-50 px-4 py-2 text-blue-800 font-medium">
-                  Global Team
+                  Oklahoma City
                 </div>
               </div>
             </div>
@@ -97,10 +101,26 @@ export default function About() {
                 Our Vision
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                To be the global standard for reliability and innovation in
-                software development and digital infrastructure. We aim to
-                define what's next in the digital landscape.
+                To be the standard for reliability and innovation in software
+                development. We aim to define what's next in the digital
+                landscape.
               </p>
+            </div>
+          </div>
+
+          {/* Contact Section */}
+          <div className="max-w-3xl mx-auto mt-24">
+            <div className="text-center mb-10">
+              <h2 className="mb-4 text-3xl font-bold text-gray-900">
+                Get in Touch
+              </h2>
+              <p className="text-gray-600">
+                Have a question or want to work together? We'd love to hear from
+                you.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
+              <ContactForm />
             </div>
           </div>
         </div>
