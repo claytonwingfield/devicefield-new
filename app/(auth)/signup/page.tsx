@@ -1,9 +1,74 @@
-export const metadata = {
-  title: "Sign Up - Simple",
-  description: "Page description",
-};
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SignUp() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            phone: phone,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        setSuccess(true);
+        // Redirect to sign in after a moment
+        setTimeout(() => {
+          router.push("/signin");
+        }, 2000);
+      }
+    } catch (error: any) {
+      setError(error.message || "An error occurred during sign up");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGitHubSignUp = async () => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      setError(error.message || "An error occurred during GitHub sign up");
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="mb-10">
@@ -11,7 +76,17 @@ export default function SignUp() {
       </div>
 
       {/* Form */}
-      <form>
+      <form onSubmit={handleSignUp}>
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-600">
+            Account created successfully! Check your email to verify your account, then sign in.
+          </div>
+        )}
         <div className="space-y-4">
           <div>
             <label
@@ -25,6 +100,8 @@ export default function SignUp() {
               className="form-input w-full py-2"
               type="text"
               placeholder="Corey Barker"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               required
             />
           </div>
@@ -40,6 +117,8 @@ export default function SignUp() {
               className="form-input w-full py-2"
               type="email"
               placeholder="corybarker@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
@@ -55,6 +134,8 @@ export default function SignUp() {
               className="form-input w-full py-2"
               type="text"
               placeholder="(+750) 932-8907"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               required
             />
           </div>
@@ -71,23 +152,44 @@ export default function SignUp() {
               type="password"
               autoComplete="on"
               placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
             />
           </div>
         </div>
         <div className="mt-6 space-y-3">
-          <button className="btn w-full bg-gradient-to-t from-blue-600 to-blue-500 bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%]">
-            Register
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn w-full bg-gradient-to-t from-blue-600 to-blue-500 bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Creating account..." : "Register"}
           </button>
           <div className="text-center text-sm italic text-gray-400">Or</div>
-          <button className="btn w-full bg-gradient-to-t from-gray-900 to-gray-700 bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%]">
+          <button
+            type="button"
+            onClick={handleGitHubSignUp}
+            disabled={loading}
+            className="btn w-full bg-gradient-to-t from-gray-900 to-gray-700 bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Continue with GitHub
           </button>
         </div>
       </form>
 
       {/* Bottom link */}
-      <div className="mt-6 text-center">
+      <div className="mt-6 space-y-2 text-center">
+        <p className="text-sm text-gray-500">
+          Already have an account?{" "}
+          <Link
+            className="font-medium text-gray-700 underline hover:no-underline"
+            href="/signin"
+          >
+            Sign in
+          </Link>
+        </p>
         <p className="text-sm text-gray-500">
           By signing up, you agree to the{" "}
           <a

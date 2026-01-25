@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import Link from "next/link";
 import PageIllustration from "@/components/page-illustration";
 import BusinessCategories from "@/components/business-categories";
 import WebsiteAnimation from "./websiteAnimation";
@@ -50,9 +53,9 @@ export default function HeroHome() {
                   data-aos="zoom-y-out"
                   data-aos-delay={450}
                 >
-                  <a
+                  <Link
                     className="btn group mb-4 w-full bg-gradient-to-t from-black to-gray-900  bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto"
-                    href="#0"
+                    href="/signup"
                   >
                     <span className="relative inline-flex items-center ">
                       Get Started{" "}
@@ -60,10 +63,17 @@ export default function HeroHome() {
                         -&gt;
                       </span>
                     </span>
-                  </a>
+                  </Link>
                   <a
                     className="btn w-full bg-white text-gray-800 shadow hover:bg-gray-50 sm:ml-4 sm:w-auto"
-                    href="#0"
+                    href="#services"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const element = document.getElementById('services');
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
                   >
                     Learn More
                   </a>

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 import React, { useRef, useEffect } from "react";
 import * as THREE from "three";
@@ -142,6 +143,7 @@ export default function FeaturesPlanet() {
   }, []);
   return (
     <section
+      id="services"
       className="relative before:absolute before:inset-0 before:-z-20 before:content-[''] before:bg-black z-40"
       data-aos="zoom-y-out"
       data-aos-delay={50}
@@ -257,13 +259,32 @@ export default function FeaturesPlanet() {
 
                   <span>Website Development</span>
                 </h3>
-                <p className="text-[15px] text-gray-400">
+                <p className="mb-4 text-[15px] text-gray-400">
                   We create robust, visually appealing websites customized to
                   meet your unique business objectives. From initial design to
                   full-scale deployment, we guarantee flawless performance,
                   user-centric layouts, and adaptable solutions that enhance
                   user engagement and foster business expansion.
                 </p>
+                <Link
+                  href="/services/website-development"
+                  className="inline-flex items-center text-sm font-medium text-yellow-primary hover:text-yellow-400 transition-colors"
+                >
+                  Learn More
+                  <svg
+                    className="ml-1 h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </Link>
               </article>
               <article>
                 <h3 className="mb-2 flex items-center space-x-2 font-medium text-gray-200">
@@ -282,13 +303,32 @@ export default function FeaturesPlanet() {
                   </svg>
                   <span>App Development</span>
                 </h3>
-                <p className="text-[15px] text-gray-400">
+                <p className="mb-4 text-[15px] text-gray-400">
                   We building high-performance, user-friendly mobile
                   applications tailored to your business needs. From concept to
                   deployment, we ensure seamless functionality, intuitive
                   interfaces, and scalable solutions that drive engagement and
                   growth.
                 </p>
+                <Link
+                  href="/services/app-development"
+                  className="inline-flex items-center text-sm font-medium text-yellow-primary hover:text-yellow-400 transition-colors"
+                >
+                  Learn More
+                  <svg
+                    className="ml-1 h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </Link>
               </article>
               <article>
                 <h3 className="mb-2 flex items-center space-x-2 font-medium text-gray-200">
@@ -326,12 +366,31 @@ export default function FeaturesPlanet() {
                   </svg>
                   <span>API Development</span>
                 </h3>
-                <p className="text-[15px] text-gray-400">
+                <p className="mb-4 text-[15px] text-gray-400">
                   We offer robust and scalable APIs that enable seamless
                   integration between your applications and third-party
                   services, ensuring efficient data exchange, enhanced
                   functionality, and secure communication channels.
                 </p>
+                <Link
+                  href="/services/api-development"
+                  className="inline-flex items-center text-sm font-medium text-yellow-primary hover:text-yellow-400 transition-colors"
+                >
+                  Learn More
+                  <svg
+                    className="ml-1 h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </Link>
               </article>
               <article>
                 <h3 className="mb-2 flex items-center space-x-2 font-medium text-gray-200">
@@ -345,11 +404,30 @@ export default function FeaturesPlanet() {
                   </svg>
                   <span>Instant Analytics</span>
                 </h3>
-                <p className="text-[15px] text-gray-400">
+                <p className="mb-4 text-[15px] text-gray-400">
                   Collect essential insights about how visitors are using your
                   site with in-depth page view metrics like pages, referring
                   sites, and more.
                 </p>
+                <Link
+                  href="/services/analytics"
+                  className="inline-flex items-center text-sm font-medium text-yellow-primary hover:text-yellow-400 transition-colors"
+                >
+                  Learn More
+                  <svg
+                    className="ml-1 h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </Link>
               </article>
               <article>
                 <h3 className="mb-2 flex items-center space-x-2 font-medium text-gray-200">
@@ -363,11 +441,30 @@ export default function FeaturesPlanet() {
                   </svg>
                   <span>Metadata</span>
                 </h3>
-                <p className="text-[15px] text-gray-400">
+                <p className="mb-4 text-[15px] text-gray-400">
                   Collect essential insights about how visitors are using your
                   site with in-depth page view metrics like pages, referring
                   sites, and more.
                 </p>
+                <Link
+                  href="/services/metadata"
+                  className="inline-flex items-center text-sm font-medium text-yellow-primary hover:text-yellow-400 transition-colors"
+                >
+                  Learn More
+                  <svg
+                    className="ml-1 h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </Link>
               </article>
               <article>
                 <h3 className="mb-2 flex items-center space-x-2 font-medium text-gray-200">
@@ -385,11 +482,30 @@ export default function FeaturesPlanet() {
                   </svg>
                   <span>SEO &amp; Performance</span>
                 </h3>
-                <p className="text-[15px] text-gray-400">
+                <p className="mb-4 text-[15px] text-gray-400">
                   Collect essential insights about how visitors are using your
                   site with in-depth page view metrics like pages, referring
                   sites, and more.
                 </p>
+                <Link
+                  href="/services/seo-performance"
+                  className="inline-flex items-center text-sm font-medium text-yellow-primary hover:text-yellow-400 transition-colors"
+                >
+                  Learn More
+                  <svg
+                    className="ml-1 h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </Link>
               </article>
             </div>
           </div>
@@ -414,9 +530,9 @@ export default function FeaturesPlanet() {
               Create your next project with us
             </h2>
             <div className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center">
-              <a
+              <Link
                 className="btn group mb-4 w-full bg-gradient-to-t from-yellow-primary to-yellow-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto"
-                href="#0"
+                href="/signup"
               >
                 <span className="relative inline-flex items-center text-black">
                   Get Started{" "}
@@ -424,7 +540,7 @@ export default function FeaturesPlanet() {
                     -&gt;
                   </span>
                 </span>
-              </a>
+              </Link>
             </div>
           </div>
         </div>

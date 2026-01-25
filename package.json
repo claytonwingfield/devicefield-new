@@ -12,6 +12,8 @@
     "-": "^0.0.1",
     "@headlessui/react": "^2.0.4",
     "@lottiefiles/lottie-interactivity": "^1.6.2",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.91.1",
     "@types/node": "^22.10.1",
     "@types/react": "19.0.1",
     "@types/react-dom": "19.0.1",
