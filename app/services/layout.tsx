@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import AOS from "aos";
 import "aos/dist/aos.css";
 
 import Header from "@/components/ui/header";
@@ -13,11 +12,13 @@ export default function ServicesLayout({
   children: React.ReactNode;
 }) {
   useEffect(() => {
-    AOS.init({
-      duration: 500,
-      easing: "ease",
+    void import("aos").then((mod) => {
+      mod.default.init({
+        duration: 500,
+        easing: "ease",
+      });
     });
-  });
+  }, []);
 
   return (
     <>

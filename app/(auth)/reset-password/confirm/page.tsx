@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function ConfirmResetPassword() {
+function ConfirmResetPasswordContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -117,5 +117,20 @@ export default function ConfirmResetPassword() {
         </div>
       </form>
     </>
+  );
+}
+
+export default function ConfirmResetPassword() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mb-10">
+          <div className="h-10 w-48 animate-pulse rounded bg-gray-200" />
+          <div className="mt-4 h-32 w-full animate-pulse rounded bg-gray-100" />
+        </div>
+      }
+    >
+      <ConfirmResetPasswordContent />
+    </Suspense>
   );
 }

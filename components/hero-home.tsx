@@ -1,10 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import PageIllustration from "@/components/page-illustration";
 import BusinessCategories from "@/components/business-categories";
-import WebsiteAnimation from "./websiteAnimation";
+
+const WebsiteAnimation = dynamic(() => import("./websiteAnimation"), {
+  ssr: false,
+});
 
 export default function HeroHome() {
   return (
