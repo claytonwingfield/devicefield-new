@@ -122,7 +122,7 @@ export default function HeroHome() {
           {/* Section header */}
           <div className="text-center">
             <h1
-              className="mb-6 text-5xl font-bold md:text-6xl text-gray-900"
+              className="mb-6 text-5xl font-space font-semibold md:text-6xl text-gray-900"
               data-aos="zoom-y-out"
               data-aos-delay={150}
             >
@@ -131,7 +131,7 @@ export default function HeroHome() {
             </h1>
             <div className="mx-auto max-w-3xl">
               <p
-                className="text-lg text-gray-700 mb-8"
+                className="text-lg text-gray-900 mb-8"
                 data-aos="zoom-y-out"
                 data-aos-delay={300}
               >
@@ -151,30 +151,101 @@ export default function HeroHome() {
               </div> */}
 
               {/* Buttons */}
-              <div className="relative mt-8">
-                <div
-                  className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center"
-                  data-aos="zoom-y-out"
-                  data-aos-delay={450}
+              {/* Buttons / CTA Section */}
+              <div
+                className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8"
+                data-aos="zoom-y-out"
+                data-aos-delay={450}
+              >
+                {/* 1. Book an Intro Call Button (Animated Text) */}
+                <motion.a
+                  href="#book-call"
+                  initial="initial"
+                  whileHover="hovered"
+                  className="group flex items-center rounded-full bg-black p-1.5 pr-6 ring-4 ring-purple-100/30 transition-all duration-300 hover:ring-purple-200/50 hover:shadow-xl hover:-translate-y-0.5"
                 >
-                  <a
-                    className="btn group mb-4 w-full bg-white text-black border border-gray-200 shadow hover:bg-gray-50 sm:mb-0 sm:w-auto"
-                    href="#0"
-                  >
-                    <span className="relative inline-flex items-center">
-                      Get Started{" "}
-                      <span className="ml-1 tracking-normal text-yellow-500 transition-transform group-hover:translate-x-0.5">
-                        -&gt;
-                      </span>
+                  {/* Avatar Image */}
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10">
+                    <Image
+                      src="/images/clayton.jpg"
+                      alt="Clayton"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+
+                  {/* Text Column */}
+                  <div className="ml-3 flex flex-col text-left">
+                    {/* Main Label: "Book an intro call" with Snake Animation */}
+                    <div className="relative flex h-5 items-start overflow-hidden">
+                      {"Book an intro call".split("").map((letter, i) => (
+                        <motion.div
+                          key={i}
+                          className="relative flex flex-col"
+                          variants={{
+                            initial: { y: 0 },
+                            hovered: { y: "-50%" },
+                          }}
+                          transition={{
+                            duration: 0.3,
+                            ease: "easeInOut",
+                            delay: 0.025 * i,
+                          }}
+                        >
+                          <span className="flex h-5 items-center text-sm font-semibold text-white leading-tight">
+                            {letter === " " ? "\u00A0" : letter}
+                          </span>
+                          <span className="flex h-5 items-center text-sm font-semibold text-white leading-tight">
+                            {letter === " " ? "\u00A0" : letter}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {/* Subtext: Static */}
+                    <span className="text-[11px] font-normal text-gray-400">
+                      Friendly chat, no pressure
                     </span>
-                  </a>
-                  <a
-                    className="btn w-full bg-gray-900 text-white shadow hover:bg-gray-800 sm:ml-4 sm:w-auto md:mb-0 mb-24"
-                    href="#0"
-                  >
-                    Learn More
-                  </a>
-                </div>
+                  </div>
+                </motion.a>
+
+                {/* 2. Learn More Text Link (Animated) */}
+                <motion.a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const element = document.getElementById("services");
+                    if (element) {
+                      element.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                  href="#services"
+                  initial="initial"
+                  whileHover="hovered"
+                  className="relative flex h-6 items-start overflow-hidden font-medium text-gray-900"
+                >
+                  {"Learn More".split("").map((letter, i) => (
+                    <motion.div
+                      key={i}
+                      className="relative flex flex-col"
+                      variants={{
+                        initial: { y: 0 },
+                        hovered: { y: "-50%" },
+                      }}
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeInOut",
+                        delay: 0.025 * i,
+                      }}
+                    >
+                      <span className="flex h-6 items-center">
+                        {letter === " " ? "\u00A0" : letter}
+                      </span>
+                      <span className="flex h-6 items-center">
+                        {letter === " " ? "\u00A0" : letter}
+                      </span>
+                    </motion.div>
+                  ))}
+                </motion.a>
               </div>
             </div>
           </div>

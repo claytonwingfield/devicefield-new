@@ -1,11 +1,18 @@
 import "./css/style.css";
 
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+// 2. Configure Space Grotesk
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space", // This defines the CSS variable name
   display: "swap",
 });
 
@@ -21,9 +28,9 @@ export default function RootLayout({
 }) {
   return (
     /* Removed "scroll-smooth" from className below */
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body
-        className="bg-gray-50 font-inter tracking-tight text-gray-900 antialiased"
+        className="bg-gray-50 font-space tracking-tight text-gray-900 antialiased"
         suppressHydrationWarning
       >
         <div className="flex min-h-screen flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">

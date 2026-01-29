@@ -21,6 +21,8 @@ module.exports = {
       fontFamily: {
         inter: ["Inter", "sans-serif"],
         mono: ["Roboto Mono", "monospace"],
+        // Add this line:
+        space: ["var(--font-space)", "sans-serif"],
       },
       fontSize: {
         xs: ["0.75rem", { lineHeight: "1.5" }],
