@@ -18,7 +18,7 @@ export default function Header() {
   // Shared transition configuration for perfect synchronization
   const smoothTransition = {
     duration: 0.2,
-    ease: [0.4, 0, 0.2, 1], // Custom "Material Design" style ease-in-out
+    ease: [0.4, 0, 0.2, 1] as const, // Custom "Material Design" style ease-in-out (cubic-bezier)
   };
 
   useEffect(() => {

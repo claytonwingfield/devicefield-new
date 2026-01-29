@@ -96,6 +96,7 @@ export default function HeroHome() {
             fill
             className="object-contain object-left-top drop-shadow-2xl brightness-105 contrast-110"
             priority
+            unoptimized
           />
         </motion.div>
 
@@ -110,6 +111,7 @@ export default function HeroHome() {
             fill
             className="object-contain object-right-top drop-shadow-2xl brightness-105 contrast-110"
             priority
+            unoptimized
           />
         </motion.div>
       </div>
