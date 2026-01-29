@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import LoadingAnimation from "@/components/loading-animation";
 
 export default function AdminDashboard() {
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -141,7 +142,11 @@ export default function AdminDashboard() {
   };
 
   if (loading)
-    return <div className="pt-32 text-center">Loading Admin Panel...</div>;
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center pt-32">
+        <LoadingAnimation className="h-24 w-24" />
+      </div>
+    );
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-32 sm:px-6 mb-20">
@@ -271,7 +276,7 @@ export default function AdminDashboard() {
 
             <button
               type="submit"
-              className={`btn w-full text-white ${editingId ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}`}
+              className={`btn w-full text-white ${editingId ? "bg-green-600 hover:bg-green-700" : "bg-blue-primary hover:bg-blue-primary/90"}`}
             >
               {editingId ? "Update Project" : "Create Project"}
             </button>
@@ -285,7 +290,7 @@ export default function AdminDashboard() {
             {projects.map((project) => (
               <div
                 key={project.id}
-                className={`rounded-lg border p-4 transition-colors ${editingId === project.id ? "border-blue-500 bg-blue-50" : "border-gray-100 bg-gray-50"}`}
+                className={`rounded-lg border p-4 transition-colors ${editingId === project.id ? "border-blue-primary bg-blue-primary/90" : "border-gray-100 bg-gray-50"}`}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="overflow-hidden mr-3">
@@ -316,7 +321,7 @@ export default function AdminDashboard() {
                       <a
                         href={project.url}
                         target="_blank"
-                        className="text-blue-600 hover:underline truncate"
+                        className="text-blue-primary hover:underline truncate"
                       >
                         {project.url}
                       </a>

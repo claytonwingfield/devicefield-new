@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import LoadingAnimation from "@/components/loading-animation";
 
 interface ProjectPlannerProps {
   isAuthFlow?: boolean;
@@ -197,7 +198,7 @@ export default function ProjectPlanner({
             <div className="flex gap-4 justify-center">
               <Link
                 href="/signup"
-                className="btn bg-blue-600 text-white hover:bg-blue-700"
+                className="btn bg-blue-primary text-white hover:bg-blue-primary/90"
               >
                 Create Account
               </Link>
@@ -457,11 +458,15 @@ export default function ProjectPlanner({
               disabled={loading}
               className="btn bg-yellow-primary text-gray-900 hover:bg-yellow-400 shadow-lg px-8 font-bold"
             >
-              {loading
-                ? "Submitting..."
-                : isAuthFlow
-                  ? "Start Project"
-                  : "Get My Quote"}
+              {loading ? (
+                <span className="inline-flex h-8 w-8 items-center justify-center">
+                  <LoadingAnimation className="h-8 w-8" />
+                </span>
+              ) : isAuthFlow ? (
+                "Start Project"
+              ) : (
+                "Get My Quote"
+              )}
             </button>
           )}
         </div>

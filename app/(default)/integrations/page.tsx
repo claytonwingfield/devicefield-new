@@ -154,7 +154,7 @@ export default function Integrations() {
 
                 <Link
                   href="#"
-                  className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+                  className="inline-flex items-center text-sm font-medium text-blue-primary hover:text-blue-primary/90"
                 >
                   Learn more{" "}
                   <span className="ml-1 transition-transform group-hover:translate-x-1">

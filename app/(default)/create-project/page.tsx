@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import ProjectPlanner from "@/components/project-planner";
+import LoadingAnimation from "@/components/loading-animation";
 
 export default function CreateProjectPage() {
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,12 @@ export default function CreateProjectPage() {
     checkAuth();
   }, [router, supabase]);
 
-  if (loading) return <div className="pt-32 text-center">Loading...</div>;
+  if (loading)
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center pt-32">
+        <LoadingAnimation className="h-24 w-24" />
+      </div>
+    );
 
   return (
     <section className="relative">

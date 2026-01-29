@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import LoadingAnimation from "@/components/loading-animation";
 
 export default function ResetPassword() {
   const [email, setEmail] = useState("");
@@ -72,9 +73,17 @@ export default function ResetPassword() {
           <button
             type="submit"
             disabled={loading || success}
-            className="btn w-full bg-gradient-to-t from-blue-600 to-blue-500 bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn w-full bg-gradient-to-t from-blue-primary to-blue-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Sending..." : success ? "Email Sent" : "Reset Password"}
+            {loading ? (
+              <span className="inline-flex h-8 w-8 items-center justify-center">
+                <LoadingAnimation className="h-8 w-8" />
+              </span>
+            ) : success ? (
+              "Email Sent"
+            ) : (
+              "Reset Password"
+            )}
           </button>
         </div>
       </form>

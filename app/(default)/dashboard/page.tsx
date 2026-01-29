@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import LoadingAnimation from "@/components/loading-animation";
 
 export default function UserDashboard() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -77,7 +78,11 @@ export default function UserDashboard() {
   };
 
   if (loading)
-    return <div className="pt-32 text-center">Loading Dashboard...</div>;
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center pt-32">
+        <LoadingAnimation className="h-24 w-24" />
+      </div>
+    );
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-32 sm:px-6 mb-20">
@@ -87,14 +92,14 @@ export default function UserDashboard() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Start New Project Card */}
-        <div className="flex flex-col justify-center items-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 shadow-sm transition hover:border-blue-500 hover:bg-blue-50 group cursor-pointer h-full min-h-[300px]">
+        <div className="flex flex-col justify-center items-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 shadow-sm transition hover:border-blue-primary hover:bg-blue-primary/90 hover:text-white group cursor-pointer h-full min-h-[300px]">
           <Link
             href="/create-project"
             className="flex flex-col items-center justify-center w-full h-full text-center"
           >
             <div className="mb-4 rounded-full bg-white p-4 shadow-sm group-hover:scale-110 transition-transform">
               <svg
-                className="h-8 w-8 text-blue-600"
+                className="h-8 w-8 text-blue-primary"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -107,10 +112,10 @@ export default function UserDashboard() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
+            <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-white transition-colors">
               Start a New Project
             </h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 group-hover:text-white transition-colors">
               Launch a new website, app, or integration.
             </p>
           </Link>
@@ -127,7 +132,7 @@ export default function UserDashboard() {
               className="block group"
             >
               <div className="mb-4 flex items-center justify-between">
-                <div className="rounded-full bg-blue-100 p-2 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <div className="rounded-full bg-blue-100 p-2 text-blue-primary group-hover:bg-blue-primary group-hover:text-white transition-colors">
                   <svg
                     className="h-6 w-6"
                     fill="none"
@@ -146,7 +151,7 @@ export default function UserDashboard() {
                   {project.status}
                 </span>
               </div>
-              <h2 className="mb-2 text-xl font-bold text-gray-900 group-hover:text-blue-600">
+              <h2 className="mb-2 text-xl font-bold text-gray-900 group-hover:text-blue-primary">
                 {project.name}
               </h2>
               <p className="mb-4 text-sm text-gray-500 line-clamp-3">
@@ -231,7 +236,7 @@ export default function UserDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                  className="rounded-lg bg-blue-primary px-4 py-2 text-white hover:bg-blue-primary/90"
                 >
                   Submit Request
                 </button>

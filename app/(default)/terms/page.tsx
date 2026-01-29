@@ -53,7 +53,7 @@ export default function Terms() {
         {/* Content Section */}
         <div className="mb-20 max-w-4xl mx-auto">
           <div
-            className="prose max-w-none text-gray-600 prose-headings:text-gray-900 prose-a:text-blue-600 hover:prose-a:text-blue-500"
+            className="prose max-w-none text-gray-600 prose-headings:text-gray-900 prose-a:text-blue-primary hover:prose-a:text-blue-primary"
             data-aos="fade-up"
           >
             <p>

@@ -72,11 +72,11 @@ export default function About() {
             </div>
 
             <div
-              className="group p-8 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:border-blue-500/50"
+              className="group p-8 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:border-blue-primary/50"
               data-aos="fade-up"
               data-aos-delay="100"
             >
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white">
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-primary text-white">
                 <svg
                   className="h-6 w-6"
                   fill="none"

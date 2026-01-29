@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import LoadingAnimation from "@/components/loading-animation";
 
 export default function ProjectDetails() {
   const [project, setProject] = useState<any>(null);
@@ -144,7 +145,11 @@ export default function ProjectDetails() {
   };
 
   if (loading)
-    return <div className="pt-32 text-center">Loading Project...</div>;
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center pt-32">
+        <LoadingAnimation className="h-24 w-24" />
+      </div>
+    );
 
   // Calculate max views for chart scaling
   const maxViews = Math.max(...stats.chartData.map((d) => d.views), 10);
@@ -242,7 +247,7 @@ export default function ProjectDetails() {
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium text-gray-500">Total Views</h3>
-            <span className="rounded-full bg-blue-50 p-2 text-blue-600">
+            <span className="rounded-full bg-blue-50 p-2 text-blue-primary">
               <svg
                 className="h-4 w-4"
                 fill="none"
@@ -362,7 +367,7 @@ export default function ProjectDetails() {
                     {item.views} Views <br /> {item.date}
                   </div>
                   <div
-                    className="w-full max-w-[40px] rounded-t-lg bg-gray-900 opacity-80 transition-all hover:bg-blue-600 hover:opacity-100 min-h-[4px]"
+                    className="w-full max-w-[40px] rounded-t-lg bg-gray-900 opacity-80 transition-all hover:bg-blue-primary hover:opacity-100 min-h-[4px]"
                     style={{
                       height: `${(item.views / maxViews) * 100}%`,
                     }}
@@ -425,7 +430,7 @@ export default function ProjectDetails() {
                     className={`absolute left-[-4px] top-2 h-2 w-2 rounded-full ${
                       req.status === "completed"
                         ? "bg-green-500"
-                        : "bg-blue-500"
+                        : "bg-blue-primary"
                     }`}
                   ></div>
                   <div className="mb-1 text-xs text-gray-400">

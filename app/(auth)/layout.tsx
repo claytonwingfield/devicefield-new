@@ -1,5 +1,6 @@
 import Image from "next/image";
-import Logo from "@/components/ui/logo";
+import Header from "@/components/ui/header";
+import Footer from "@/components/ui/footer";
 import AuthBg from "@/public/images/auth-bg.svg";
 
 export default function AuthLayout({
@@ -9,23 +10,14 @@ export default function AuthLayout({
 }) {
   return (
     <>
-      <header className="absolute z-30 w-full">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex h-16 items-center justify-between md:h-20">
-            {/* Site branding */}
-            <div className="mr-4 shrink-0">
-              <Logo />
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header />
 
-      <main className="relative flex grow">
+      <main className="relative flex grow pt-24 md:pt-28">
         <div
           className="pointer-events-none absolute bottom-0 left-0 -translate-x-1/3"
           aria-hidden="true"
         >
-          <div className="h-80 w-80 rounded-full bg-gradient-to-tr from-blue-500 opacity-70 blur-[160px]"></div>
+          <div className="h-80 w-80 rounded-full bg-gradient-to-tr from-blue-primary opacity-70 blur-[160px]"></div>
         </div>
 
         {/* Content */}
@@ -44,7 +36,7 @@ export default function AuthLayout({
           <div className="relative my-6 mr-6 hidden w-[572px] shrink-0 overflow-hidden rounded-2xl lg:block">
             {/*  */}
             <div
-              className="pointer-events-none absolute left-1/2 top-1/2 -z-10 -ml-24 -translate-x-1/2 -translate-y-1/2 bg-yellow-primary"
+              className="pointer-events-none absolute left-1/2 top-1/2 -z-10 -ml-24 -translate-x-1/2 -translate-y-1/2 bg-yellow-primary/20 blur-3xl"
               aria-hidden="true"
             >
               <Image
@@ -92,6 +84,8 @@ export default function AuthLayout({
           </div>
         </>
       </main>
+
+      <Footer border={true} />
     </>
   );
 }

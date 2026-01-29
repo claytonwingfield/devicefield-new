@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import LoadingAnimation from "@/components/loading-animation";
 
 export default function SignUp() {
   const [name, setName] = useState("");
@@ -84,7 +85,8 @@ export default function SignUp() {
         )}
         {success && (
           <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-600">
-            Account created successfully! Check your email to verify your account, then sign in.
+            Account created successfully! Check your email to verify your
+            account, then sign in.
           </div>
         )}
         <div className="space-y-4">
@@ -163,11 +165,17 @@ export default function SignUp() {
           <button
             type="submit"
             disabled={loading}
-            className="btn w-full bg-gradient-to-t from-blue-600 to-blue-500 bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn w-full bg-gradient-to-t from-blue-primary to-blue-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Creating account..." : "Register"}
+            {loading ? (
+              <span className="inline-flex h-8 w-8 items-center justify-center">
+                <LoadingAnimation className="h-8 w-8" />
+              </span>
+            ) : (
+              "Register"
+            )}
           </button>
-          <div className="text-center text-sm italic text-gray-400">Or</div>
+          {/* <div className="text-center text-sm italic text-gray-400">Or</div>
           <button
             type="button"
             onClick={handleGitHubSignUp}
@@ -175,7 +183,7 @@ export default function SignUp() {
             className="btn w-full bg-gradient-to-t from-gray-900 to-gray-700 bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue with GitHub
-          </button>
+          </button> */}
         </div>
       </form>
 

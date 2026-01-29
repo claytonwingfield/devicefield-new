@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import LoadingAnimation from "@/components/loading-animation";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -26,7 +27,7 @@ export default function SignIn() {
 
       if (error) throw error;
 
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch (error: any) {
       setError(error.message || "An error occurred during sign in");
@@ -88,9 +89,15 @@ export default function SignIn() {
           <button
             type="submit"
             disabled={loading}
-            className="btn w-full bg-gradient-to-t from-blue-600 to-blue-500 bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn w-full bg-gradient-to-t from-blue-primary to-blue-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? (
+              <span className="inline-flex h-8 w-8 items-center justify-center">
+                <LoadingAnimation className="h-8 w-8" />
+              </span>
+            ) : (
+              "Sign In"
+            )}
           </button>
         </div>
       </form>
