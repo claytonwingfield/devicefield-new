@@ -164,10 +164,10 @@ export default function HeroHome() {
                   onClick={() => setIsScheduleOpen(true)}
                   initial="initial"
                   whileHover="hovered"
-                  className="group flex items-center rounded-full bg-black p-1.5 pr-6  transition-all duration-300 hover:ring-white hover:shadow-xl hover:-translate-y-0.5"
+                  className="group flex items-center rounded-lg bg-black p-1.5 pr-6  transition-all duration-300 hover:ring-white hover:shadow-xl hover:-translate-y-0.5"
                 >
                   {/* Avatar Image */}
-                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10">
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10">
                     <Image
                       src="/images/clayton.jpg"
                       alt="Clayton"
