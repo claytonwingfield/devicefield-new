@@ -1,7 +1,8 @@
+// app/(auth)/reset-password/confirm/page.tsx
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation"; // Removed useSearchParams
 import { createClient } from "@/lib/supabase/client";
 import LoadingAnimation from "@/components/loading-animation";
 
@@ -11,16 +12,23 @@ function ConfirmResetPasswordContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // Removed searchParams
   const supabase = createClient();
 
+  // Optional: Check if user is actually logged in
   useEffect(() => {
-    // Check if we have the necessary tokens in the URL
-    const code = searchParams.get("code");
-    if (!code) {
-      setError("Invalid reset link. Please request a new password reset.");
-    }
-  }, [searchParams]);
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        setError(
+          "Invalid or expired session. Please try resetting your password again.",
+        );
+      }
+    };
+    checkSession();
+  }, [supabase.auth]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +53,7 @@ function ConfirmResetPasswordContent() {
 
       if (error) throw error;
 
-      router.push("/signin");
+      router.push("/dashboard");
       router.refresh();
     } catch (error: any) {
       setError(error.message || "An error occurred while updating password");
@@ -60,7 +68,6 @@ function ConfirmResetPasswordContent() {
         <h1 className="text-4xl font-bold">Set new password</h1>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleUpdatePassword}>
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
@@ -129,14 +136,7 @@ function ConfirmResetPasswordContent() {
 
 export default function ConfirmResetPassword() {
   return (
-    <Suspense
-      fallback={
-        <div className="mb-10">
-          <div className="h-10 w-48 animate-pulse rounded bg-gray-200" />
-          <div className="mt-4 h-32 w-full animate-pulse rounded bg-gray-100" />
-        </div>
-      }
-    >
+    <Suspense fallback={<div>Loading...</div>}>
       <ConfirmResetPasswordContent />
     </Suspense>
   );

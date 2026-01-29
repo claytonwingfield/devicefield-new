@@ -1,15 +1,7 @@
-"use client";
-
-import dynamic from "next/dynamic";
 import Image from "next/image";
-import Link from "next/link";
 import PageIllustration from "@/components/page-illustration";
 import BusinessCategories from "@/components/business-categories";
-
-const WebsiteAnimation = dynamic(() => import("./websiteAnimation"), {
-  ssr: false,
-});
-
+import WebsiteAnimation from "./websiteAnimation";
 export default function HeroHome() {
   return (
     <section className="relative lg:mb-12 mb-16">
@@ -51,9 +43,9 @@ export default function HeroHome() {
                   data-aos="zoom-y-out"
                   data-aos-delay={450}
                 >
-                  <Link
+                  <a
                     className="btn group mb-4 w-full bg-gradient-to-t from-black to-gray-900  bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto"
-                    href="/get-started"
+                    href="#0"
                   >
                     <span className="relative inline-flex items-center ">
                       Get Started{" "}
@@ -61,17 +53,10 @@ export default function HeroHome() {
                         -&gt;
                       </span>
                     </span>
-                  </Link>
+                  </a>
                   <a
-                    className="btn w-full bg-white text-gray-800 shadow hover:bg-gray-50 sm:ml-4 sm:w-auto"
-                    href="#services"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const element = document.getElementById("services");
-                      if (element) {
-                        element.scrollIntoView({ behavior: "smooth" });
-                      }
-                    }}
+                    className="btn w-full bg-white text-gray-800 shadow hover:bg-gray-50 sm:ml-4 sm:w-auto md:mb-0 mb-24"
+                    href="#0"
                   >
                     Learn More
                   </a>
