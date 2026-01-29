@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 import React, { useRef, useEffect } from "react";
 import * as THREE from "three";
@@ -130,8 +131,6 @@ export default function FeaturesPlanet() {
     // ——————————————————————————
     // HANDLE RESIZE (ResizeObserver)
     // ——————————————————————————
-    // This is the key fix for the "jumping" issue. It watches the container size
-    // and updates the renderer immediately when the layout settles.
     const onResize = (entries: ResizeObserverEntry[]) => {
       if (!Array.isArray(entries) || !entries.length) return;
 
@@ -167,7 +166,6 @@ export default function FeaturesPlanet() {
 
       // Cleanup DOM
       if (globeContainerRef.current) {
-        // Remove all children to be safe
         while (globeContainerRef.current.firstChild) {
           globeContainerRef.current.removeChild(
             globeContainerRef.current.firstChild,
@@ -181,15 +179,16 @@ export default function FeaturesPlanet() {
     <section
       id="services"
       className="relative before:absolute before:inset-0 before:-z-20 before:content-[''] before:bg-black z-40"
-      data-aos="zoom-y-out"
-      data-aos-delay={50}
     >
       <div className="mx-auto max-w-full px-4 sm:px-6">
         {/* Section header */}
-        <div
-          className="text-center "
-          data-aos="zoom-y-out"
-          data-aos-delay={200}
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          // CHANGED: once: false ensures it fades out when scrolling back up
+          viewport={{ once: false, margin: "-150px" }}
+          transition={{ duration: 1, ease: "easeOut" }}
         >
           <span
             className="absolute mt-8 bg-gradient-to-r blur-xl from-white via-yellow-primary to-white bg-clip-text lg:text-5xl text-4xl font-extrabold text-transparent select-none"
@@ -210,61 +209,59 @@ export default function FeaturesPlanet() {
           >
             Your Vision <br /> Delivered Worldwide
           </h2>
-        </div>
+        </motion.div>
 
         {/* Globe Container + Grid Wrapper */}
         <div className="relative">
           {/* Globe Container Wrapper */}
-          {/* FIX: Added 'relative' here to act as the anchor for the absolute child */}
           <div
             className="relative flex items-center justify-center h-[300px] sm:h-[400px] md:h-[500px]"
             data-aos="zoom-y-out"
             data-aos-delay={300}
           >
-            {/* FIX: Changed to absolute inset-0 to force perfect fit and ignore flex alignment issues */}
             <div
               ref={globeContainerRef}
               className="absolute inset-0 w-full h-full"
             />
           </div>
 
-          {/* Grid Section... (Same as before) */}
+          {/* Grid Section */}
           <div
             className="
-    relative
-    z-10
-    mt-[-150px]         
-    sm:mt-[-200px]       
-    backdrop-blur-sm    
-    bg-white/10         
-    rounded-xl          
-    p-4                  
-  "
+              relative
+              z-10
+              mt-[-150px]         
+              sm:mt-[-200px]       
+              backdrop-blur-sm    
+              bg-white/10         
+              rounded-xl          
+              p-4                  
+            "
             data-aos="zoom-y-out"
             data-aos-delay={150}
           >
             <div
               className="
-      grid 
-      overflow-hidden
-      sm:grid-cols-2 
-      lg:grid-cols-3
-      [&>*]:relative
-      [&>*]:p-6
-      [&>*]:before:absolute
-      [&>*]:before:bg-gray-800
-      [&>*]:before:[block-size:100vh]
-      [&>*]:before:[inline-size:1px]
-      [&>*]:before:[inset-block-start:0]
-      [&>*]:before:[inset-inline-start:-1px]
-      [&>*]:after:absolute
-      [&>*]:after:bg-gray-800
-      [&>*]:after:[block-size:1px]
-      [&>*]:after:[inline-size:100vw]
-      [&>*]:after:[inset-block-start:-1px]
-      [&>*]:after:[inset-inline-start:0]
-      md:[&>*]:p-10
-    "
+                grid 
+                overflow-hidden
+                sm:grid-cols-2 
+                lg:grid-cols-3
+                [&>*]:relative
+                [&>*]:p-6
+                [&>*]:before:absolute
+                [&>*]:before:bg-gray-800
+                [&>*]:before:[block-size:100vh]
+                [&>*]:before:[inline-size:1px]
+                [&>*]:before:[inset-block-start:0]
+                [&>*]:before:[inset-inline-start:-1px]
+                [&>*]:after:absolute
+                [&>*]:after:bg-gray-800
+                [&>*]:after:[block-size:1px]
+                [&>*]:after:[inline-size:100vw]
+                [&>*]:after:[inset-block-start:-1px]
+                [&>*]:after:[inset-inline-start:0]
+                md:[&>*]:p-10
+              "
             >
               {/* Box 1: Website Development */}
               <Link
@@ -304,7 +301,6 @@ export default function FeaturesPlanet() {
                   user-centric layouts, and adaptable solutions that enhance
                   user engagement and foster business expansion.
                 </p>
-                {/* Changed inner Link to span with group-hover logic */}
                 <span className="inline-flex items-center text-sm font-medium text-yellow-primary group-hover:text-yellow-400 transition-colors">
                   Learn More
                   <svg

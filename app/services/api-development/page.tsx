@@ -1,5 +1,11 @@
-import ServiceLayout from "@/components/service-layout";
+import ServiceLayout, { FeatureItem } from "@/components/service-layout";
 import { ApiVisual } from "@/components/service-visuals";
+import { GitBranchIcon } from "@/components/ui/git-branch";
+import { BookTextIcon } from "@/components/ui/book-text";
+import { LockKeyholeIcon } from "@/components/ui/lock-keyhole";
+import { BadgeAlertIcon } from "@/components/ui/badge-alert";
+import { FileStackIcon } from "@/components/ui/file-stack";
+import { CctvIcon } from "@/components/ui/cctv";
 
 export const metadata = {
   title: "API Development - DeviceField",
@@ -7,6 +13,15 @@ export const metadata = {
 };
 
 export default function APIDevelopmentPage() {
+  const features: FeatureItem[] = [
+    { title: "RESTful & GraphQL APIs", icon: <GitBranchIcon size={24} /> },
+    { title: "API Documentation", icon: <BookTextIcon size={24} /> },
+    { title: "Authentication & Security", icon: <LockKeyholeIcon size={24} /> },
+    { title: "Rate Limiting", icon: <BadgeAlertIcon size={24} /> },
+    { title: "Versioning", icon: <FileStackIcon size={24} /> },
+    { title: "Testing & Monitoring", icon: <CctvIcon size={24} /> },
+  ];
+
   return (
     <ServiceLayout
       title="API Development"
@@ -29,14 +44,7 @@ export default function APIDevelopmentPage() {
           />
         </svg>
       }
-      features={[
-        "RESTful & GraphQL APIs",
-        "API Documentation",
-        "Authentication & Security",
-        "Rate Limiting",
-        "Versioning",
-        "Testing & Monitoring",
-      ]}
+      features={features}
       benefits={[
         "RESTful and GraphQL APIs for flexible data access",
         "Comprehensive documentation for easy integration",

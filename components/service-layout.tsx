@@ -114,7 +114,7 @@ export default function ServiceLayout({
                 data-aos-delay={index * 50}
               >
                 <div>
-                  <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-900 group-hover:bg-yellow-primary group-hover:text-black transition-colors">
+                  <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-900 group-hover:bg-yellow-primary group-hover:text-black transition-colors [&>div]:w-full [&>div]:h-full [&_svg]:w-6 [&_svg]:h-6 [&_svg]:text-current">
                     {featureIcon}
                   </div>
                   <h3 className="text-xl font-bold text-gray-900">

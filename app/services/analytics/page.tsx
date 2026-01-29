@@ -1,5 +1,11 @@
-import ServiceLayout from "@/components/service-layout";
+import ServiceLayout, { FeatureItem } from "@/components/service-layout";
 import { AnalyticsVisual } from "@/components/service-visuals";
+import { ClockIcon } from "@/components/ui/clock";
+import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
+import { CursorClickIcon } from "@/components/ui/cursor-click";
+import { EarthIcon } from "@/components/ui/earth";
+import { GalleryThumbnailsIcon } from "@/components/ui/gallery-thumbnails";
+import { HardDriveDownloadIcon } from "@/components/ui/hard-drive-download";
 
 export const metadata = {
   title: "Instant Analytics - DeviceField",
@@ -7,6 +13,18 @@ export const metadata = {
 };
 
 export default function AnalyticsPage() {
+  const features: FeatureItem[] = [
+    { title: "Real-Time Tracking", icon: <ClockIcon size={24} /> },
+    {
+      title: "Page View Analytics",
+      icon: <ChartColumnIncreasingIcon size={24} />,
+    },
+    { title: "User Behavior Insights", icon: <CursorClickIcon size={24} /> },
+    { title: "Traffic Sources", icon: <EarthIcon size={24} /> },
+    { title: "Custom Dashboards", icon: <GalleryThumbnailsIcon size={24} /> },
+    { title: "Export & Reporting", icon: <HardDriveDownloadIcon size={24} /> },
+  ];
+
   return (
     <ServiceLayout
       title="Instant Analytics"
@@ -29,14 +47,7 @@ export default function AnalyticsPage() {
           />
         </svg>
       }
-      features={[
-        "Real-Time Tracking",
-        "Page View Analytics",
-        "User Behavior Insights",
-        "Traffic Sources",
-        "Custom Dashboards",
-        "Export & Reporting",
-      ]}
+      features={features}
       benefits={[
         "See visitor activity as it happens in real-time",
         "Track which pages are most popular and engaging",

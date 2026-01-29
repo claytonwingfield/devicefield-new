@@ -21,9 +21,10 @@ export default function RootLayout({
 }) {
   return (
     /* Removed "scroll-smooth" from className below */
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body
-        className={`${inter.variable} bg-gray-50 font-inter tracking-tight text-gray-900 antialiased`}
+        className="bg-gray-50 font-inter tracking-tight text-gray-900 antialiased"
+        suppressHydrationWarning
       >
         <div className="flex min-h-screen flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">
           {children}

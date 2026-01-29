@@ -1,5 +1,11 @@
-import ServiceLayout from "@/components/service-layout";
+import ServiceLayout, { FeatureItem } from "@/components/service-layout";
 import { AppVisual } from "@/components/service-visuals";
+import { GripIcon } from "@/components/ui/grip";
+import { RouteIcon } from "@/components/ui/route";
+import { ScanFaceIcon } from "@/components/ui/scan-face";
+import { BellIcon } from "@/components/ui/bell";
+import { RefreshCWOffIcon } from "@/components/ui/refresh-cw-off";
+import { ChartLineIcon } from "@/components/ui/chart-line";
 
 export const metadata = {
   title: "App Development - DeviceField",
@@ -8,6 +14,15 @@ export const metadata = {
 };
 
 export default function AppDevelopmentPage() {
+  const features: FeatureItem[] = [
+    { title: "iOS & Android Development", icon: <GripIcon size={24} /> },
+    { title: "Native & Cross-Platform", icon: <RouteIcon size={24} /> },
+    { title: "App Store Optimization", icon: <ScanFaceIcon size={24} /> },
+    { title: "Push Notifications", icon: <BellIcon size={24} /> },
+    { title: "Offline Functionality", icon: <RefreshCWOffIcon size={24} /> },
+    { title: "Analytics Integration", icon: <ChartLineIcon size={24} /> },
+  ];
+
   return (
     <ServiceLayout
       title="App Development"
@@ -27,14 +42,7 @@ export default function AppDevelopmentPage() {
           <line x1="12" y1="18" x2="12.01" y2="18" />
         </svg>
       }
-      features={[
-        "iOS & Android Development",
-        "Native & Cross-Platform",
-        "App Store Optimization",
-        "Push Notifications",
-        "Offline Functionality",
-        "Analytics Integration",
-      ]}
+      features={features}
       benefits={[
         "Native performance with smooth user experience",
         "Cross-platform solutions reducing development time and cost",

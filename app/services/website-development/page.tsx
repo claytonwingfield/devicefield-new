@@ -1,5 +1,11 @@
-import ServiceLayout from "@/components/service-layout";
+import ServiceLayout, { FeatureItem } from "@/components/service-layout";
 import { WebsiteVisual } from "@/components/service-visuals";
+import { ExpandIcon } from "@/components/ui/expand";
+import { PenToolIcon } from "@/components/ui/pen-tool";
+import { CloudCogIcon } from "@/components/ui/cloud-cog";
+import { SearchIcon } from "@/components/ui/search";
+import { SquareStackIcon } from "@/components/ui/square-stack";
+import { CartIcon } from "@/components/ui/cart";
 
 export const metadata = {
   title: "Website Development - DeviceField",
@@ -8,6 +14,15 @@ export const metadata = {
 };
 
 export default function WebsiteDevelopmentPage() {
+  const features: FeatureItem[] = [
+    { title: "Responsive Design", icon: <ExpandIcon size={24} /> },
+    { title: "UX/UI", icon: <PenToolIcon size={24} /> },
+    { title: "Performance Optimization", icon: <CloudCogIcon size={24} /> },
+    { title: "SEO-Friendly", icon: <SearchIcon size={24} /> },
+    { title: "Content Management", icon: <SquareStackIcon size={24} /> },
+    { title: "E-commerce Integration", icon: <CartIcon size={24} /> },
+  ];
+
   return (
     <ServiceLayout
       title="Website Development"
@@ -30,14 +45,7 @@ export default function WebsiteDevelopmentPage() {
           />
         </svg>
       }
-      features={[
-        "Responsive Design",
-        "Modern UI/UX",
-        "Performance Optimization",
-        "SEO-Friendly",
-        "Content Management",
-        "E-commerce Integration",
-      ]}
+      features={features}
       benefits={[
         "Custom solutions tailored to your brand and business goals",
         "Mobile-first approach ensuring perfect display on all devices",
