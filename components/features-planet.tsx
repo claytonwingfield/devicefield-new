@@ -2,12 +2,82 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 
 import React, { useRef, useEffect } from "react";
 import * as THREE from "three";
 import ThreeGlobe from "three-globe";
 import BusinessCategories from "@/components/business-categories";
+
+// ——————————————————————————————————————————————————————————————————————————
+// SCROLL REVEAL HELPER COMPONENTS
+// ——————————————————————————————————————————————————————————————————————————
+
+const ScrollRevealSpan = ({
+  children,
+  progress,
+  range,
+  className,
+}: {
+  children: string;
+  progress: MotionValue<number>;
+  range: [number, number];
+  className?: string;
+}) => {
+  // Opacity: Starts at 0.1 (Gray/Faded) and goes to 1 (Solid White/Black)
+  const opacity = useTransform(progress, range, [0.1, 1]);
+  // Blur: Adds a subtle blur to the unread text for extra depth
+  const filter = useTransform(progress, range, ["blur(1px)", "blur(0px)"]);
+
+  return (
+    <motion.span
+      style={{ opacity, filter }}
+      className={`inline-block mr-[0.25em] transition-colors duration-200 ${className}`}
+    >
+      {children}
+    </motion.span>
+  );
+};
+
+const ScrollRevealParagraph = ({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) => {
+  const element = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: element,
+    // Start revealing when the top of the text hits 90% of the viewport height
+    // Finish revealing when it hits 50% (center)
+    offset: ["start 0.9", "start 0.5"],
+  });
+
+  const words = text.split(" ");
+
+  return (
+    <p ref={element} className={`flex flex-wrap justify-center ${className}`}>
+      {words.map((word, i) => {
+        const start = i / words.length;
+        const end = start + 1 / words.length;
+        return (
+          <ScrollRevealSpan
+            key={i}
+            range={[start, end]}
+            progress={scrollYProgress}
+          >
+            {word}
+          </ScrollRevealSpan>
+        );
+      })}
+    </p>
+  );
+};
+
+// ——————————————————————————————————————————————————————————————————————————
+// MAIN COMPONENT
+// ——————————————————————————————————————————————————————————————————————————
 
 export default function FeaturesPlanet() {
   const globeContainerRef = useRef<HTMLDivElement>(null);
@@ -186,7 +256,6 @@ export default function FeaturesPlanet() {
           className="text-center"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
-          // CHANGED: once: false ensures it fades out when scrolling back up
           viewport={{ once: false, margin: "-150px" }}
           transition={{ duration: 1, ease: "easeOut" }}
         >
@@ -296,10 +365,7 @@ export default function FeaturesPlanet() {
                 </h3>
                 <p className="mb-4 text-[15px] text-gray-400">
                   We create robust, visually appealing websites customized to
-                  meet your unique business objectives. From initial design to
-                  full-scale deployment, we guarantee flawless performance,
-                  user-centric layouts, and adaptable solutions that enhance
-                  user engagement and foster business expansion.
+                  meet your unique business objectives.
                 </p>
                 <span className="inline-flex items-center text-sm font-medium text-yellow-primary group-hover:text-yellow-400 transition-colors">
                   Learn More
@@ -342,10 +408,7 @@ export default function FeaturesPlanet() {
                 </h3>
                 <p className="mb-4 text-[15px] text-gray-400">
                   We building high-performance, user-friendly mobile
-                  applications tailored to your business needs. From concept to
-                  deployment, we ensure seamless functionality, intuitive
-                  interfaces, and scalable solutions that drive engagement and
-                  growth.
+                  applications tailored to your business needs.
                 </p>
                 <span className="inline-flex items-center text-sm font-medium text-yellow-primary group-hover:text-yellow-400 transition-colors">
                   Learn More
@@ -380,25 +443,7 @@ export default function FeaturesPlanet() {
                     id="Api"
                   >
                     <path
-                      d="M50.272,20.325c-0.222-5.283-4.548-9.512-9.835-9.512c-1.688,0-3.323,0.438-4.795,1.276C33.246,9.475,29.935,8,26.375,8
-c-6.838,0-12.426,5.491-12.649,12.326C10.262,21.953,8,25.394,8,29.187c0,4.978,3.749,9.104,8.598,9.754
-c0.079,0.795,0.229,1.605,0.453,2.443l-1.774,1.025c-0.672,0.388-0.903,1.248-0.515,1.921l2.813,4.871
-c0.388,0.672,1.248,0.903,1.921,0.515l1.779-1.027c1.861,1.822,4.078,3.123,6.507,3.817v2.088c0,0.777,0.629,1.406,1.406,1.406
-h5.625c0.777,0,1.406-0.629,1.406-1.406v-2.088c2.429-0.694,4.646-1.995,6.507-3.817l1.779,1.027
-c0.672,0.388,1.533,0.158,1.921-0.515l2.812-4.871c0.388-0.673,0.158-1.533-0.515-1.921l-1.774-1.025
-c0.224-0.837,0.374-1.647,0.453-2.443C52.25,38.291,56,34.165,56,29.187C56,25.394,53.737,21.952,50.272,20.325L50.272,20.325z
- M44.693,46.577l-1.519-0.876c-0.578-0.334-1.311-0.215-1.754,0.284c-1.871,2.106-4.253,3.504-6.889,4.041
-c-0.655,0.133-1.125,0.709-1.125,1.378v1.784h-2.812v-1.784c0-0.668-0.47-1.245-1.125-1.378c-2.635-0.537-5.017-1.935-6.889-4.041
-c-0.443-0.499-1.176-0.618-1.754-0.284l-1.518,0.876l-1.406-2.436l1.521-0.878c0.579-0.334,0.842-1.03,0.63-1.664
-c-0.301-0.9-0.504-1.75-0.613-2.568h2.818c0.684,4.764,4.792,8.438,9.743,8.438c4.951,0,9.059-3.673,9.743-8.438h2.818
-c-0.109,0.819-0.312,1.669-0.613,2.569c-0.212,0.634,0.052,1.33,0.63,1.664l1.521,0.878L44.693,46.577z M25.11,39.03H38.89
-c-0.653,3.207-3.494,5.626-6.89,5.626C28.604,44.656,25.764,42.237,25.11,39.03L25.11,39.03z M46.062,36.219H17.938
-c-3.929,0-7.125-3.154-7.125-7.031c0-2.947,1.939-5.602,4.826-6.608c0.587-0.205,0.97-0.77,0.943-1.39
-c-0.006-0.145-0.025-0.271-0.038-0.362c-0.004-0.03-0.01-0.069-0.012-0.088c0.006-5.475,4.419-9.926,9.844-9.926
-c3.105,0,5.971,1.452,7.862,3.983c0.224,0.3,0.559,0.499,0.93,0.551c0.371,0.053,0.748-0.045,1.046-0.272
-c1.25-0.948,2.711-1.449,4.224-1.449c3.874,0,7.027,3.192,7.031,7.117c-0.002,0.02-0.008,0.066-0.013,0.1
-c-0.012,0.087-0.027,0.196-0.035,0.324c-0.038,0.628,0.347,1.205,0.941,1.412c2.886,1.006,4.826,3.661,4.826,6.608
-C53.188,33.064,49.991,36.219,46.062,36.219L46.062,36.219z"
+                      d="M50.272,20.325c-0.222-5.283-4.548-9.512-9.835-9.512c-1.688,0-3.323,0.438-4.795,1.276C33.246,9.475,29.935,8,26.375,8c-6.838,0-12.426,5.491-12.649,12.326C10.262,21.953,8,25.394,8,29.187c0,4.978,3.749,9.104,8.598,9.754c0.079,0.795,0.229,1.605,0.453,2.443l-1.774,1.025c-0.672,0.388-0.903,1.248-0.515,1.921l2.813,4.871c0.388,0.672,1.248,0.903,1.921,0.515l1.779-1.027c1.861,1.822,4.078,3.123,6.507,3.817v2.088c0,0.777,0.629,1.406,1.406,1.406h5.625c0.777,0,1.406-0.629,1.406-1.406v-2.088c2.429-0.694,4.646-1.995,6.507-3.817l1.779,1.027c0.672,0.388,1.533,0.158,1.921-0.515l2.812-4.871c0.388-0.673,0.158-1.533-0.515-1.921l-1.774-1.025c0.224-0.837,0.374-1.647,0.453-2.443C52.25,38.291,56,34.165,56,29.187C56,25.394,53.737,21.952,50.272,20.325L50.272,20.325z M44.693,46.577l-1.519-0.876c-0.578-0.334-1.311-0.215-1.754,0.284c-1.871,2.106-4.253,3.504-6.889,4.041c-0.655,0.133-1.125,0.709-1.125,1.378v1.784h-2.812v-1.784c0-0.668-0.47-1.245-1.125-1.378c-2.635-0.537-5.017-1.935-6.889-4.041c-0.443-0.499-1.176-0.618-1.754-0.284l-1.518,0.876l-1.406-2.436l1.521-0.878c0.579-0.334,0.842-1.03,0.63-1.664c-0.301-0.9-0.504-1.75-0.613-2.568h2.818c0.684,4.764,4.792,8.438,9.743,8.438c4.951,0,9.059-3.673,9.743-8.438h2.818c-0.109,0.819-0.312,1.669-0.613,2.569c-0.212,0.634,0.052,1.33,0.63,1.664l1.521,0.878L44.693,46.577z M25.11,39.03H38.89c-0.653,3.207-3.494,5.626-6.89,5.626C28.604,44.656,25.764,42.237,25.11,39.03L25.11,39.03z M46.062,36.219H17.938c-3.929,0-7.125-3.154-7.125-7.031c0-2.947,1.939-5.602,4.826-6.608c0.587-0.205,0.97-0.77,0.943-1.39c-0.006-0.145-0.025-0.271-0.038-0.362c-0.004-0.03-0.01-0.069-0.012-0.088c0.006-5.475,4.419-9.926,9.844-9.926c3.105,0,5.971,1.452,7.862,3.983c0.224,0.3,0.559,0.499,0.93,0.551c0.371,0.053,0.748-0.045,1.046-0.272c1.25-0.948,2.711-1.449,4.224-1.449c3.874,0,7.027,3.192,7.031,7.117c-0.002,0.02-0.008,0.066-0.013,0.1c-0.012,0.087-0.027,0.196-0.035,0.324c-0.038,0.628,0.347,1.205,0.941,1.412c2.886,1.006,4.826,3.661,4.826,6.608C53.188,33.064,49.991,36.219,46.062,36.219L46.062,36.219z"
                       fill="#ffeb3b"
                       className="color000000 svgShape"
                     ></path>
@@ -408,8 +453,7 @@ C53.188,33.064,49.991,36.219,46.062,36.219L46.062,36.219z"
                 <p className="mb-4 text-[15px] text-gray-400">
                   We offer robust and scalable APIs that enable seamless
                   integration between your applications and third-party
-                  services, ensuring efficient data exchange, enhanced
-                  functionality, and secure communication channels.
+                  services.
                 </p>
                 <span className="inline-flex items-center text-sm font-medium text-yellow-primary group-hover:text-yellow-400 transition-colors">
                   Learn More
@@ -444,8 +488,7 @@ C53.188,33.064,49.991,36.219,46.062,36.219L46.062,36.219z"
                 </h3>
                 <p className="mb-4 text-[15px] text-gray-400">
                   Collect essential insights about how visitors are using your
-                  site with in-depth page view metrics like pages, referring
-                  sites, and more.
+                  site with in-depth page view metrics.
                 </p>
                 <span className="inline-flex items-center text-sm font-medium text-yellow-primary group-hover:text-yellow-400 transition-colors">
                   Learn More
@@ -479,9 +522,8 @@ C53.188,33.064,49.991,36.219,46.062,36.219L46.062,36.219z"
                   <span>Metadata</span>
                 </h3>
                 <p className="mb-4 text-[15px] text-gray-400">
-                  Collect essential insights about how visitors are using your
-                  site with in-depth page view metrics like pages, referring
-                  sites, and more.
+                  Optimize your content delivery with structured metadata
+                  solutions.
                 </p>
                 <span className="inline-flex items-center text-sm font-medium text-yellow-primary group-hover:text-yellow-400 transition-colors">
                   Learn More
@@ -522,9 +564,8 @@ C53.188,33.064,49.991,36.219,46.062,36.219L46.062,36.219z"
                   <span>SEO &amp; Performance</span>
                 </h3>
                 <p className="mb-4 text-[15px] text-gray-400">
-                  Collect essential insights about how visitors are using your
-                  site with in-depth page view metrics like pages, referring
-                  sites, and more.
+                  Enhance your site speed and search engine rankings with our
+                  optimizations.
                 </p>
                 <span className="inline-flex items-center text-sm font-medium text-yellow-primary group-hover:text-yellow-400 transition-colors">
                   Learn More
@@ -547,39 +588,38 @@ C53.188,33.064,49.991,36.219,46.062,36.219L46.062,36.219z"
           </div>
         </div>
       </div>
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 mt-4 pb-6">
-        <div
-          className="relative overflow-hidden rounded-2xl text-center shadow-xl before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-2xl before:bg-black border border-yellow-primary"
-          data-aos="zoom-y-out"
-        >
-          {/* Glow */}
-          <div
-            className="absolute bottom-0 left-1/2 -z-10 -translate-x-1/2 translate-y-1/2"
-            aria-hidden="true"
-          >
-            <div className="h-56 w-[480px] rounded-full border-[20px] border-yellow-primary blur-3xl" />
-          </div>
-          {/* Stripes illustration */}
 
-          <div className="px-4 py-12 md:px-12 md:py-20">
-            <h2 className="mb-6  text-3xl font-bold text-gray-200  md:mb-12 md:text-4xl">
-              Create your next project with us
-            </h2>
-            <div className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center">
-              <Link
-                className="btn group mb-4 w-full bg-gradient-to-t from-yellow-primary to-yellow-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto"
-                href="/get-started"
-              >
-                <span className="relative inline-flex items-center text-black">
-                  Get Started{" "}
-                  <span className="ml-1 tracking-normal text-black transition-transform group-hover:translate-x-0.5">
-                    -&gt;
-                  </span>
-                </span>
-              </Link>
-            </div>
-          </div>
+      {/* NEW SCROLL REVEAL SECTION */}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 mt-16 pb-24 text-center">
+        {/* Paragraph 1 - Updated for Tech/Evaluations */}
+        <ScrollRevealParagraph
+          className="text-2xl md:text-5xl font-semibold text-white leading-relaxed mb-16 max-w-5xl mx-auto"
+          text="Your users don’t just visit. They validate. In seconds, they demand clarity, performance, and proof of scale. Anything less is a bounce."
+        />
+
+        {/* Paragraph 2 - Updated for Authority/Building */}
+        <ScrollRevealParagraph
+          className="text-2xl md:text-5xl font-semibold text-white leading-relaxed max-w-5xl mx-auto"
+          text="We engineer digital dominance. A sharper message. A robust architecture. A conversion-first platform that commands authority globally."
+        />
+
+        {/* Call to Action Button */}
+        <div className="mt-16 flex justify-center">
+          <Link
+            className="btn group mb-4 w-full bg-gradient-to-t from-yellow-primary to-yellow-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto px-10 py-4 rounded-full font-bold text-lg"
+            href="/get-started"
+          >
+            <span className="relative inline-flex items-center text-black">
+              Get Started{" "}
+              <span className="ml-1 tracking-normal text-black transition-transform group-hover:translate-x-0.5">
+                -&gt;
+              </span>
+            </span>
+          </Link>
         </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pb-6">
         <BusinessCategories />
       </div>
     </section>

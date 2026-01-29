@@ -1,10 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import WebsiteAnimation from "./websiteAnimation";
-
+import ScheduleModal from "@/components/calender-hero";
 export default function HeroHome() {
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const { scrollY } = useScroll();
 
   // Animation Logic
@@ -159,10 +161,10 @@ export default function HeroHome() {
               >
                 {/* 1. Book an Intro Call Button (Animated Text) */}
                 <motion.a
-                  href="/schedule"
+                  onClick={() => setIsScheduleOpen(true)}
                   initial="initial"
                   whileHover="hovered"
-                  className="group flex items-center rounded-full bg-black p-1.5 pr-6 ring-4 ring-black transition-all duration-300 hover:ring-white hover:shadow-xl hover:-translate-y-0.5"
+                  className="group flex items-center rounded-full bg-black p-1.5 pr-6  transition-all duration-300 hover:ring-white hover:shadow-xl hover:-translate-y-0.5"
                 >
                   {/* Avatar Image */}
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10">
@@ -175,9 +177,12 @@ export default function HeroHome() {
                   </div>
 
                   {/* Text Column */}
-                  <div className="ml-3 flex flex-col text-left">
+                  <div className="ml-3 flex flex-col text-left cursor-pointer">
                     {/* Main Label: "Book an intro call" with Snake Animation */}
-                    <div className="relative flex h-5 items-start overflow-hidden">
+                    <div
+                      className="relative flex h-5 items-start overflow-hidden cursor-pointer"
+                      onClick={() => setIsScheduleOpen(true)}
+                    >
                       {"Book an intro call".split("").map((letter, i) => (
                         <motion.div
                           key={i}
@@ -251,6 +256,10 @@ export default function HeroHome() {
           </div>
         </div>
       </div>
+      <ScheduleModal
+        isOpen={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+      />
     </section>
   );
 }
