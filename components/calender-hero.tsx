@@ -42,7 +42,7 @@ export default function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 sm:p-6"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto overscroll-contain"
           role="dialog"
           aria-modal="true"
         >
@@ -81,10 +81,10 @@ export default function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
               stiffness: 300,
               duration: 0.3,
             }}
-            className="relative w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-2xl px-8"
+            className="relative w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-2xl px-8 max-h-[min(650px,calc(100dvh-8rem))]"
           >
             {/* Cal.com Embed Container */}
-            <div className="h-[650px] w-full">
+            <div className="h-[650px] max-h-[calc(100dvh-10rem)] w-full overflow-auto">
               <Cal
                 namespace="30min"
                 calLink="devicefield-llc-1dnclf/30min"
@@ -95,7 +95,6 @@ export default function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
                   theme: "light",
                 }}
               />
-              ;
             </div>
           </motion.div>
         </div>

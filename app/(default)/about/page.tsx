@@ -109,20 +109,27 @@ export default function About() {
           </div>
 
           {/* Contact Section */}
-          <div className="max-w-3xl mx-auto mt-24">
-            <div className="text-center mb-10">
-              <h2 className="mb-4 text-3xl font-bold text-gray-900">
-                Get in Touch
-              </h2>
-              <p className="text-gray-600">
-                Have a question or want to work together? We'd love to hear from
-                you.
-              </p>
+          <section
+            id="contact-form"
+            className="relative mb-20 overflow-hidden rounded-3xl bg-gradient-to-br from-blue-primary via-blue-primary/95 to-yellow-primary/80 px-6 py-16 shadow-2xl sm:px-12 lg:px-20"
+          >
+            <div className="absolute -mt-20 -mr-20 right-0 top-0 h-64 w-64 rounded-full bg-yellow-primary opacity-10 blur-3xl"></div>
+            <div className="absolute -mb-20 -ml-20 bottom-0 left-0 h-64 w-64 rounded-full bg-blue-primary opacity-10 blur-3xl"></div>
+
+            <div className="relative mx-auto max-w-3xl">
+              <div className="mb-10 text-center">
+                <h2 className="mb-4 text-3xl font-bold text-white">
+                  Ready to start?
+                </h2>
+                <p className="text-white">
+                  Tell us about your requirements for your project.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white p-6 md:p-8">
+                <ContactForm />
+              </div>
             </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
-              <ContactForm />
-            </div>
-          </div>
+          </section>
         </div>
       </div>
     </section>

@@ -184,3 +184,185 @@ export function AnalyticsVisual() {
     </div>
   );
 }
+
+export function MetadataVisual() {
+  return (
+    <div className="relative mx-auto w-full max-w-[500px] py-6">
+      {/* Background Layer: The Code (The Input) */}
+      <div className="ml-8 overflow-hidden rounded-xl bg-gray-900 p-5 shadow-xl opacity-90 transition-all duration-500 hover:ml-12 hover:rotate-3 hover:scale-105 hover:z-20 hover:opacity-100">
+        <div className="flex space-x-2 mb-4">
+          <div className="h-3 w-3 rounded-full bg-red-500"></div>
+          <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+          <div className="h-3 w-3 rounded-full bg-green-500"></div>
+        </div>
+        <div className="space-y-2 font-mono text-xs sm:text-sm">
+          <div className="flex">
+            <span className="text-purple-400">&lt;meta</span>
+            <span className="text-blue-400 ml-2">property</span>
+            <span className="text-white">=</span>
+            <span className="text-green-400">"og:title"</span>
+          </div>
+          <div className="flex pl-4">
+            <span className="text-blue-400">content</span>
+            <span className="text-white">=</span>
+            <span className="text-green-400">"Metadata Services"</span>
+            <span className="text-purple-400">/&gt;</span>
+          </div>
+          <div className="flex">
+            <span className="text-purple-400">&lt;meta</span>
+            <span className="text-blue-400 ml-2">property</span>
+            <span className="text-white">=</span>
+            <span className="text-green-400">"og:image"</span>
+            <span className="text-purple-400">/&gt;</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Foreground Layer: The Preview (The Output) */}
+      <div className="absolute top-10 left-0 w-[280px] sm:w-[320px] rounded-xl border border-gray-100 bg-white p-4 shadow-2xl animate-[float_5s_ease-in-out_infinite]">
+        {/* Social Card Preview */}
+        <div className="mb-3 h-32 w-full rounded-lg bg-gray-50 border border-gray-100 relative overflow-hidden group flex items-center justify-center">
+          {/* Abstract Image Placeholder */}
+          <div className="relative h-12 w-12 rounded-full bg-yellow-primary/20 flex items-center justify-center">
+            <div className="h-6 w-6 rounded-full bg-yellow-primary shadow-sm"></div>
+          </div>
+          {/* Corner badge */}
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-black text-white opacity-20">
+            IMG
+          </div>
+        </div>
+
+        {/* Mock Text Lines */}
+        <div className="space-y-2">
+          <div className="h-4 w-3/4 rounded bg-gray-900"></div>
+          <div className="h-2 w-full rounded bg-gray-200"></div>
+          <div className="h-2 w-1/2 rounded bg-gray-200"></div>
+        </div>
+
+        {/* Tag Indicator */}
+        <div className="absolute -right-3 -top-3 flex items-center gap-1 rounded-full bg-yellow-primary px-3 py-1 text-xs font-bold shadow-lg text-black">
+          <span>PREVIEW</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+// Add this to @/components/service-visuals.tsx
+
+export function IntegrationsVisual() {
+  return (
+    <div className="relative mx-auto w-full max-w-[500px] h-[350px] flex items-center justify-center">
+      {/* Central Hub (DeviceField) */}
+      <div className="relative z-20 h-24 w-24 rounded-2xl bg-gray-900 shadow-2xl flex items-center justify-center border border-gray-800">
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-yellow-primary to-yellow-600 flex items-center justify-center shadow-inner">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6 text-black"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+        </div>
+        {/* Pulsing Effect */}
+        <div className="absolute inset-0 -z-10 animate-ping rounded-2xl bg-gray-900 opacity-20 duration-1000"></div>
+      </div>
+
+      {/* Orbiting Satellite Nodes */}
+      {/* Node 1: Top Right */}
+      <div className="absolute top-10 right-10 animate-[float_4s_ease-in-out_infinite]">
+        <div className="h-14 w-14 rounded-xl bg-white border border-gray-100 shadow-xl flex items-center justify-center">
+          <div className="h-8 w-8 rounded bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+            API
+          </div>
+        </div>
+      </div>
+      {/* Connecting Line 1 */}
+      <svg className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
+        <line
+          x1="50%"
+          y1="50%"
+          x2="75%"
+          y2="20%"
+          stroke="#e5e7eb"
+          strokeWidth="2"
+          strokeDasharray="4 4"
+          className="animate-pulse"
+        />
+      </svg>
+
+      {/* Node 2: Bottom Right */}
+      <div className="absolute bottom-12 right-16 animate-[float_5s_ease-in-out_infinite_1s]">
+        <div className="h-14 w-14 rounded-xl bg-white border border-gray-100 shadow-xl flex items-center justify-center">
+          <div className="h-8 w-8 rounded bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
+            DB
+          </div>
+        </div>
+      </div>
+      <svg className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
+        <line
+          x1="50%"
+          y1="50%"
+          x2="70%"
+          y2="80%"
+          stroke="#e5e7eb"
+          strokeWidth="2"
+          strokeDasharray="4 4"
+        />
+      </svg>
+
+      {/* Node 3: Bottom Left */}
+      <div className="absolute bottom-8 left-12 animate-[float_6s_ease-in-out_infinite_0.5s]">
+        <div className="h-14 w-14 rounded-xl bg-white border border-gray-100 shadow-xl flex items-center justify-center">
+          <div className="h-8 w-8 rounded bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">
+            SaaS
+          </div>
+        </div>
+      </div>
+      <svg className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
+        <line
+          x1="50%"
+          y1="50%"
+          x2="25%"
+          y2="80%"
+          stroke="#e5e7eb"
+          strokeWidth="2"
+          strokeDasharray="4 4"
+        />
+      </svg>
+
+      {/* Node 4: Top Left */}
+      <div className="absolute top-16 left-8 animate-[float_4.5s_ease-in-out_infinite_1.5s]">
+        <div className="h-14 w-14 rounded-xl bg-white border border-gray-100 shadow-xl flex items-center justify-center">
+          <div className="h-8 w-8 rounded bg-red-100 text-red-600 flex items-center justify-center text-xs font-bold">
+            Pay
+          </div>
+        </div>
+      </div>
+      <svg className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
+        <line
+          x1="50%"
+          y1="50%"
+          x2="20%"
+          y2="30%"
+          stroke="#e5e7eb"
+          strokeWidth="2"
+          strokeDasharray="4 4"
+        />
+      </svg>
+
+      {/* Floating Badge */}
+      <div className="absolute -bottom-4 bg-white px-4 py-1 rounded-full shadow-lg border border-gray-100 text-xs font-bold text-green-600 flex items-center gap-2">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+        </span>
+        Systems Online
+      </div>
+    </div>
+  );
+}

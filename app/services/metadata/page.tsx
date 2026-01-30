@@ -1,4 +1,5 @@
 import ServiceLayout, { FeatureItem } from "@/components/service-layout";
+import { MetadataVisual } from "@/components/service-visuals";
 import { BoxesIcon } from "@/components/ui/boxes";
 import { BookmarkCheckIcon } from "@/components/ui/bookmark-check";
 import { ChevronsLeftRightIcon } from "@/components/ui/chevrons-left-right";
@@ -54,17 +55,8 @@ export default function MetadataPage() {
   return (
     <ServiceLayout
       title="Metadata"
-      description="Collect essential insights about how visitors are using your site with in-depth page view metrics like pages, referring sites, and more."
-      icon={
-        <svg
-          className="fill-yellow-primary"
-          xmlns="http://www.w3.org/2000/svg"
-          width={48}
-          height={48}
-        >
-          <path d="M14.29 2.614a1 1 0 0 0-1.58-1.228L6.407 9.492l-3.199-3.2a1 1 0 1 0-1.414 1.415l4 4a1 1 0 0 0 1.496-.093l7-9ZM1 14a1 1 0 1 0 0 2h14a1 1 0 1 0 0-2H1Z" />
-        </svg>
-      }
+      description="Maximize your digital footprint with precise metadata management. We optimize the hidden code that powers your search rankings, social shares, and how AI understands your content."
+      visual={<MetadataVisual />}
       features={features}
       benefits={[
         "Improved search engine visibility and rankings",

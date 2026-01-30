@@ -72,7 +72,7 @@ export default function ServiceLayout({
 
           {/* Right Column: Visual */}
           <div
-            className="absolute -right-16 -top-16 w-[90%] opacity-100 pointer-events-none z-0 sm:-right-28 sm:-top-40 sm:w-[70%] lg:static lg:w-full lg:max-w-full lg:opacity-100 lg:pointer-events-auto lg:right-auto lg:top-auto lg:z-auto"
+            className="absolute -right-12 -top-8 w-[90%] opacity-100 pointer-events-none z-0 sm:-right-28 sm:-top-40 sm:w-[70%] lg:static lg:w-full lg:max-w-full lg:opacity-100 lg:pointer-events-auto lg:right-auto lg:top-auto lg:z-auto"
             data-aos="fade-left"
           >
             {visual ? (
