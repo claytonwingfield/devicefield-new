@@ -13,12 +13,42 @@ export const metadata = {
 
 export default function SEOPerformancePage() {
   const features: FeatureItem[] = [
-    { title: "Keyword Research", icon: <SearchIcon size={24} /> },
-    { title: "On-Page Optimization", icon: <FolderCogIcon size={24} /> },
-    { title: "Technical SEO", icon: <FlaskIcon size={24} /> },
-    { title: "Page Speed Optimization", icon: <AtomIcon size={24} /> },
-    { title: "Link Building", icon: <LinkIcon size={24} /> },
-    { title: "Performance Monitoring", icon: <CpuIcon size={24} /> },
+    {
+      title: "Keyword Research",
+      description:
+        "Identify high-value search terms and phrases that your target audience uses, ensuring your content aligns with intent.",
+      icon: <SearchIcon size={24} />,
+    },
+    {
+      title: "On-Page Optimization",
+      description:
+        "Refine headers, content structure, and internal linking to make your pages more relevant and authoritative to search algorithms.",
+      icon: <FolderCogIcon size={24} />,
+    },
+    {
+      title: "Technical SEO",
+      description:
+        "Fix crawl errors, broken links, and sitemap issues. We ensure the backend architecture is healthy and indexable.",
+      icon: <FlaskIcon size={24} />,
+    },
+    {
+      title: "Page Speed Optimization",
+      description:
+        "Minimize load times by compressing assets, optimizing code, and leveraging caching to improve Core Web Vitals scores.",
+      icon: <AtomIcon size={24} />,
+    },
+    {
+      title: "Link Building",
+      description:
+        "Develop a strategy to acquire high-quality backlinks from reputable sources, boosting your domain authority and trust.",
+      icon: <LinkIcon size={24} />,
+    },
+    {
+      title: "Performance Monitoring",
+      description:
+        "Continuous tracking of rankings and speed metrics to identify issues before they impact your traffic or conversion rates.",
+      icon: <CpuIcon size={24} />,
+    },
   ];
 
   return (

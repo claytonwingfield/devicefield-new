@@ -183,11 +183,11 @@ export default function SchedulePage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn w-full bg-gray-900 text-white hover:bg-gray-800 shadow-lg"
+              className="btn btn-loading w-full bg-gray-900 text-white hover:bg-gray-800 shadow-lg"
             >
               {loading ? (
-                <span className="inline-flex h-6 w-6 items-center justify-center">
-                  <LoadingAnimation className="h-6 w-6" />
+                <span className="inline-flex size-10 items-center justify-center shrink-0">
+                  <LoadingAnimation className="h-10 w-10" />
                 </span>
               ) : (
                 "Confirm Booking"

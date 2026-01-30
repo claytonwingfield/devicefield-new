@@ -26,7 +26,7 @@ export default function LoadingAnimation({
     <Lottie
       animationData={animationData}
       loop
-      className={className}
+      className={`shrink-0 overflow-hidden ${className}`}
       aria-hidden
     />
   );

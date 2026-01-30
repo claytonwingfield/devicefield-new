@@ -73,7 +73,7 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-2 z-30 w-full md:top-6 pointer-events-none">
+    <header className="fixed  z-50 w-full top-6 pointer-events-none">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <motion.div
           initial={false}
@@ -119,7 +119,7 @@ export default function Header() {
                       <li>
                         <Link
                           href="/dashboard"
-                          className="btn-sm bg-yellow-primary/70 text-black shadow hover:bg-yellow-primary/90 border border-gray-200"
+                          className="btn-sm bg-black text-white shadow hover:bg-black/90 border border-gray-200"
                         >
                           Dashboard
                         </Link>

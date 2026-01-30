@@ -5,6 +5,44 @@ import { useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import WebsiteAnimation from "./websiteAnimation";
 import ScheduleModal from "@/components/calender-hero";
+
+// Star configuration array
+// r: radius (size), o: opacity, d: duration (animation speed)
+const starData = [
+  // --- LARGE STARS (Close/Bright) ---
+  { cx: "10%", cy: "80%", r: 2.5, o: 1, d: "3s" },
+  { cx: "35%", cy: "85%", r: 2.2, o: 0.9, d: "4s" },
+  { cx: "65%", cy: "55%", r: 2.5, o: 1, d: "5s" },
+  { cx: "75%", cy: "92%", r: 2.0, o: 0.8, d: "2s" },
+  { cx: "90%", cy: "65%", r: 2.3, o: 0.9, d: "3.5s" },
+  { cx: "5%", cy: "95%", r: 2.0, o: 0.8, d: "4.5s" },
+  { cx: "48%", cy: "62%", r: 2.1, o: 1, d: "3s" },
+
+  // --- MEDIUM STARS (Mid-distance) ---
+  { cx: "20%", cy: "60%", r: 1.5, o: 0.7, d: "0s" }, // Static
+  { cx: "50%", cy: "75%", r: 1.4, o: 0.6, d: "0s" }, // Static
+  { cx: "80%", cy: "85%", r: 1.6, o: 0.7, d: "6s" },
+  { cx: "15%", cy: "90%", r: 1.5, o: 0.6, d: "0s" },
+  { cx: "45%", cy: "95%", r: 1.4, o: 0.7, d: "0s" },
+  { cx: "95%", cy: "75%", r: 1.5, o: 0.7, d: "4s" },
+  { cx: "25%", cy: "65%", r: 1.3, o: 0.6, d: "0s" },
+  { cx: "60%", cy: "88%", r: 1.5, o: 0.8, d: "5s" },
+
+  // --- SMALL STARS (Far away / Dust) ---
+  { cx: "5%", cy: "70%", r: 0.8, o: 0.4, d: "0s" },
+  { cx: "25%", cy: "50%", r: 0.6, o: 0.3, d: "0s" },
+  { cx: "55%", cy: "60%", r: 0.7, o: 0.4, d: "0s" },
+  { cx: "85%", cy: "55%", r: 0.8, o: 0.3, d: "0s" },
+  { cx: "30%", cy: "95%", r: 0.7, o: 0.4, d: "0s" },
+  { cx: "40%", cy: "55%", r: 0.6, o: 0.3, d: "0s" },
+  { cx: "70%", cy: "70%", r: 0.9, o: 0.5, d: "0s" },
+  { cx: "92%", cy: "90%", r: 0.7, o: 0.4, d: "0s" },
+  { cx: "12%", cy: "55%", r: 0.8, o: 0.4, d: "0s" },
+  { cx: "38%", cy: "75%", r: 0.6, o: 0.3, d: "0s" },
+  { cx: "58%", cy: "52%", r: 0.7, o: 0.4, d: "0s" },
+  { cx: "82%", cy: "62%", r: 0.8, o: 0.3, d: "0s" },
+];
+
 export default function HeroHome() {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -18,19 +56,14 @@ export default function HeroHome() {
   const xRight = useTransform(scrollY, [0, 400], [0, 200]);
 
   return (
-    // REMOVED: lg:mb-12 mb-16 (This was causing the white bar)
-    // CHANGED: bg-gradient to be slightly stronger blue at the top
     <section className="relative overflow-hidden min-h-[800px] bg-gradient-to-b from-blue-50 to-transparent">
       {/* --- BACKGROUND LAYERS --- */}
 
-      {/* 1. Dark Fade from Bottom
-          CHANGED: Reduced height to h-[50%] so it fades to blue quicker.
-          CHANGED: Adjusted gradient stops for a smoother but faster transition.
-      */}
+      {/* 1. Dark Fade from Bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-[100%] bg-gradient-to-t from-black via-blue-500/90 to-blue-500 -z-20" />
 
       {/* 2. Star Sprinkles (Visible in the dark area) */}
-      <div className="absolute bottom-0 left-0 right-0 h-[50%] overflow-hidden -z-10 opacity-80 pointer-events-none">
+      <div className="absolute bottom-0 left-0 right-0 h-[60%] overflow-hidden -z-10 opacity-90 pointer-events-none">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="star-glow" cx="50%" cy="50%" r="50%">
@@ -38,50 +71,23 @@ export default function HeroHome() {
               <stop offset="100%" stopColor="transparent" stopOpacity="0" />
             </radialGradient>
           </defs>
-          {/* Static random stars */}
-          <circle
-            cx="10%"
-            cy="80%"
-            r="2"
-            fill="white"
-            className="animate-pulse"
-            style={{ animationDuration: "3s" }}
-          />
-          <circle cx="20%" cy="60%" r="1.5" fill="white" />
-          <circle
-            cx="35%"
-            cy="85%"
-            r="2"
-            fill="white"
-            className="animate-pulse"
-            style={{ animationDuration: "4s" }}
-          />
-          <circle cx="50%" cy="75%" r="1" fill="white" />
-          <circle
-            cx="65%"
-            cy="55%"
-            r="1.5"
-            fill="white"
-            className="animate-pulse"
-            style={{ animationDuration: "5s" }}
-          />
-          <circle cx="80%" cy="85%" r="2" fill="white" />
-          <circle cx="90%" cy="65%" r="1.5" fill="white" />
-          <circle cx="15%" cy="90%" r="1" fill="white" />
-          <circle cx="45%" cy="95%" r="1.5" fill="white" />
-          <circle
-            cx="75%"
-            cy="92%"
-            r="2"
-            fill="white"
-            className="animate-pulse"
-            style={{ animationDuration: "2s" }}
-          />
-          {/* Tiny dust sprinkles */}
-          <circle cx="5%" cy="70%" r="0.5" fill="gray" />
-          <circle cx="25%" cy="50%" r="0.5" fill="gray" />
-          <circle cx="55%" cy="60%" r="0.5" fill="gray" />
-          <circle cx="85%" cy="55%" r="0.5" fill="gray" />
+
+          {/* Mapping through star data for varied sizes and animations */}
+          {starData.map((star, i) => (
+            <circle
+              key={i}
+              cx={star.cx}
+              cy={star.cy}
+              r={star.r} // Variable size
+              fill="white"
+              fillOpacity={star.o} // Variable opacity for depth
+              className={star.d !== "0s" ? "animate-pulse" : ""}
+              style={{
+                animationDuration: star.d,
+                animationDelay: `${i * 0.2}s`, // Staggered start times so they don't pulse together
+              }}
+            />
+          ))}
         </svg>
       </div>
 
@@ -141,18 +147,6 @@ export default function HeroHome() {
                 need.
               </p>
 
-              {/* Lottie Animation Container */}
-              {/* <div
-                className="mx-auto max-w-md mt-8 relative"
-                data-aos="zoom-y-out"
-                data-aos-delay={600}
-              >
-                <div className="aspect-video w-full relative">
-                  <WebsiteAnimation />
-                </div>
-              </div> */}
-
-              {/* Buttons */}
               {/* Buttons / CTA Section */}
               <div
                 className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8"

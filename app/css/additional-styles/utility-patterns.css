@@ -8,6 +8,11 @@
   @apply px-4 py-[11px] shadow-lg;
 }
 
+/* Buttons with loading: fixed height so they don't resize when spinner shows */
+.btn-loading {
+  @apply h-12 min-h-12;
+}
+
 .btn-sm {
   @apply px-3 py-[5px] shadow;
 }

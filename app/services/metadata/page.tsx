@@ -13,12 +13,42 @@ export const metadata = {
 
 export default function MetadataPage() {
   const features: FeatureItem[] = [
-    { title: "SEO Metadata", icon: <BoxesIcon size={24} /> },
-    { title: "Open Graph Tags", icon: <BookmarkCheckIcon size={24} /> },
-    { title: "Schema Markup", icon: <ChevronsLeftRightIcon size={24} /> },
-    { title: "Meta Descriptions", icon: <FileTextIcon size={24} /> },
-    { title: "Social Media Tags", icon: <AtSignIcon size={24} /> },
-    { title: "Structured Data", icon: <FolderKanbanIcon size={24} /> },
+    {
+      title: "SEO Metadata",
+      description:
+        "Optimize title tags, keywords, and robots directives to ensure search engines correctly index and rank your pages.",
+      icon: <BoxesIcon size={24} />,
+    },
+    {
+      title: "Open Graph Tags",
+      description:
+        "Control how your content appears on platforms like Facebook and LinkedIn with precise image, title, and description tags.",
+      icon: <BookmarkCheckIcon size={24} />,
+    },
+    {
+      title: "Schema Markup",
+      description:
+        "Implement JSON-LD structured data to help search engines understand content context, leading to rich results and snippets.",
+      icon: <ChevronsLeftRightIcon size={24} />,
+    },
+    {
+      title: "Meta Descriptions",
+      description:
+        "Craft compelling, click-worthy summaries for search results that improve Click-Through Rates (CTR) without keyword stuffing.",
+      icon: <FileTextIcon size={24} />,
+    },
+    {
+      title: "Social Media Tags",
+      description:
+        "Configure Twitter Cards and other platform-specific meta tags to ensure your links look professional and engaging everywhere.",
+      icon: <AtSignIcon size={24} />,
+    },
+    {
+      title: "Structured Data",
+      description:
+        "Organize complex data hierarchies for products, events, and organizations to maximize visibility in voice search and AI results.",
+      icon: <FolderKanbanIcon size={24} />,
+    },
   ];
 
   return (

@@ -81,10 +81,10 @@ export default function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
               stiffness: 300,
               duration: 0.3,
             }}
-            className="relative w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-2xl"
+            className="relative w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-2xl px-8"
           >
             {/* Cal.com Embed Container */}
-            <div className="h-[650px] w-full bg-black">
+            <div className="h-[650px] w-full">
               <Cal
                 namespace="30min"
                 calLink="devicefield-llc-1dnclf/30min"
@@ -92,8 +92,10 @@ export default function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
                 config={{
                   layout: "month_view",
                   useSlotsViewOnSmallScreen: "true",
+                  theme: "light",
                 }}
               />
+              ;
             </div>
           </motion.div>
         </div>

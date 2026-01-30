@@ -15,12 +15,42 @@ export const metadata = {
 
 export default function AppDevelopmentPage() {
   const features: FeatureItem[] = [
-    { title: "iOS & Android Development", icon: <GripIcon size={24} /> },
-    { title: "Native & Cross-Platform", icon: <RouteIcon size={24} /> },
-    { title: "App Store Optimization", icon: <ScanFaceIcon size={24} /> },
-    { title: "Push Notifications", icon: <BellIcon size={24} /> },
-    { title: "Offline Functionality", icon: <RefreshCWOffIcon size={24} /> },
-    { title: "Analytics Integration", icon: <ChartLineIcon size={24} /> },
+    {
+      title: "iOS & Android Development",
+      description:
+        "We build high-quality mobile experiences tailored for the Apple App Store and Google Play Store ecosystems.",
+      icon: <GripIcon size={24} />,
+    },
+    {
+      title: "Native & Cross-Platform",
+      description:
+        "Choose between pure Native code for max performance or React Native/Flutter for faster deployment across both platforms.",
+      icon: <RouteIcon size={24} />,
+    },
+    {
+      title: "App Store Optimization",
+      description:
+        "We handle the submission process and optimize listings with keywords and visuals to increase organic downloads.",
+      icon: <ScanFaceIcon size={24} />,
+    },
+    {
+      title: "Push Notifications",
+      description:
+        "Re-engage users instantly. Send targeted alerts, updates, and promotions directly to their device lock screens.",
+      icon: <BellIcon size={24} />,
+    },
+    {
+      title: "Offline Functionality",
+      description:
+        "Ensure your app remains usable without an internet connection by implementing local caching and data synchronization.",
+      icon: <RefreshCWOffIcon size={24} />,
+    },
+    {
+      title: "Analytics Integration",
+      description:
+        "Track user retention, crash reports, and engagement metrics to continuously improve the app experience.",
+      icon: <ChartLineIcon size={24} />,
+    },
   ];
 
   return (

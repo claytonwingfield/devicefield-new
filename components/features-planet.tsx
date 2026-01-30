@@ -12,7 +12,40 @@ import BusinessCategories from "@/components/business-categories";
 // ——————————————————————————————————————————————————————————————————————————
 // SCROLL REVEAL HELPER COMPONENTS
 // ——————————————————————————————————————————————————————————————————————————
+const starData = [
+  // --- LARGE STARS (Close/Bright) ---
+  { cx: "10%", cy: "80%", r: 2.5, o: 1, d: "3s" },
+  { cx: "35%", cy: "85%", r: 2.2, o: 0.9, d: "4s" },
+  { cx: "65%", cy: "55%", r: 2.5, o: 1, d: "5s" },
+  { cx: "75%", cy: "92%", r: 2.0, o: 0.8, d: "2s" },
+  { cx: "90%", cy: "65%", r: 2.3, o: 0.9, d: "3.5s" },
+  { cx: "5%", cy: "95%", r: 2.0, o: 0.8, d: "4.5s" },
+  { cx: "48%", cy: "62%", r: 2.1, o: 1, d: "3s" },
 
+  // --- MEDIUM STARS (Mid-distance) ---
+  { cx: "20%", cy: "60%", r: 1.5, o: 0.7, d: "0s" }, // Static
+  { cx: "50%", cy: "75%", r: 1.4, o: 0.6, d: "0s" }, // Static
+  { cx: "80%", cy: "85%", r: 1.6, o: 0.7, d: "6s" },
+  { cx: "15%", cy: "90%", r: 1.5, o: 0.6, d: "0s" },
+  { cx: "45%", cy: "95%", r: 1.4, o: 0.7, d: "0s" },
+  { cx: "95%", cy: "75%", r: 1.5, o: 0.7, d: "4s" },
+  { cx: "25%", cy: "65%", r: 1.3, o: 0.6, d: "0s" },
+  { cx: "60%", cy: "88%", r: 1.5, o: 0.8, d: "5s" },
+
+  // --- SMALL STARS (Far away / Dust) ---
+  { cx: "5%", cy: "70%", r: 0.8, o: 0.4, d: "0s" },
+  { cx: "25%", cy: "50%", r: 0.6, o: 0.3, d: "0s" },
+  { cx: "55%", cy: "60%", r: 0.7, o: 0.4, d: "0s" },
+  { cx: "85%", cy: "55%", r: 0.8, o: 0.3, d: "0s" },
+  { cx: "30%", cy: "95%", r: 0.7, o: 0.4, d: "0s" },
+  { cx: "40%", cy: "55%", r: 0.6, o: 0.3, d: "0s" },
+  { cx: "70%", cy: "70%", r: 0.9, o: 0.5, d: "0s" },
+  { cx: "92%", cy: "90%", r: 0.7, o: 0.4, d: "0s" },
+  { cx: "12%", cy: "55%", r: 0.8, o: 0.4, d: "0s" },
+  { cx: "38%", cy: "75%", r: 0.6, o: 0.3, d: "0s" },
+  { cx: "58%", cy: "52%", r: 0.7, o: 0.4, d: "0s" },
+  { cx: "82%", cy: "62%", r: 0.8, o: 0.3, d: "0s" },
+];
 const ScrollRevealSpan = ({
   children,
   progress,
@@ -110,13 +143,14 @@ export default function FeaturesPlanet() {
     const width = globeContainerRef.current.clientWidth;
     const height = globeContainerRef.current.clientHeight;
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    // Change FOV from 35 to 45 (Wider lens effect helps on mobile)
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 4000); // Increased Far plane to 4000 to see distant stars
 
-    // FIX: Adjusted Z values to zoom in closer (Lower number = Bigger Globe)
+    // LOGIC UPDATE:
     if (window.innerWidth < 768) {
-      camera.position.z = 400; // Mobile: Closer
+      camera.position.z = 180; // Mobile: MUCH closer (was 280)
     } else {
-      camera.position.z = 280; // Desktop: Closer
+      camera.position.z = 280; // Desktop: Standard
     }
 
     cameraRef.current = camera;
@@ -148,6 +182,34 @@ export default function FeaturesPlanet() {
     globeRef.current = globe;
 
     scene.add(globe);
+
+    // ——————————————————————————
+    // 4) STARFIELD (Added Here)
+    // ——————————————————————————
+    const starGeometry = new THREE.BufferGeometry();
+    const starMaterial = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 3.2,
+      transparent: true,
+      opacity: 0.8,
+      sizeAttenuation: true, // Makes distant stars smaller
+    });
+
+    const starVertices = [];
+    for (let i = 0; i < 4000; i++) {
+      const x = (Math.random() - 0.5) * 3000; // Large spread
+      const y = (Math.random() - 0.5) * 3000;
+      const z = (Math.random() - 0.5) * 3000;
+      starVertices.push(x, y, z);
+    }
+
+    starGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(starVertices, 3),
+    );
+
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    scene.add(stars);
 
     // ——————————————————————————
     // LIGHTING
@@ -193,7 +255,15 @@ export default function FeaturesPlanet() {
     function animate() {
       animationIdRef.current = requestAnimationFrame(animate);
       const delta = clock.getDelta();
+
+      // Rotate Globe
       globe.rotation.y += delta * 0.05;
+
+      // Rotate Stars (Added Here)
+      // We rotate slower and in reverse to create depth/parallax
+      // stars.rotation.y -= delta * 0.02;
+      // stars.rotation.x += delta * 0.005;
+
       renderer.render(scene, camera);
     }
     animate();
@@ -210,15 +280,18 @@ export default function FeaturesPlanet() {
 
       if (cameraRef.current && rendererRef.current) {
         cameraRef.current.aspect = newWidth / newHeight;
-        cameraRef.current.updateProjectionMatrix();
-        rendererRef.current.setSize(newWidth, newHeight);
 
-        // Re-check breakpoints on resize to adjust zoom level
-        if (window.innerWidth < 768) {
-          cameraRef.current.position.z = 250;
+        // DYNAMIC ZOOM LOGIC:
+        if (newWidth < 768) {
+          // Mobile: Move camera closer to fill the narrow screen
+          cameraRef.current.position.z = 330;
         } else {
+          // Desktop: Move camera back
           cameraRef.current.position.z = 280;
         }
+
+        cameraRef.current.updateProjectionMatrix();
+        rendererRef.current.setSize(newWidth, newHeight);
       }
     };
 
@@ -251,40 +324,79 @@ export default function FeaturesPlanet() {
       className="relative before:absolute before:inset-0 before:-z-20 before:content-[''] before:bg-black z-40"
     >
       <div className="mx-auto max-w-full px-4 sm:px-6">
-        {/* Section header */}
-        <motion.div
-          className="text-center"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, margin: "-150px" }}
-          transition={{ duration: 1, ease: "easeOut" }}
-        >
-          <span
-            className="absolute mt-8 bg-gradient-to-r blur-xl from-white via-yellow-primary to-white bg-clip-text lg:text-5xl text-4xl font-extrabold text-transparent select-none"
-            style={{
-              transform: "perspective(1000px) rotateX(5deg)",
-              display: "inline-block",
-            }}
+        {/* --- NEW WRAPPER START --- 
+          This 'relative isolate' div holds the stars and text together.
+          Added some padding/margin to give the stars space to breathe.
+      */}
+        <div className="relative isolate mb-0 pt-0">
+          {/* 1. STAR BACKGROUND LAYER 
+            (Pasted your code here. Note: ensure 'starData' is defined in your component) 
+        */}
+          <div className="absolute top-0 left-0 right-0 h-full w-full overflow-hidden -z-10 opacity-90 pointer-events-none">
+            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="star-glow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="white" stopOpacity="1" />
+                  <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+
+              {starData.map((star, i) => (
+                <circle
+                  key={i}
+                  cx={star.cx}
+                  cy={star.cy}
+                  r={star.r}
+                  fill="white"
+                  fillOpacity={star.o}
+                  className={star.d !== "0s" ? "animate-pulse" : ""}
+                  style={{
+                    animationDuration: star.d,
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                />
+              ))}
+            </svg>
+          </div>
+
+          {/* 2. TEXT CONTENT LAYER
+            Added 'relative z-10' to ensure text sits ON TOP of stars.
+        */}
+          <motion.div
+            className="relative z-10 text-center"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-150px" }}
+            transition={{ duration: 1, ease: "easeOut" }}
           >
-            Your Vision <br />
-            Delivered Worldwide
-          </span>
-          <h2
-            className="block mt-8 bg-gradient-to-r from-white via-yellow-primary to-white bg-clip-text lg:text-5xl text-4xl font-extrabold text-transparent select-auto"
-            style={{
-              transform: "perspective(1000px) rotateX(5deg)",
-              display: "inline-block",
-            }}
-          >
-            Your Vision <br /> Delivered Worldwide
-          </h2>
-        </motion.div>
+            <span
+              className="absolute mt-8 bg-gradient-to-r blur-xl from-white via-yellow-primary to-white bg-clip-text lg:text-5xl text-4xl font-extrabold text-transparent select-none"
+              style={{
+                transform: "perspective(1000px) rotateX(5deg)",
+                display: "inline-block",
+              }}
+            >
+              Your Vision <br />
+              Delivered Worldwide
+            </span>
+            <h2
+              className="block mt-8 bg-gradient-to-r from-white via-yellow-primary to-white bg-clip-text lg:text-5xl text-4xl font-extrabold text-transparent select-auto"
+              style={{
+                transform: "perspective(1000px) rotateX(5deg)",
+                display: "inline-block",
+              }}
+            >
+              Your Vision <br /> Delivered Worldwide
+            </h2>
+          </motion.div>
+        </div>
 
         {/* Globe Container + Grid Wrapper */}
         <div className="relative">
           {/* Globe Container Wrapper */}
           <div
-            className="relative flex items-center justify-center h-[300px] sm:h-[400px] md:h-[500px]"
+            // Update: Increased mobile height to h-[450px]
+            className="relative flex items-center justify-center h-[450px] sm:h-[450px] md:h-[500px]"
             data-aos="zoom-y-out"
             data-aos-delay={300}
           >
@@ -299,13 +411,15 @@ export default function FeaturesPlanet() {
             className="
               relative
               z-10
-              mt-[-150px]         
+              mt-[-80px]         
               sm:mt-[-200px]       
               backdrop-blur-sm    
               bg-white/10         
               rounded-xl          
               p-4                  
             "
+            // Note: Changed mobile margin from -150px to -80px above
+            // This reveals more of the globe's bottom curve on mobile
             data-aos="zoom-y-out"
             data-aos-delay={150}
           >

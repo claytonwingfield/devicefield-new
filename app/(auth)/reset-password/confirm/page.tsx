@@ -118,11 +118,11 @@ function ConfirmResetPasswordContent() {
           <button
             type="submit"
             disabled={loading}
-            className="btn w-full bg-gradient-to-t from-blue-primary to-blue-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-loading w-full bg-gradient-to-t from-blue-primary to-blue-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <span className="inline-flex h-8 w-8 items-center justify-center">
-                <LoadingAnimation className="h-8 w-8" />
+              <span className="inline-flex size-10 items-center justify-center shrink-0">
+                <LoadingAnimation className="h-10 w-10" />
               </span>
             ) : (
               "Update Password"

@@ -7,3 +7,18 @@
 @import "additional-styles/theme.css";
 
 @import "tailwindcss/utilities";
+
+html {
+  scroll-behavior: smooth;
+  /* Adjust this value based on your header height + desired gap */
+  scroll-padding-top: 100px;
+}
+
+/* Prevent iOS zoom on input focus: use 16px minimum on text inputs on mobile */
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

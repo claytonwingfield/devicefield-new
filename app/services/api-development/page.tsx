@@ -14,12 +14,42 @@ export const metadata = {
 
 export default function APIDevelopmentPage() {
   const features: FeatureItem[] = [
-    { title: "RESTful & GraphQL APIs", icon: <GitBranchIcon size={24} /> },
-    { title: "API Documentation", icon: <BookTextIcon size={24} /> },
-    { title: "Authentication & Security", icon: <LockKeyholeIcon size={24} /> },
-    { title: "Rate Limiting", icon: <BadgeAlertIcon size={24} /> },
-    { title: "Versioning", icon: <FileStackIcon size={24} /> },
-    { title: "Testing & Monitoring", icon: <CctvIcon size={24} /> },
+    {
+      title: "RESTful & GraphQL APIs",
+      description:
+        "We build flexible architectures using REST for standard compliance or GraphQL for efficient, precise data fetching.",
+      icon: <GitBranchIcon size={24} />,
+    },
+    {
+      title: "API Documentation",
+      description:
+        "Comprehensive Swagger/OpenAPI documentation ensures your developers can integrate services quickly without guessing endpoints.",
+      icon: <BookTextIcon size={24} />,
+    },
+    {
+      title: "Authentication & Security",
+      description:
+        "Implement industry standards like OAuth2, JWT, and API Keys to protect your data and ensure only authorized access.",
+      icon: <LockKeyholeIcon size={24} />,
+    },
+    {
+      title: "Rate Limiting",
+      description:
+        "Protect your infrastructure from abuse and traffic spikes by implementing intelligent throttling and quota management.",
+      icon: <BadgeAlertIcon size={24} />,
+    },
+    {
+      title: "Versioning",
+      description:
+        "Deploy updates confidently without breaking existing clients by maintaining structured version control of your API endpoints.",
+      icon: <FileStackIcon size={24} />,
+    },
+    {
+      title: "Testing & Monitoring",
+      description:
+        "Automated unit tests and real-time uptime monitoring ensure your API remains reliable, performant, and bug-free.",
+      icon: <CctvIcon size={24} />,
+    },
   ];
 
   return (

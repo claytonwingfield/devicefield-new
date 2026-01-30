@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import ContactForm from "./contact-form";
 
 // Update the interface to allow features to be strings OR objects with icons
 export interface FeatureItem {
   title: string;
+  description?: string;
   icon?: React.ReactNode;
 }
 
@@ -30,6 +31,13 @@ export default function ServiceLayout({
   useCases,
   children,
 }: ServiceLayoutProps) {
+  // State to track which card is open
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
+  const toggleCard = (index: number) => {
+    setExpandedIndex(expandedIndex === index ? null : index);
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
       {/* Hero Section */}
@@ -62,7 +70,7 @@ export default function ServiceLayout({
             </div>
           </div>
 
-          {/* Right Column: Dynamic Visual */}
+          {/* Right Column: Visual */}
           <div
             className="absolute -right-16 -top-16 w-[90%] opacity-100 pointer-events-none z-0 sm:-right-28 sm:-top-40 sm:w-[70%] lg:static lg:w-full lg:max-w-full lg:opacity-100 lg:pointer-events-auto lg:right-auto lg:top-auto lg:z-auto"
             data-aos="fade-left"
@@ -87,6 +95,9 @@ export default function ServiceLayout({
           {features.map((feature, index) => {
             const isString = typeof feature === "string";
             const featureTitle = isString ? feature : feature.title;
+            const featureDesc = !isString ? feature.description : null;
+            const isExpanded = expandedIndex === index;
+
             const featureIcon =
               !isString && feature.icon ? (
                 feature.icon
@@ -107,26 +118,77 @@ export default function ServiceLayout({
               );
 
             return (
+              /* FIX: Wrapper DIV handles AOS animation and Grid placement */
               <div
                 key={index}
-                className="group relative flex flex-col justify-between rounded-3xl border border-gray-100 bg-white p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1"
                 data-aos="fade-up"
                 data-aos-delay={index * 50}
+                className="h-full"
               >
-                <div>
-                  <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-900 group-hover:bg-yellow-primary group-hover:text-black transition-colors [&>div]:w-full [&>div]:h-full [&_svg]:w-6 [&_svg]:h-6 [&_svg]:text-current">
-                    {featureIcon}
+                {/* Button handles Interaction and Styling */}
+                <button
+                  onClick={() => toggleCard(index)}
+                  className={`group w-full h-full relative flex flex-col text-left justify-between rounded-3xl border bg-white p-8 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-yellow-primary/50 ${
+                    isExpanded
+                      ? "border-yellow-primary ring-1 ring-yellow-primary"
+                      : "border-gray-100"
+                  }`}
+                >
+                  <div className="w-full">
+                    <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-900 group-hover:bg-yellow-primary group-hover:text-black transition-colors [&>div]:w-full [&>div]:h-full [&_svg]:w-6 [&_svg]:h-6 [&_svg]:text-current">
+                      {featureIcon}
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {featureTitle}
+                    </h3>
+
+                    {/* Expandable Description Area */}
+                    <div
+                      className={`grid transition-all duration-300 ease-in-out ${
+                        isExpanded
+                          ? "grid-rows-[1fr] opacity-100 mt-4"
+                          : "grid-rows-[0fr] opacity-0"
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <p className="text-gray-600 leading-relaxed text-sm">
+                          {featureDesc ||
+                            "Detailed breakdown of this capability is available upon consultation."}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {featureTitle}
-                  </h3>
-                </div>
-                {/* Decorative dots from inspiration image */}
-                <div className="mt-8 flex gap-2 opacity-20">
-                  <div className="h-2 w-2 rounded-full bg-gray-900"></div>
-                  <div className="h-2 w-2 rounded-full bg-gray-900"></div>
-                  <div className="h-2 w-2 rounded-full bg-gray-900"></div>
-                </div>
+
+                  {/* Bottom Interaction Indicator */}
+                  <div className="mt-8 flex items-center justify-between w-full border-t border-gray-100 pt-4">
+                    <span
+                      className={`text-xs font-bold uppercase tracking-wider transition-colors ${
+                        isExpanded
+                          ? "text-yellow-600"
+                          : "text-gray-400 group-hover:text-gray-600"
+                      }`}
+                    >
+                      {isExpanded ? "Less info" : "Learn more"}
+                    </span>
+                    <div
+                      className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : "rotate-0"}`}
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-gray-400 group-hover:text-yellow-600"
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </div>
+                  </div>
+                </button>
               </div>
             );
           })}
@@ -148,7 +210,6 @@ export default function ServiceLayout({
               key={index}
               className="sticky top-24 lg:top-32"
               style={{
-                // Create a slight offset so they stack nicely but don't completely hide the one behind
                 paddingTop: `${index * 1.5}rem`,
                 zIndex: index + 1,
               }}
@@ -170,7 +231,6 @@ export default function ServiceLayout({
                       </p>
                     </div>
 
-                    {/* Card Footer from Inspiration */}
                     <div className="mt-12 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
                       <span>Process + Deliverables</span>
                       <div className="flex gap-0.5">
@@ -183,7 +243,6 @@ export default function ServiceLayout({
 
                   {/* Right Side: Visual/Abstract */}
                   <div className="relative min-h-[300px] bg-gray-50 lg:min-h-full flex items-center justify-center overflow-hidden border-t lg:border-t-0 lg:border-l border-gray-100">
-                    {/* Dynamic Geometric Pattern based on index to give variety */}
                     {index % 3 === 0 && (
                       <div className="relative w-64 h-64">
                         <div className="absolute inset-0 bg-gradient-to-tr from-blue-primary/20 to-yellow-primary/20 rounded-full blur-3xl"></div>
@@ -214,8 +273,6 @@ export default function ServiceLayout({
                   </div>
                 </div>
               </div>
-
-              {/* Spacer div to ensure enough scroll space for the sticky effect */}
               <div className="h-8 lg:h-12 w-full"></div>
             </div>
           ))}

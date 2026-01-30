@@ -249,21 +249,22 @@ export default function ContactForm({
         </div>
 
         <div>
-        {loading ? (
-          <div className="flex h-12 items-center justify-center" aria-hidden="true">
-            <LoadingAnimation
-              className="h-10 w-10"
-              fallback={<span className="text-gray-500">Sending...</span>}
-            />
-            </div>
-          ) : (
-            <button
-              type="submit"
-              className="btn w-full bg-gradient-to-t from-blue-primary to-blue-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%]"
-            >
-              Send Message
-            </button>
-          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn btn-loading w-full bg-gradient-to-t from-blue-primary to-blue-primary bg-[length:100%_100%] bg-[bottom] text-white shadow hover:bg-[length:100%_150%] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <span className="inline-flex size-10 items-center justify-center shrink-0" aria-hidden>
+                <LoadingAnimation
+                  className="h-10 w-10"
+                  fallback={<span className="text-white/80">Sending...</span>}
+                />
+              </span>
+            ) : (
+              "Send Message"
+            )}
+          </button>
         </div>
       </form>
     </div>

@@ -14,15 +14,42 @@ export const metadata = {
 
 export default function AnalyticsPage() {
   const features: FeatureItem[] = [
-    { title: "Real-Time Tracking", icon: <ClockIcon size={24} /> },
+    {
+      title: "Real-Time Tracking",
+      description:
+        "Monitor visitor activity as it happens. Watch live user counts and immediate interactions to react to trends instantly.",
+      icon: <ClockIcon size={24} />,
+    },
     {
       title: "Page View Analytics",
+      description:
+        "Dive deep into specific page performance. Identify your top-performing content and pinpoint areas with high exit rates.",
       icon: <ChartColumnIncreasingIcon size={24} />,
     },
-    { title: "User Behavior Insights", icon: <CursorClickIcon size={24} /> },
-    { title: "Traffic Sources", icon: <EarthIcon size={24} /> },
-    { title: "Custom Dashboards", icon: <GalleryThumbnailsIcon size={24} /> },
-    { title: "Export & Reporting", icon: <HardDriveDownloadIcon size={24} /> },
+    {
+      title: "User Behavior Insights",
+      description:
+        "Understand the 'why' behind the clicks. Analyze navigation paths, scroll depth, and interaction heatmaps to optimize UX.",
+      icon: <CursorClickIcon size={24} />,
+    },
+    {
+      title: "Traffic Sources",
+      description:
+        "Know exactly where your audience comes from—whether it's organic search, social media, or referral links—to optimize marketing spend.",
+      icon: <EarthIcon size={24} />,
+    },
+    {
+      title: "Custom Dashboards",
+      description:
+        "Tailor your view to focus on the KPIs that matter most to your business. Create drag-and-drop widgets for a personalized command center.",
+      icon: <GalleryThumbnailsIcon size={24} />,
+    },
+    {
+      title: "Export & Reporting",
+      description:
+        "Generate professional reports in PDF or CSV formats automatically. Schedule delivery to stakeholders to keep everyone aligned.",
+      icon: <HardDriveDownloadIcon size={24} />,
+    },
   ];
 
   return (

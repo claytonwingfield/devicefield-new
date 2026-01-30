@@ -456,11 +456,11 @@ export default function ProjectPlanner({
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="btn bg-yellow-primary text-gray-900 hover:bg-yellow-400 shadow-lg px-8 font-bold"
+              className="btn btn-loading min-w-[11rem] bg-yellow-primary text-gray-900 hover:bg-yellow-400 shadow-lg px-8 font-bold"
             >
               {loading ? (
-                <span className="inline-flex h-8 w-8 items-center justify-center">
-                  <LoadingAnimation className="h-8 w-8" />
+                <span className="inline-flex size-10 items-center justify-center shrink-0">
+                  <LoadingAnimation className="h-10 w-10" />
                 </span>
               ) : isAuthFlow ? (
                 "Start Project"

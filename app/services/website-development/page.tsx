@@ -15,12 +15,42 @@ export const metadata = {
 
 export default function WebsiteDevelopmentPage() {
   const features: FeatureItem[] = [
-    { title: "Responsive Design", icon: <ExpandIcon size={24} /> },
-    { title: "UX/UI", icon: <PenToolIcon size={24} /> },
-    { title: "Performance Optimization", icon: <CloudCogIcon size={24} /> },
-    { title: "SEO-Friendly", icon: <SearchIcon size={24} /> },
-    { title: "Content Management", icon: <SquareStackIcon size={24} /> },
-    { title: "E-commerce Integration", icon: <CartIcon size={24} /> },
+    {
+      title: "Responsive Design",
+      description:
+        "We build layouts that fluidly adapt to any screen size, ensuring a flawless experience on desktops, tablets, and smartphones.",
+      icon: <ExpandIcon size={24} />,
+    },
+    {
+      title: "UX/UI",
+      description:
+        "Our design process focuses on intuitive navigation and visual hierarchy, reducing friction and guiding users toward conversion.",
+      icon: <PenToolIcon size={24} />,
+    },
+    {
+      title: "Performance Optimization",
+      description:
+        "Code is minified and assets are optimized to ensure lightning-fast load times, which boosts both user retention and SEO.",
+      icon: <CloudCogIcon size={24} />,
+    },
+    {
+      title: "SEO-Friendly",
+      description:
+        "Built with semantic HTML5 and clean architecture, our sites are ready to rank on Google from day one.",
+      icon: <SearchIcon size={24} />,
+    },
+    {
+      title: "Content Management",
+      description:
+        "Empower your team with an easy-to-use CMS. Update text, images, and blogs without needing to write a single line of code.",
+      icon: <SquareStackIcon size={24} />,
+    },
+    {
+      title: "E-commerce Integration",
+      description:
+        "Seamlessly integrate payment gateways, shopping carts, and inventory management for a robust online store experience.",
+      icon: <CartIcon size={24} />,
+    },
   ];
 
   return (
