@@ -9,7 +9,6 @@
 @import "tailwindcss/utilities";
 
 html {
-  scroll-behavior: smooth;
   /* Adjust this value based on your header height + desired gap */
   scroll-padding-top: 100px;
 }

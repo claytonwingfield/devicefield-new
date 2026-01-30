@@ -200,19 +200,19 @@ export default function SignUp() {
         </p>
         <p className="text-sm text-gray-500">
           By signing up, you agree to the{" "}
-          <a
+          <Link
             className="whitespace-nowrap font-medium text-gray-700 underline hover:no-underline"
-            href="#0"
+            href="/terms"
           >
             Terms of Service
-          </a>{" "}
+          </Link>{" "}
           and{" "}
-          <a
+          <Link
             className="whitespace-nowrap font-medium text-gray-700 underline hover:no-underline"
-            href="#0"
+            href="/terms"
           >
             Privacy Policy
-          </a>
+          </Link>
           .
         </p>
       </div>

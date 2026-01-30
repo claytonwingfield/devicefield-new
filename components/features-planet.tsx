@@ -655,7 +655,7 @@ export default function FeaturesPlanet() {
         {/* Paragraph 1 - Updated for Tech/Evaluations */}
         <ScrollRevealParagraph
           className="text-2xl md:text-5xl font-semibold text-white leading-relaxed mb-16 max-w-5xl mx-auto"
-          text="Your users don’t just visit. They validate. In seconds, they demand clarity, performance, and proof of scale. Anything less is a bounce."
+          text="Your users don’t just visit. They validate. In seconds, they demand clarity, performance, and proof of scale. Anything less is a loss."
         />
 
         {/* Paragraph 2 - Updated for Authority/Building */}

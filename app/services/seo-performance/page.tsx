@@ -1,4 +1,5 @@
 import ServiceLayout, { FeatureItem } from "@/components/service-layout";
+import { SeoVisual } from "@/components/service-visuals"; // <--- Import the new visual
 import { SearchIcon } from "@/components/ui/search";
 import { FolderCogIcon } from "@/components/ui/folder-cog";
 import { FlaskIcon } from "@/components/ui/flask";
@@ -55,6 +56,7 @@ export default function SEOPerformancePage() {
     <ServiceLayout
       title="SEO & Performance"
       description="Collect essential insights about how visitors are using your site with in-depth page view metrics like pages, referring sites, and more."
+      visual={<SeoVisual />} // <--- Added the visual here
       icon={
         <svg
           className="fill-yellow-primary"

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import ContactForm from "./contact-form";
-
+import { getBenefitVisual } from "@/components/outcome-visuals";
 // Update the interface to allow features to be strings OR objects with icons
 export interface FeatureItem {
   title: string;
@@ -201,7 +201,7 @@ export default function ServiceLayout({
           <div className="inline-block px-3 py-1 mb-4 text-xs font-semibold tracking-wider text-yellow-800 uppercase bg-yellow-100 rounded-full">
             Outcomes
           </div>
-          <h2 className="text-3xl font-bold md:text-5xl">Why Choose This?</h2>
+          <h2 className="text-3xl font-bold md:text-5xl">Why Choose Us?</h2>
         </div>
 
         <div className="relative space-y-8 lg:space-y-0">
@@ -231,7 +231,7 @@ export default function ServiceLayout({
                       </p>
                     </div>
 
-                    <div className="mt-12 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+                    <div className="mt-12 lg:flex hidden items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
                       <span>Process + Deliverables</span>
                       <div className="flex gap-0.5">
                         <div className="h-0.5 w-0.5 rounded-full bg-gray-400"></div>
@@ -242,34 +242,8 @@ export default function ServiceLayout({
                   </div>
 
                   {/* Right Side: Visual/Abstract */}
-                  <div className="relative min-h-[300px] bg-gray-50 lg:min-h-full flex items-center justify-center overflow-hidden border-t lg:border-t-0 lg:border-l border-gray-100">
-                    {index % 3 === 0 && (
-                      <div className="relative w-64 h-64">
-                        <div className="absolute inset-0 bg-gradient-to-tr from-blue-primary/20 to-yellow-primary/20 rounded-full blur-3xl"></div>
-                        <div className="absolute inset-4 border border-gray-200 rounded-full flex items-center justify-center">
-                          <div className="w-32 h-32 bg-white shadow-lg rounded-2xl rotate-12"></div>
-                        </div>
-                      </div>
-                    )}
-                    {index % 3 === 1 && (
-                      <div className="relative w-full h-full p-12">
-                        <div className="h-full w-full bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-4">
-                          <div className="h-8 w-1/3 bg-gray-100 rounded-lg"></div>
-                          <div className="h-32 w-full bg-gray-50 rounded-lg border border-dashed border-gray-200"></div>
-                          <div className="flex gap-2">
-                            <div className="h-8 w-8 rounded-full bg-yellow-primary/20"></div>
-                            <div className="h-8 w-full bg-gray-100 rounded-lg"></div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {index % 3 === 2 && (
-                      <div className="relative flex gap-4">
-                        <div className="w-16 h-32 bg-gray-900 rounded-lg shadow-xl translate-y-4"></div>
-                        <div className="w-16 h-32 bg-yellow-primary rounded-lg shadow-xl -translate-y-4"></div>
-                        <div className="w-16 h-32 bg-gray-200 rounded-lg shadow-xl translate-y-4"></div>
-                      </div>
-                    )}
+                  <div className="relative min-h-[300px] lg:min-h-full overflow-hidden border-t lg:border-t-0 lg:border-l border-gray-100">
+                    {getBenefitVisual(title, index)}
                   </div>
                 </div>
               </div>

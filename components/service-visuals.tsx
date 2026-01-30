@@ -366,3 +366,126 @@ export function IntegrationsVisual() {
     </div>
   );
 }
+
+export function SeoVisual() {
+  return (
+    <div className="relative mx-auto w-full max-w-[500px]">
+      <div className="rounded-xl border border-gray-100 bg-white shadow-2xl overflow-hidden">
+        {/* Header / Toolbar */}
+        <div className="flex items-center justify-between border-b border-gray-50 bg-gray-50/50 px-5 py-3">
+          <div className="flex gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-red-400"></div>
+            <div className="h-2.5 w-2.5 rounded-full bg-yellow-400"></div>
+            <div className="h-2.5 w-2.5 rounded-full bg-green-400"></div>
+          </div>
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            Site Health Report
+          </div>
+        </div>
+
+        <div className="p-8">
+          {/* Score Circles Row */}
+          <div className="flex justify-between gap-4 mb-10">
+            <ScoreCircle score={98} label="Performance" color="green" />
+            <ScoreCircle score={100} label="SEO" color="green" />
+            <ScoreCircle score={92} label="Practices" color="yellow" />
+          </div>
+
+          {/* Checklist Items (Audit List) */}
+          <div className="space-y-4">
+            <AuditItem width="w-3/4" delay="0" />
+            <AuditItem width="w-2/3" delay="100" />
+            <AuditItem width="w-5/6" delay="200" />
+          </div>
+        </div>
+      </div>
+
+      {/* Floating Rank Card - Styled like a Search Result */}
+    </div>
+  );
+}
+
+// --- Helper Components for Cleaner Code ---
+
+function ScoreCircle({
+  score,
+  label,
+  color,
+}: {
+  score: number;
+  label: string;
+  color: "green" | "yellow";
+}) {
+  const strokeColor = color === "green" ? "#22c55e" : "#eab308"; // Tailwind green-500 or yellow-500
+  const circleRadius = 28;
+  const circumference = 2 * Math.PI * circleRadius; // ~175
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative h-20 w-20 flex items-center justify-center">
+        {/* Background Track Ring */}
+        <svg className="absolute top-0 left-0 h-full w-full rotate-[-90deg]">
+          <circle
+            cx="40"
+            cy="40"
+            r={circleRadius}
+            fill="transparent"
+            stroke="#f3f4f6" /* gray-100 */
+            strokeWidth="6"
+            strokeLinecap="round"
+          />
+        </svg>
+        {/* Progress Ring */}
+        <svg className="absolute top-0 left-0 h-full w-full rotate-[-90deg]">
+          <circle
+            cx="40"
+            cy="40"
+            r={circleRadius}
+            fill="transparent"
+            stroke={strokeColor}
+            strokeWidth="6"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-out"
+          />
+        </svg>
+        <span
+          className={`text-2xl font-bold ${color === "green" ? "text-green-600" : "text-yellow-600"}`}
+        >
+          {score}
+        </span>
+      </div>
+      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function AuditItem({ width, delay }: { width: string; delay: string }) {
+  return (
+    <div
+      className="flex items-center gap-4 p-3 rounded-lg bg-gray-50/50 border border-gray-100/50 animate-fade-in"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="flex-shrink-0 h-6 w-6 rounded-full bg-green-500 flex items-center justify-center shadow-sm">
+        <svg
+          className="w-3.5 h-3.5 text-white"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={3}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      </div>
+      <div className={`h-2.5 bg-gray-200 rounded-full ${width}`}></div>
+    </div>
+  );
+}
