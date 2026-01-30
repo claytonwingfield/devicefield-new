@@ -15,21 +15,6 @@ export default function Terms() {
             {/* Left Column: Text */}
             <div className="text-center" data-aos="fade-right">
               {/* Mobile Icon (visible only on small screens, matching service layout pattern) */}
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-yellow-primary/10 text-yellow-primary lg:hidden">
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
 
               <h1 className="mb-6 text-4xl font-bold md:text-5xl lg:text-6xl tracking-tight">
                 Terms of Service
