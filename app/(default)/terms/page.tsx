@@ -1,106 +1,56 @@
-import Link from "next/link";
+import {
+  defaultSitePages,
+  getSitePage,
+  getString,
+  getTermsSections,
+} from "@/lib/site/pages";
 
-export const metadata = {
-  title: "Terms of Service - Devicefield",
-  description: "Read our terms of service",
-};
+export const revalidate = 300;
 
-export default function Terms() {
+export async function generateMetadata() {
+  const page = await getSitePage("terms");
+
+  return {
+    title: page.title,
+    description: page.meta_description,
+    alternates: {
+      canonical: "https://devicefield.com/terms",
+    },
+  };
+}
+
+export default async function TermsPage() {
+  const page = await getSitePage("terms");
+  const defaults = defaultSitePages.terms.content;
+  const sections = getTermsSections(page.content);
+
   return (
-    <section>
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        {/* Hero Section - Matching Services Style */}
-        <div className="pb-12 pt-32 md:pb-20 md:pt-40">
-          <div className="grid gap-12 lg:grid-cols-1 lg:gap-8 items-center">
-            {/* Left Column: Text */}
-            <div className="text-center" data-aos="fade-right">
-              {/* Mobile Icon (visible only on small screens, matching service layout pattern) */}
+    <section className="bg-zinc-50 px-4 pb-20 pt-32 sm:px-6">
+      <div className="mx-auto max-w-4xl">
+        <header className="border-b border-zinc-200 pb-10">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+            {getString(page.content, "eyebrow", getString(defaults, "eyebrow", ""))}
+          </p>
+          <h1 className="mt-4 text-5xl font-semibold tracking-[-0.05em] text-zinc-950 sm:text-7xl">
+            {getString(page.content, "heading", getString(defaults, "heading", ""))}
+          </h1>
+          <p className="mt-6 text-lg leading-8 text-zinc-600">
+            {getString(page.content, "intro", getString(defaults, "intro", ""))}
+          </p>
+        </header>
 
-              <h1 className="mb-6 text-4xl font-bold md:text-5xl lg:text-6xl tracking-tight">
-                Terms of Service
-              </h1>
-              <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-                Please read these terms carefully before using our services.
-                They outline the rules and regulations for the use of
-                Devicefield's Website and Services.
-              </p>
-
-              <div className="inline-flex items-center gap-2 text-sm text-gray-500 bg-gray-100 rounded-full px-3 py-1">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                Last updated: {new Date().toLocaleDateString()}
-              </div>
-            </div>
-
-            {/* Right Column: Visual */}
-          </div>
-        </div>
-
-        {/* Content Section */}
-        <div className="mb-20 max-w-4xl mx-auto">
-          <div
-            className="prose max-w-none text-gray-600 prose-headings:text-gray-900 prose-a:text-blue-primary hover:prose-a:text-blue-primary"
-            data-aos="fade-up"
-          >
-            <p>
-              Welcome to Devicefield. By using our website and services, you
-              agree to comply with and be bound by the following terms and
-              conditions.
-            </p>
-
-            <h3>1. Acceptance of Terms</h3>
-            <p>
-              By accessing or using our Service, you agree to be bound by these
-              Terms. If you disagree with any part of the terms, then you may
-              not access the Service.
-            </p>
-
-            <h3>2. Use License</h3>
-            <p>
-              Permission is granted to temporarily download one copy of the
-              materials (information or software) on Devicefield's website for
-              personal, non-commercial transitory viewing only. This is the
-              grant of a license, not a transfer of title, and under this
-              license you may not:
-            </p>
-            <ul>
-              <li>modify or copy the materials;</li>
-              <li>
-                use the materials for any commercial purpose, or for any public
-                display (commercial or non-commercial);
-              </li>
-              <li>
-                attempt to decompile or reverse engineer any software contained
-                on Devicefield's website;
-              </li>
-              <li>
-                remove any copyright or other proprietary notations from the
-                materials; or
-              </li>
-              <li>
-                transfer the materials to another person or "mirror" the
-                materials on any other server.
-              </li>
-            </ul>
-
-            <h3>3. Disclaimer</h3>
-            <p>
-              The materials on Devicefield's website are provided on an 'as is'
-              basis. Devicefield makes no warranties, expressed or implied, and
-              hereby disclaims and negates all other warranties including,
-              without limitation, implied warranties or conditions of
-              merchantability, fitness for a particular purpose, or
-              non-infringement of intellectual property or other violation of
-              rights.
-            </p>
-
-            <h3>4. Limitations</h3>
-            <p>
-              In no event shall Devicefield or its suppliers be liable for any
-              damages (including, without limitation, damages for loss of data
-              or profit, or due to business interruption) arising out of the use
-              or inability to use the materials on Devicefield's website.
-            </p>
-          </div>
+        <div className="mt-10 space-y-5">
+          {sections.map((section) => (
+            <article
+              key={section.title}
+              className="rounded-[1.5rem] border border-zinc-200 bg-white p-6"
+            >
+              <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
+                {section.title}
+              </h2>
+              <p className="mt-3 leading-7 text-zinc-600">{section.body}</p>
+            </article>
+          ))}
         </div>
       </div>
     </section>

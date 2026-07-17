@@ -9,8 +9,88 @@
 @import "tailwindcss/utilities";
 
 html {
-  /* Adjust this value based on your header height + desired gap */
   scroll-padding-top: 100px;
+  scroll-behavior: smooth;
+}
+
+@keyframes hero-orbit {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes hero-orbit-reverse {
+  from {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+}
+
+@keyframes hero-signal-row {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.82;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@keyframes hero-signal-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  45%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.hero-orbit {
+  animation: hero-orbit 24s linear infinite;
+}
+
+.hero-orbit-reverse {
+  animation: hero-orbit-reverse 18s linear infinite;
+}
+
+.hero-signal-row {
+  animation: hero-signal-row 4s ease-in-out infinite;
+}
+
+.hero-signal-bar {
+  animation: hero-signal-bar 1.6s ease-out both;
+}
+
+.hero-float {
+  animation: hero-float 4.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-orbit,
+  .hero-orbit-reverse,
+  .hero-signal-row,
+  .hero-signal-bar,
+  .hero-float {
+    animation: none;
+  }
 }
 
 /* Prevent iOS zoom on input focus: use 16px minimum on text inputs on mobile */

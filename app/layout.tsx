@@ -1,7 +1,6 @@
 import "./css/style.css";
 
 import { Inter, Space_Grotesk } from "next/font/google";
-import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,8 +16,25 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = {
-  title: "Devicefield",
-  description: "Your partner in digital creation",
+  metadataBase: new URL("https://devicefield.com"),
+  title: {
+    default: "Devicefield - Tested devices and systems for modern businesses",
+    template: "%s",
+  },
+  description:
+    "Independent business device reviews, software comparisons, and operating system guides for modern teams.",
+  openGraph: {
+    siteName: "Devicefield",
+    type: "website",
+    url: "https://devicefield.com",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  other: {
+    "impact-site-verification": "65f54530-8a64-40ab-be8e-132733dd624a",
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +43,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    /* Removed "scroll-smooth" from className below */
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body
         className="bg-gray-50 font-space tracking-tight text-gray-900 antialiased"
@@ -36,49 +51,6 @@ export default function RootLayout({
         <div className="flex min-h-screen flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">
           {children}
         </div>
-
-        {/* DeviceField Analytics Script */}
-        <Script id="devicefield-pixel" strategy="afterInteractive">
-          {`
-            (function() {
-              // CONFIGURATION
-              const PROJECT_ID = "wpnwkawyheooovygldbq"; // User replaces this
-              // const ENDPOINT = "https://devicefield.com/api/track"; // Your domain
-              const ENDPOINT = "/api/track";
-
-              // Track Page View
-              function trackView() {
-                fetch(ENDPOINT, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    projectId: PROJECT_ID,
-                    eventType: "view",
-                    path: window.location.pathname,
-                    referrer: document.referrer
-                  })
-                }).catch(err => console.log("Analytics error:", err));
-              }
-
-              // Track Clicks (Optional - simplest version)
-              document.addEventListener("click", function(e) {
-                // You can refine this to only track specific buttons if you want
-                fetch(ENDPOINT, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    projectId: PROJECT_ID,
-                    eventType: "click",
-                    path: window.location.pathname
-                  })
-                }).catch(() => {});
-              });
-
-              // Run on load
-              trackView();
-            })();
-          `}
-        </Script>
       </body>
     </html>
   );

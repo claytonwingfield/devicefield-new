@@ -34,8 +34,6 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "components/websiteAnimation.jsx",
-    "components/websiteAnimation.jsx",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

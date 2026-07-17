@@ -2,7 +2,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // Removed useSearchParams
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import LoadingAnimation from "@/components/loading-animation";
 
@@ -12,7 +12,6 @@ function ConfirmResetPasswordContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  // Removed searchParams
   const supabase = createClient();
 
   // Optional: Check if user is actually logged in
@@ -53,7 +52,7 @@ function ConfirmResetPasswordContent() {
 
       if (error) throw error;
 
-      router.push("/dashboard");
+      router.push("/admin");
       router.refresh();
     } catch (error: any) {
       setError(error.message || "An error occurred while updating password");

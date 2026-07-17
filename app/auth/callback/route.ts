@@ -5,8 +5,7 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // Ensure we fall back to /dashboard or /reset-password/confirm if next is missing
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = searchParams.get("next") ?? "/admin";
 
   if (code) {
     const supabase = await createClient();

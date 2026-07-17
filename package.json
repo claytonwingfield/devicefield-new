@@ -6,44 +6,25 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "-": "^0.0.1",
-    "@calcom/embed-react": "^1.5.3",
-    "@headlessui/react": "^2.0.4",
-    "@lottiefiles/lottie-interactivity": "^1.6.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.91.1",
     "@types/node": "^22.10.1",
     "@types/react": "19.0.1",
     "@types/react-dom": "19.0.1",
-    "aos": "^3.0.0-beta.6",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
-    "firebase": "^12.8.0",
-    "framer-motion": "^12.29.2",
-    "googleapis": "^170.1.0",
-    "lottie-react": "^2.4.0",
-    "lucide-react": "^0.563.0",
-    "motion": "^12.29.2",
     "next": "^16.1.6",
-    "nodemailer": "^7.0.13",
     "prettier-plugin-tailwindcss": "^0.6.5",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "save": "^2.9.0",
-    "stripe": "^20.3.0",
     "tailwind-merge": "^3.4.0",
-    "three": "^0.172.0",
-    "three-globe": "^2.39.1",
     "typescript": "^5.3.3"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.7",
-    "@types/aos": "^3.0.7",
-    "@types/nodemailer": "^7.0.9",
-    "@types/three": "^0.171.0",
     "autoprefixer": "^10.4.16",
     "esbuild": "^0.19.12",
     "postcss": "^8.4.32",
@@ -51,10 +32,6 @@
   },
   "overrides": {
     "@types/react": "19.0.1",
-    "@types/react-dom": "19.0.1",
-    "lottie-react": {
-      "react": "$react",
-      "react-dom": "$react-dom"
-    }
+    "@types/react-dom": "19.0.1"
   }
 }
