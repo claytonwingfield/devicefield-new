@@ -43,16 +43,6 @@ html {
   }
 }
 
-@keyframes hero-signal-bar {
-  0% {
-    transform: translateX(-100%);
-  }
-  45%,
-  100% {
-    transform: translateX(0);
-  }
-}
-
 @keyframes hero-float {
   0%,
   100% {
@@ -75,10 +65,6 @@ html {
   animation: hero-signal-row 4s ease-in-out infinite;
 }
 
-.hero-signal-bar {
-  animation: hero-signal-bar 1.6s ease-out both;
-}
-
 .hero-float {
   animation: hero-float 4.5s ease-in-out infinite;
 }
@@ -87,7 +73,6 @@ html {
   .hero-orbit,
   .hero-orbit-reverse,
   .hero-signal-row,
-  .hero-signal-bar,
   .hero-float {
     animation: none;
   }

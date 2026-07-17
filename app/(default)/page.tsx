@@ -3,8 +3,10 @@ import BlogCard from "@/components/blog/blog-card";
 import { getFeaturedPosts, getPublishedPosts } from "@/lib/blog/server";
 import {
   defaultSitePages,
+  getObjectArray,
   getSitePage,
   getString,
+  type HeroEvaluationItem,
 } from "@/lib/site/pages";
 
 export const revalidate = 300;
@@ -28,6 +30,17 @@ export default async function Home() {
     getPublishedPosts(6),
   ]);
   const defaults = defaultSitePages.home.content;
+  const heroEvaluation = getObjectArray(
+    page.content,
+    "heroEvaluation",
+    getObjectArray<HeroEvaluationItem>(
+      defaults,
+      "heroEvaluation",
+      [],
+      ["title", "description"],
+    ),
+    ["title", "description"],
+  );
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -88,30 +101,29 @@ export default async function Home() {
               <div className="rounded-[1.75rem] bg-zinc-950 p-5 text-white">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
-                    Ranking system
+                    How we evaluate
                   </p>
                   <span className="h-2.5 w-2.5 rounded-full bg-lime-300 shadow-[0_0_28px_rgba(190,242,100,0.95)]" />
                 </div>
-                <div className="mt-8 space-y-3">
-                  {[
-                    ["Reviews", "94"],
-                    ["Comparisons", "88"],
-                    ["Guides", "82"],
-                  ].map(([label, score], index) => (
+                <div className="mt-8 grid gap-3">
+                  {heroEvaluation.map((item, index) => (
                     <div
-                      key={label}
+                      key={item.title}
                       className="hero-signal-row rounded-2xl border border-white/10 bg-white/[0.06] p-4"
                       style={{ animationDelay: `${index * 0.18}s` }}
                     >
-                      <div className="flex items-center justify-between text-sm font-semibold">
-                        <span>{label}</span>
-                        <span className="text-lime-300">{score}</span>
-                      </div>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                        <div
-                          className="hero-signal-bar h-full rounded-full bg-lime-300"
-                          style={{ width: `${score}%`, animationDelay: `${index * 0.2}s` }}
-                        />
+                      <div className="flex gap-3">
+                        <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-300 text-xs font-semibold text-zinc-950">
+                          {index + 1}
+                        </span>
+                        <div>
+                          <h2 className="text-base font-semibold tracking-tight text-white">
+                            {item.title}
+                          </h2>
+                          <p className="mt-1 text-sm leading-6 text-zinc-300">
+                            {item.description}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -119,7 +131,7 @@ export default async function Home() {
               </div>
 
               <div className="mt-4 grid grid-cols-3 gap-3">
-                {["Test", "Score", "Publish"].map((step, index) => (
+                {["Research", "Verify", "Explain"].map((step, index) => (
                   <div
                     key={step}
                     className="hero-float rounded-2xl border border-zinc-200 bg-white p-4 text-center text-sm font-semibold text-zinc-700 shadow-sm"

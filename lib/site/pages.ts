@@ -15,6 +15,11 @@ export type TermsSection = {
   body: string;
 };
 
+export type HeroEvaluationItem = {
+  title: string;
+  description: string;
+};
+
 const homeContent = {
   eyebrow: "Independent reviews. Business-first.",
   heading: "Tested devices and systems for modern businesses.",
@@ -31,6 +36,27 @@ const homeContent = {
     "Web infrastructure",
     "Operations stack",
   ],
+  heroEvaluation: [
+    {
+      title: "Compatibility",
+      description: "Does it work with the systems businesses already use?",
+    },
+    {
+      title: "Setup",
+      description:
+        "How much time and technical effort does deployment require?",
+    },
+    {
+      title: "Reliability",
+      description:
+        "How does it handle daily operation, reconnection, and failure?",
+    },
+    {
+      title: "Value",
+      description:
+        "What is the real cost after accessories and subscriptions?",
+    },
+  ] satisfies HeroEvaluationItem[],
   featuredEyebrow: "Featured",
   featuredHeading: "Practical buying guides",
   affiliateEyebrow: "Research library",
@@ -182,4 +208,23 @@ export function getTermsSections(content: Record<string, unknown>) {
   );
 
   return sections.length > 0 ? sections : termsContent.sections;
+}
+
+export function getObjectArray<T extends Record<string, string>>(
+  content: Record<string, unknown>,
+  key: string,
+  fallback: T[],
+  requiredKeys: Array<keyof T>,
+) {
+  const value = content[key];
+  if (!Array.isArray(value)) return fallback;
+
+  const rows = value.filter(
+    (item): item is T =>
+      typeof item === "object" &&
+      item !== null &&
+      requiredKeys.every((requiredKey) => typeof item[requiredKey] === "string"),
+  );
+
+  return rows.length > 0 ? rows : fallback;
 }
