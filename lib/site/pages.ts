@@ -1,6 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 
-export type SitePageSlug = "home" | "blog" | "terms";
+export type SitePageSlug =
+  | "global"
+  | "home"
+  | "blog"
+  | "about"
+  | "contact"
+  | "review-methodology"
+  | "editorial-policy"
+  | "affiliate-disclosure"
+  | "terms"
+  | "privacy";
 
 export type SitePage = {
   slug: SitePageSlug;
@@ -20,6 +30,47 @@ export type HeroEvaluationItem = {
   description: string;
 };
 
+export type HomeCategoryEntry = {
+  title: string;
+  description: string;
+};
+
+export type NavigationEntry = {
+  href: string;
+  label: string;
+};
+
+const globalContent = {
+  newsletterLabel: "Newsletter",
+  navItems: [
+    { href: "/blog", label: "Guides" },
+    { href: "/blog?type=reviews", label: "Reviews" },
+    { href: "/blog?type=comparisons", label: "Comparisons" },
+    { href: "/category/troubleshooting", label: "Troubleshooting" },
+    { href: "/about", label: "About" },
+  ] satisfies NavigationEntry[],
+  footerPublicationLinks: [
+    { href: "/blog", label: "All guides" },
+    { href: "/about", label: "About" },
+    { href: "/contact", label: "Contact" },
+    { href: "/review-methodology", label: "Review methodology" },
+    { href: "/editorial-policy", label: "Editorial policy" },
+  ] satisfies NavigationEntry[],
+  footerPolicyLinks: [
+    { href: "/affiliate-disclosure", label: "Affiliate disclosure" },
+    { href: "/privacy", label: "Privacy Policy" },
+    { href: "/terms", label: "Terms of Use" },
+  ] satisfies NavigationEntry[],
+  footerDescription:
+    "Devicefield publishes independent buying guides, reviews, compatibility notes, and troubleshooting help for business devices and systems.",
+  footerDisclosure:
+    "Devicefield may earn commissions from qualifying purchases made through clearly identified partner links.",
+  footerTagline: "Tested devices and systems for modern businesses.",
+  footerNewsletterHeading: "Newsletter",
+  footerNewsletterText:
+    "Get new buying guides, corrections, and practical business technology notes when they publish.",
+};
+
 const homeContent = {
   eyebrow: "Independent reviews. Business-first.",
   heading: "Tested devices and systems for modern businesses.",
@@ -27,15 +78,49 @@ const homeContent = {
     "Independent buying guides, compatibility notes, reviews, setup guides, and troubleshooting articles for business devices and systems.",
   primaryCta: "Browse Buying Guides",
   secondaryCta: "How we test",
-  coverageLabel: "Coverage map",
-  focusAreas: [
-    "Business devices",
-    "SaaS systems",
-    "AI workflows",
-    "Security tools",
-    "Web infrastructure",
-    "Operations stack",
+  trustStrip: [
+    "Hands-on when stated",
+    "Specs independently verified",
+    "Affiliate-supported",
+    "Corrections welcomed",
+    "Updated regularly",
   ],
+  categoryEyebrow: "Coverage",
+  categoryHeading: "Business technology categories Devicefield covers.",
+  categoryIntro:
+    "Focused guides for the hardware, software, and reliability problems businesses run into every day.",
+  categoryEntries: [
+    {
+      title: "Barcode & Inventory",
+      description:
+        "Scanners, inventory workflows, SKU labeling, and stock-counting systems.",
+    },
+    {
+      title: "Receipt & Label Printing",
+      description:
+        "Receipt printers, label printers, thermal media, drivers, and replacement planning.",
+    },
+    {
+      title: "POS Hardware",
+      description:
+        "Terminals, tablets, cash drawers, stands, card readers, and retail counter setups.",
+    },
+    {
+      title: "Networking & Uptime",
+      description:
+        "Routers, failover, backup power, Wi-Fi coverage, and business continuity gear.",
+    },
+    {
+      title: "Business Software",
+      description:
+        "POS platforms, inventory apps, reporting tools, and systems that connect operations.",
+    },
+    {
+      title: "Troubleshooting",
+      description:
+        "Fixes for printer pairing, scanner setup, network drops, and hardware compatibility issues.",
+    },
+  ] satisfies HomeCategoryEntry[],
   heroEvaluation: [
     {
       title: "Compatibility",
@@ -53,58 +138,237 @@ const homeContent = {
     },
     {
       title: "Value",
-      description:
-        "What is the real cost after accessories and subscriptions?",
+      description: "What is the real cost after accessories and subscriptions?",
     },
   ] satisfies HeroEvaluationItem[],
+  heroEvaluationLabel: "How we evaluate",
+  heroSteps: ["Research", "Verify", "Explain"],
   featuredEyebrow: "Featured",
   featuredHeading: "Practical buying guides",
-  affiliateEyebrow: "Research library",
-  affiliateHeading: "Built around buyer-intent research, not random link lists.",
   latestEyebrow: "Latest",
   latestHeading: "New from Devicefield",
-  disclosureEyebrow: "Disclosure",
-  disclosureText:
-    "Some articles may include partner links. The goal is to publish useful, test-driven recommendations with clear tradeoffs.",
+  evaluationEyebrow: "Evaluation system",
+  evaluationHeading: "Evidence for the decisions that affect daily operations.",
+  evaluationIntro:
+    "Guides consider deployment effort, total cost, compatibility, reliability, and the practical limits a business needs to know before buying.",
+  evaluationFactors: [
+    {
+      title: "Compatibility",
+      description: "Required systems, drivers, accessories, and integrations.",
+    },
+    {
+      title: "Setup effort",
+      description: "The time and technical work needed to deploy it.",
+    },
+    {
+      title: "Reliability",
+      description:
+        "Daily operation, reconnect behavior, failure, and recovery.",
+    },
+    {
+      title: "Total value",
+      description:
+        "Purchase cost, subscriptions, supplies, and switching risk.",
+    },
+  ] satisfies HeroEvaluationItem[],
+  newsletterEyebrow: "Free checklist",
+  newsletterHeading: "Get the Business Technology Checklist",
+  newsletterIntro:
+    "A practical checklist for selecting POS hardware, scanners, printers, networking equipment, and backup power.",
 };
 
 const blogContent = {
   eyebrow: "Field notes",
   heading: "Reviews, comparisons, and operating guides.",
   intro:
-    "Clear recommendations for teams choosing devices, SaaS platforms, AI workflows, security tools, and the systems that connect them.",
+    "Buying guides, product reviews, comparisons, setup notes, and troubleshooting help for the devices and systems businesses rely on.",
+};
+
+const aboutContent = {
+  eyebrow: "About Devicefield",
+  heading: "Practical technology guidance for modern businesses.",
+  intro:
+    "Devicefield helps business owners and operators choose, connect, and troubleshoot the devices and systems their teams rely on.",
+  missionHeading: "Useful answers before expensive decisions.",
+  missionBody:
+    "Coverage focuses on barcode and inventory systems, receipt and label printing, POS hardware, networking and uptime, business software, and the problems that appear when those systems need to work together.",
+  standardsHeading: "How coverage is labeled",
+  standardsBody:
+    "Hands-on testing is identified only when an article includes real testing notes, screenshots, photos, measurements, or other direct evidence. Otherwise, recommendations are clearly presented as researched or spec-reviewed.",
+  independenceHeading: "Independent and affiliate-supported",
+  independenceBody:
+    "Some links may earn Devicefield a commission at no additional cost to the reader. Affiliate relationships do not guarantee coverage or a positive recommendation, and tradeoffs remain part of every useful guide.",
+};
+
+const contactContent = {
+  eyebrow: "Contact",
+  heading: "Questions, corrections, and useful product context.",
+  intro:
+    "Devicefield welcomes factual corrections, reader questions, and relevant information that can improve published guidance.",
+  sections: [
+    {
+      title: "Editorial and corrections",
+      body: "Email contact@devicefield.com with the article URL, the detail that needs review, and a source when available.",
+    },
+    {
+      title: "Products and review access",
+      body: "Vendors may share documentation or offer review access, but access does not guarantee coverage or a positive recommendation.",
+    },
+    {
+      title: "Response expectations",
+      body: "Messages are reviewed manually. Devicefield prioritizes corrections and questions tied to published business-device guidance.",
+    },
+  ],
+};
+
+const reviewMethodologyContent = {
+  eyebrow: "Review methodology",
+  heading: "How Devicefield evaluates business technology.",
+  intro:
+    "The process changes with the product, but the evidence label and the core evaluation questions remain consistent.",
+  sections: [
+    {
+      title: "Testing status",
+      body: "Tested means hands-on evidence is documented. Researched means the article relies on specifications, documentation, demonstrations, and credible sources. Mixed means only part of the recommendation set was tested directly.",
+    },
+    {
+      title: "Compatibility",
+      body: "We check required operating systems, ports, drivers, accessories, integrations, media, subscriptions, and other dependencies that affect deployment.",
+    },
+    {
+      title: "Setup and reliability",
+      body: "When hands-on access is available, notes focus on setup time, reconnect behavior, normal operation, failure handling, and recovery. Research-only coverage clearly says what could not be verified directly.",
+    },
+    {
+      title: "Value and limitations",
+      body: "Evaluation includes required accessories, ongoing subscriptions, replacement supplies, switching costs, support constraints, known limitations, and credible alternatives.",
+    },
+    {
+      title: "Updates and corrections",
+      body: "Commercial and compatibility details can change. Articles include review dates where available, and material corrections are welcomed through the contact page.",
+    },
+  ],
+};
+
+const editorialPolicyContent = {
+  eyebrow: "Editorial policy",
+  heading: "Evidence first, labels that match the work.",
+  intro:
+    "Devicefield separates what was observed directly from what was verified through documentation and other sources.",
+  sections: [
+    {
+      title: "No fabricated testing",
+      body: "A product is described as tested only when the article includes genuine hands-on notes, screenshots, photos, measurements, or other original evidence.",
+    },
+    {
+      title: "Sources and claims",
+      body: "Important factual, numerical, compatibility, pricing, and commercial claims should be tied to current sources. Unresolved high-risk claims should not be published.",
+    },
+    {
+      title: "Recommendations",
+      body: "Best-for recommendations should explain selection criteria, who the product fits, who should avoid it, known limitations, and reasonable alternatives.",
+    },
+    {
+      title: "Commercial independence",
+      body: "Affiliate eligibility, commissions, vendor access, and advertising do not guarantee coverage or determine a positive conclusion.",
+    },
+    {
+      title: "Corrections",
+      body: "Material errors should be corrected promptly. Readers and vendors can submit a correction with supporting evidence through the contact page.",
+    },
+  ],
+};
+
+const affiliateDisclosureContent = {
+  eyebrow: "Affiliate disclosure",
+  heading: "How partner links support Devicefield.",
+  intro:
+    "Some articles contain clearly identified partner links. Devicefield may earn a commission when a reader makes a qualifying purchase through one of those links.",
+  sections: [
+    {
+      title: "No added reader cost",
+      body: "A qualifying purchase may generate a commission without changing the price paid by the reader, although prices and terms are controlled by the seller.",
+    },
+    {
+      title: "Disclosure in articles",
+      body: "Articles with affiliate-linked recommendations display a disclosure near the article introduction. Affiliate buttons are labeled and use sponsored link attributes.",
+    },
+    {
+      title: "Editorial separation",
+      body: "Compensation does not guarantee coverage, placement, an award, or a positive recommendation. Tradeoffs and alternatives remain part of the editorial decision.",
+    },
+    {
+      title: "Verify before buying",
+      body: "Pricing, availability, compatibility, and program terms can change. Readers should confirm important details with the seller before purchasing.",
+    },
+  ],
 };
 
 const termsContent = {
   eyebrow: "Policy",
-  heading: "Terms, disclosure, and editorial standards.",
+  heading: "Terms of Use",
   intro:
-    "Devicefield is an independent publication focused on devices, software, and systems for modern businesses.",
+    "These terms apply to use of Devicefield.com and its informational content.",
   sections: [
     {
-      title: "Affiliate disclosure",
-      body: "Devicefield may earn commissions when readers click affiliate links and purchase products or services. Those commissions help fund testing, writing, hosting, and maintenance. Affiliate compensation does not guarantee coverage, placement, or a positive recommendation.",
+      title: "Informational content",
+      body: "Devicefield content is general information, not legal, financial, security, procurement, or individualized technical advice. Evaluate products against your own requirements.",
     },
     {
-      title: "Editorial policy",
-      body: "Recommendations should be based on product fit, testing notes, implementation tradeoffs, pricing context, security considerations, and realistic alternatives. Devicefield aims to explain who a product is best for and who should avoid it.",
-    },
-    {
-      title: "No professional advice",
-      body: "Devicefield content is for general informational purposes. It is not legal, financial, procurement, security, or technical consulting advice. Businesses should evaluate products against their own requirements before buying.",
-    },
-    {
-      title: "Accuracy and changes",
-      body: "Pricing, product features, affiliate terms, and availability can change. Devicefield may update articles over time, but readers should verify important details with the vendor before making a purchase.",
+      title: "Changing product information",
+      body: "Pricing, availability, features, compatibility, and support terms can change. Verify material details with the manufacturer, vendor, or service provider before purchasing or deploying a product.",
     },
     {
       title: "Website use",
-      body: "By using this website, you agree not to misuse the site, attempt unauthorized access, copy content at scale, or interfere with normal operation. Devicefield may update these terms as the site evolves.",
+      body: "Do not misuse the website, attempt unauthorized access, interfere with operation, submit abusive automated requests, or reproduce substantial content without permission.",
+    },
+    {
+      title: "Third-party services",
+      body: "Devicefield links to third-party websites that control their own products, terms, availability, privacy practices, and transactions.",
+    },
+    {
+      title: "Updates",
+      body: "These terms may be updated as the publication and its services change. Continued use of the site is subject to the current published version.",
+    },
+  ],
+};
+
+const privacyContent = {
+  eyebrow: "Policy",
+  heading: "Privacy Policy",
+  intro:
+    "This policy explains what Devicefield collects and how that information is used.",
+  sections: [
+    {
+      title: "Newsletter data",
+      body: "When you subscribe, Devicefield stores your email address, consent and confirmation timestamps, subscription status, and the page where you subscribed. A confirmation email is required before marketing emails are sent.",
+    },
+    {
+      title: "Email providers",
+      body: "Confirmed subscriber information may be synchronized with an email delivery provider to send requested messages, process delivery events, and honor unsubscribe requests.",
+    },
+    {
+      title: "Security and abuse prevention",
+      body: "Devicefield uses short-lived rate-limit records, hashed request identifiers, and anti-bot fields to reduce abuse. Raw IP addresses are not stored in the newsletter subscription table.",
+    },
+    {
+      title: "Affiliate and website data",
+      body: "Devicefield may record limited click and referral information for affiliate links and site performance. This information is used to understand content performance and maintain the website.",
+    },
+    {
+      title: "Your choices",
+      body: "You can unsubscribe at any time using the link in Devicefield emails. To ask about, correct, or delete your information, contact contact@devicefield.com.",
     },
   ],
 };
 
 export const defaultSitePages: Record<SitePageSlug, SitePage> = {
+  global: {
+    slug: "global",
+    title: "Devicefield publication settings",
+    meta_description: "Shared Devicefield navigation and footer content.",
+    content: globalContent,
+  },
   home: {
     slug: "home",
     title: "Devicefield - Tested devices and systems for modern businesses",
@@ -119,12 +383,54 @@ export const defaultSitePages: Record<SitePageSlug, SitePage> = {
       "Browse Devicefield buying guides, business system reviews, security checklists, and implementation playbooks.",
     content: blogContent,
   },
+  about: {
+    slug: "about",
+    title: "About Devicefield - Independent Business Technology Publication",
+    meta_description:
+      "Learn how Devicefield researches business devices and systems, labels hands-on testing, and maintains independent editorial standards.",
+    content: aboutContent,
+  },
+  contact: {
+    slug: "contact",
+    title: "Contact Devicefield",
+    meta_description:
+      "Contact Devicefield with corrections, questions, product information, or editorial feedback.",
+    content: contactContent,
+  },
+  "review-methodology": {
+    slug: "review-methodology",
+    title: "Review Methodology - Devicefield",
+    meta_description:
+      "Learn how Devicefield evaluates compatibility, setup, reliability, value, and evidence for business technology coverage.",
+    content: reviewMethodologyContent,
+  },
+  "editorial-policy": {
+    slug: "editorial-policy",
+    title: "Editorial Policy - Devicefield",
+    meta_description:
+      "Read Devicefield editorial standards for sourcing, testing labels, corrections, independence, and affiliate relationships.",
+    content: editorialPolicyContent,
+  },
+  "affiliate-disclosure": {
+    slug: "affiliate-disclosure",
+    title: "Affiliate Disclosure - Devicefield",
+    meta_description:
+      "Learn how affiliate links support Devicefield and how commercial relationships are disclosed.",
+    content: affiliateDisclosureContent,
+  },
   terms: {
     slug: "terms",
-    title: "Terms, Affiliate Disclosure, and Editorial Policy - Devicefield",
+    title: "Terms of Use - Devicefield",
     meta_description:
-      "Read Devicefield's affiliate disclosure, editorial policy, and website terms.",
+      "Read the terms that apply when using Devicefield business technology articles and website features.",
     content: termsContent,
+  },
+  privacy: {
+    slug: "privacy",
+    title: "Privacy Policy - Devicefield",
+    meta_description:
+      "Learn how Devicefield collects, uses, and protects newsletter, analytics, and website data.",
+    content: privacyContent,
   },
 };
 
@@ -196,8 +502,34 @@ export function getStringArray(
 }
 
 export function getTermsSections(content: Record<string, unknown>) {
+  return getPolicySections(content, termsContent.sections);
+}
+
+export function getPrivacySections(content: Record<string, unknown>) {
+  return getPolicySections(content, privacyContent.sections);
+}
+
+export function getPolicyPageSections(
+  slug:
+    | "contact"
+    | "review-methodology"
+    | "editorial-policy"
+    | "affiliate-disclosure",
+  content: Record<string, unknown>,
+) {
+  const fallback = defaultSitePages[slug].content.sections;
+  return getPolicySections(
+    content,
+    Array.isArray(fallback) ? (fallback as TermsSection[]) : [],
+  );
+}
+
+function getPolicySections(
+  content: Record<string, unknown>,
+  fallback: TermsSection[],
+) {
   const value = content.sections;
-  if (!Array.isArray(value)) return termsContent.sections;
+  if (!Array.isArray(value)) return fallback;
 
   const sections = value.filter(
     (section): section is TermsSection =>
@@ -207,7 +539,7 @@ export function getTermsSections(content: Record<string, unknown>) {
       typeof (section as TermsSection).body === "string",
   );
 
-  return sections.length > 0 ? sections : termsContent.sections;
+  return sections.length > 0 ? sections : fallback;
 }
 
 export function getObjectArray<T extends Record<string, string>>(
@@ -223,7 +555,9 @@ export function getObjectArray<T extends Record<string, string>>(
     (item): item is T =>
       typeof item === "object" &&
       item !== null &&
-      requiredKeys.every((requiredKey) => typeof item[requiredKey] === "string"),
+      requiredKeys.every(
+        (requiredKey) => typeof item[requiredKey] === "string",
+      ),
   );
 
   return rows.length > 0 ? rows : fallback;

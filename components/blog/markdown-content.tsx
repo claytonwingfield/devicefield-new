@@ -1,6 +1,21 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+function headingId(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\*\*/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function getMarkdownHeadings(content: string) {
+  return Array.from(content.matchAll(/^##\s+(.+)$/gm)).map((match) => ({
+    title: match[1].replace(/\*\*/g, "").trim(),
+    id: headingId(match[1]),
+  }));
+}
+
 function renderInline(text: string) {
   const nodes: ReactNode[] = [];
   const pattern =
@@ -15,7 +30,10 @@ function renderInline(text: string) {
 
     if (match[2]) {
       nodes.push(
-        <strong key={`${match.index}-strong`} className="font-semibold text-zinc-950">
+        <strong
+          key={`${match.index}-strong`}
+          className="font-semibold text-zinc-950"
+        >
           {match[2]}
         </strong>,
       );
@@ -67,9 +85,16 @@ export default function MarkdownContent({ content }: { content: string }) {
         if (imageMatch) {
           const [, alt, src] = imageMatch;
           return (
-            <figure key={index} className="overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white p-3">
+            <figure
+              key={index}
+              className="overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white p-3"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt={alt} className="w-full rounded-[1.15rem] object-cover" />
+              <img
+                src={src}
+                alt={alt}
+                className="w-full rounded-[1.15rem] object-cover"
+              />
               <figcaption className="px-2 pt-3 text-sm leading-6 text-zinc-500">
                 {alt}
               </figcaption>
@@ -79,7 +104,10 @@ export default function MarkdownContent({ content }: { content: string }) {
 
         if (trimmed.startsWith("### ")) {
           return (
-            <h3 key={index} className="pt-3 text-2xl font-semibold tracking-tight text-zinc-950">
+            <h3
+              key={index}
+              className="pt-3 text-2xl font-semibold tracking-tight text-zinc-950"
+            >
               {renderInline(trimmed.replace(/^### /, ""))}
             </h3>
           );
@@ -87,7 +115,11 @@ export default function MarkdownContent({ content }: { content: string }) {
 
         if (trimmed.startsWith("## ")) {
           return (
-            <h2 key={index} className="pt-6 text-3xl font-semibold tracking-tight text-zinc-950">
+            <h2
+              key={index}
+              id={headingId(trimmed.replace(/^## /, ""))}
+              className="scroll-mt-28 pt-6 text-3xl font-semibold tracking-tight text-zinc-950"
+            >
               {renderInline(trimmed.replace(/^## /, ""))}
             </h2>
           );

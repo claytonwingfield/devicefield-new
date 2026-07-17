@@ -17,7 +17,8 @@ export const AFFILIATE_PROGRAM_STATUSES = [
 ] as const;
 
 export type AffiliateNetwork = (typeof AFFILIATE_NETWORKS)[number];
-export type AffiliateProgramStatus = (typeof AFFILIATE_PROGRAM_STATUSES)[number];
+export type AffiliateProgramStatus =
+  (typeof AFFILIATE_PROGRAM_STATUSES)[number];
 
 export type AffiliateProgram = {
   id: string;
@@ -60,6 +61,38 @@ export type AffiliateClickEvent = {
 };
 
 export type AffiliateLinkWithProgram = AffiliateLink & {
-  affiliate_programs?: Pick<AffiliateProgram, "id" | "name" | "network" | "status"> | null;
+  affiliate_programs?: Pick<
+    AffiliateProgram,
+    "id" | "name" | "network" | "status"
+  > | null;
 };
 
+export const ARTICLE_PRODUCT_PLACEMENTS = [
+  "recommendation",
+  "comparison",
+  "alternative",
+] as const;
+
+export type ArticleProductPlacement =
+  (typeof ARTICLE_PRODUCT_PLACEMENTS)[number];
+
+export type ArticleProduct = {
+  id: string;
+  article_id: string;
+  affiliate_link_id: string;
+  product_name: string;
+  award: string | null;
+  best_for: string | null;
+  avoid_if: string | null;
+  verdict: string | null;
+  pros: string[];
+  cons: string[];
+  placement: ArticleProductPlacement;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ArticleProductWithLink = ArticleProduct & {
+  affiliate_links: AffiliateLinkWithProgram;
+};

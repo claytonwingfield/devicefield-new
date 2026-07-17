@@ -1,6 +1,8 @@
+import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
 import BlogCard from "@/components/blog/blog-card";
 import { getPublishedPosts } from "@/lib/blog/server";
-import { BLOG_CATEGORIES, slugify } from "@/lib/blog/types";
+import { BLOG_CATEGORY_DETAILS, getBlogCategoryBySlug } from "@/lib/blog/types";
 import { defaultSitePages, getSitePage, getString } from "@/lib/site/pages";
 
 export const revalidate = 300;
@@ -8,34 +10,55 @@ export const revalidate = 300;
 type BlogIndexPageProps = {
   searchParams: Promise<{
     category?: string;
+    type?: string;
+    q?: string;
   }>;
 };
 
-function getCategorySlug(category: string) {
-  return slugify(category);
+type EditorialType = "reviews" | "comparisons";
+
+function getSelectedType(value: string | undefined): EditorialType | null {
+  return value === "reviews" || value === "comparisons" ? value : null;
 }
 
-function getSelectedCategory(value: string | undefined) {
-  if (!value) return null;
-
-  return (
-    BLOG_CATEGORIES.find((category) => getCategorySlug(category) === value) ??
-    null
-  );
+function matchesEditorialType(
+  post: Awaited<ReturnType<typeof getPublishedPosts>>[number],
+  type: EditorialType,
+) {
+  return type === "reviews"
+    ? post.article_type === "review"
+    : post.article_type === "comparison";
 }
 
 export async function generateMetadata({ searchParams }: BlogIndexPageProps) {
   const page = await getSitePage("blog");
-  const selectedCategory = getSelectedCategory((await searchParams).category);
+  const params = await searchParams;
+  const selectedCategory = params.category
+    ? getBlogCategoryBySlug(params.category)
+    : null;
+  const selectedType = getSelectedType(params.type);
+  const searchQuery = params.q?.trim() ?? "";
   const title = selectedCategory
-    ? `${selectedCategory} Guides - Devicefield`
-    : page.title;
+    ? `${selectedCategory.name} Guides - Devicefield`
+    : selectedType
+      ? `${selectedType === "reviews" ? "Product Reviews" : "Product Comparisons"} - Devicefield`
+      : searchQuery
+        ? `Search results for ${searchQuery} - Devicefield`
+        : page.title;
   const description = selectedCategory
-    ? `Browse Devicefield articles in ${selectedCategory}, including buying guides, reviews, setup notes, and troubleshooting resources.`
-    : page.meta_description;
+    ? selectedCategory.description
+    : selectedType
+      ? `Browse independent Devicefield ${selectedType} for business devices, software, and operating systems.`
+      : searchQuery
+        ? `Search Devicefield guides, reviews, comparisons, and troubleshooting articles for ${searchQuery}.`
+        : page.meta_description;
   const canonicalPath = selectedCategory
-    ? `/blog?category=${getCategorySlug(selectedCategory)}`
-    : "/blog";
+    ? `/category/${selectedCategory.slug}`
+    : selectedType
+      ? `/blog?type=${selectedType}`
+      : searchQuery
+        ? `/blog?q=${encodeURIComponent(searchQuery)}`
+        : "/blog";
 
   return {
     title,
@@ -46,13 +69,46 @@ export async function generateMetadata({ searchParams }: BlogIndexPageProps) {
   };
 }
 
-export default async function BlogIndexPage({ searchParams }: BlogIndexPageProps) {
-  const [page, posts] = await Promise.all([getSitePage("blog"), getPublishedPosts()]);
+export default async function BlogIndexPage({
+  searchParams,
+}: BlogIndexPageProps) {
+  const [page, posts] = await Promise.all([
+    getSitePage("blog"),
+    getPublishedPosts(),
+  ]);
   const defaults = defaultSitePages.blog.content;
-  const selectedCategory = getSelectedCategory((await searchParams).category);
-  const visiblePosts = selectedCategory
-    ? posts.filter((post) => post.category === selectedCategory)
-    : posts;
+  const params = await searchParams;
+  if (params.category) {
+    const category = getBlogCategoryBySlug(params.category);
+    permanentRedirect(category ? `/category/${category.slug}` : "/blog");
+  }
+
+  const selectedType = getSelectedType(params.type);
+  const searchQuery = params.q?.trim() ?? "";
+  const normalizedQuery = searchQuery.toLowerCase();
+  const visiblePosts = posts.filter((post) => {
+    if (selectedType && !matchesEditorialType(post, selectedType)) return false;
+    if (!normalizedQuery) return true;
+
+    return [post.title, post.excerpt, post.category, ...post.tags]
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedQuery);
+  });
+  const publishedCategories = BLOG_CATEGORY_DETAILS.flatMap((category) => {
+    const count = posts.filter(
+      (post) => post.category === category.name,
+    ).length;
+    return count > 0 ? [{ ...category, count }] : [];
+  });
+  const filterHeading =
+    selectedType === "reviews"
+      ? "Reviews"
+      : selectedType === "comparisons"
+        ? "Comparisons"
+        : searchQuery
+          ? `Search: ${searchQuery}`
+          : null;
 
   return (
     <div className="bg-zinc-50 px-4 pb-20 pt-32 sm:px-6">
@@ -60,10 +116,18 @@ export default async function BlogIndexPage({ searchParams }: BlogIndexPageProps
         <header className="grid gap-10 border-b border-zinc-200 pb-12 lg:grid-cols-[1fr_0.8fr] lg:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-              {getString(page.content, "eyebrow", getString(defaults, "eyebrow", ""))}
+              {getString(
+                page.content,
+                "eyebrow",
+                getString(defaults, "eyebrow", ""),
+              )}
             </p>
             <h1 className="mt-4 max-w-4xl text-5xl font-semibold tracking-[-0.05em] text-zinc-950 sm:text-7xl">
-              {getString(page.content, "heading", getString(defaults, "heading", ""))}
+              {getString(
+                page.content,
+                "heading",
+                getString(defaults, "heading", ""),
+              )}
             </h1>
           </div>
           <p className="text-lg leading-8 text-zinc-600">
@@ -72,43 +136,38 @@ export default async function BlogIndexPage({ searchParams }: BlogIndexPageProps
         </header>
 
         <nav aria-label="Blog categories" className="flex flex-wrap gap-3 py-8">
-          <a
+          <Link
             href="/blog"
             className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-              selectedCategory
+              selectedType || searchQuery
                 ? "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-950 hover:text-zinc-950"
                 : "border-zinc-950 bg-zinc-950 text-white"
             }`}
           >
             All guides
-          </a>
-          {BLOG_CATEGORIES.map((category) => (
-            <a
-              key={category}
-              href={`/blog?category=${getCategorySlug(category)}`}
-              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                selectedCategory === category
-                  ? "border-zinc-950 bg-zinc-950 text-white"
-                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-950 hover:text-zinc-950"
-              }`}
+          </Link>
+          {publishedCategories.map((category) => (
+            <Link
+              key={category.slug}
+              href={`/category/${category.slug}`}
+              className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950"
             >
-              {category}
-            </a>
+              {category.name}
+            </Link>
           ))}
         </nav>
 
-        {selectedCategory && (
+        {filterHeading && (
           <section className="mb-8 rounded-[1.5rem] border border-zinc-200 bg-white p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-              Category
+              {searchQuery ? "Search results" : "Article type"}
             </p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-950">
-              {selectedCategory}
+              {filterHeading}
             </h2>
             <p className="mt-3 text-zinc-600">
               {visiblePosts.length} published{" "}
-              {visiblePosts.length === 1 ? "guide" : "guides"} in this
-              section.
+              {visiblePosts.length === 1 ? "article" : "articles"} found.
             </p>
           </section>
         )}
@@ -122,45 +181,52 @@ export default async function BlogIndexPage({ searchParams }: BlogIndexPageProps
         {visiblePosts.length === 0 && (
           <section className="rounded-[1.5rem] border border-dashed border-zinc-300 bg-white p-8 text-center">
             <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
-              No articles in this category yet.
+              {filterHeading
+                ? "No matching articles yet."
+                : "No guides are currently published."}
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-zinc-600">
-              This section is ready for future guides. Browse all published
-              Devicefield articles while new category coverage is being added.
+              {filterHeading
+                ? "Try another search or browse all currently published Devicefield guides."
+                : "Published articles will appear here after they are available from the Devicefield CMS."}
             </p>
-            <a
+            <Link
               href="/blog"
               className="mt-6 inline-flex rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
             >
               View all guides
-            </a>
+            </Link>
           </section>
         )}
 
-        <section className="mt-16 grid gap-4 lg:grid-cols-3">
-          {BLOG_CATEGORIES.map((category) => (
-            <a
-              key={category}
-              id={getCategorySlug(category)}
-              href={`/blog?category=${getCategorySlug(category)}`}
-              className="rounded-[1.5rem] border border-zinc-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-zinc-950 hover:shadow-[0_20px_70px_rgba(24,24,27,0.06)]"
-            >
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Category
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
-                {category}
-              </h2>
-              <p className="mt-3 text-zinc-600">
-                {posts.filter((post) => post.category === category).length} published
-                guides in this section.
-              </p>
-              <span className="mt-5 inline-flex text-sm font-semibold text-zinc-950 underline decoration-lime-400 decoration-2 underline-offset-4">
-                View articles
-              </span>
-            </a>
-          ))}
-        </section>
+        {publishedCategories.length > 0 && (
+          <section className="mt-16 grid gap-4 lg:grid-cols-3">
+            {publishedCategories.map((category) => (
+              <Link
+                key={category.slug}
+                href={`/category/${category.slug}`}
+                className="rounded-[1.5rem] border border-zinc-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-zinc-950 hover:shadow-[0_20px_70px_rgba(24,24,27,0.06)]"
+              >
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  Category
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                  {category.name}
+                </h2>
+                <p className="mt-3 text-zinc-600">
+                  {category.count} published{" "}
+                  {category.count === 1 ? "guide" : "guides"} in this section.
+                </p>
+                <p className="mt-3 text-sm leading-6 text-zinc-500">
+                  {category.description}
+                </p>
+                <span className="mt-5 inline-flex text-sm font-semibold text-zinc-950 underline decoration-lime-400 decoration-2 underline-offset-4">
+                  View articles
+                </span>
+              </Link>
+            ))}
+          </section>
+        )}
       </div>
     </div>
   );
