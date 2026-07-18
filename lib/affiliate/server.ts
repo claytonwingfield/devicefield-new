@@ -77,11 +77,13 @@ export async function getAffiliateLinkBySlug(slug: string) {
       "id,slug,label,program_id,destination_url,use_redirect,active,disclosure_required,rel,created_at,updated_at,affiliate_programs(id,name,network,status)",
     )
     .eq("slug", slug)
+    .eq("active", true)
     .maybeSingle();
 
   if (error || !data) return null;
 
-  return normalizeAffiliateLink(data as unknown as AffiliateLinkQueryRow);
+  const link = normalizeAffiliateLink(data as unknown as AffiliateLinkQueryRow);
+  return link.affiliate_programs?.status === "approved" ? link : null;
 }
 
 export async function getArticleProducts(articleId: string) {
@@ -110,12 +112,20 @@ export async function getArticleProducts(articleId: string) {
         ? (row.affiliate_links[0] ?? null)
         : (row.affiliate_links ?? null);
 
-      if (!affiliateLink?.active) return [];
+      const normalizedLink = affiliateLink
+        ? normalizeAffiliateLink(affiliateLink)
+        : null;
+      if (
+        !normalizedLink?.active ||
+        normalizedLink.affiliate_programs?.status !== "approved"
+      ) {
+        return [];
+      }
 
       return [
         {
           ...row,
-          affiliate_links: normalizeAffiliateLink(affiliateLink),
+          affiliate_links: normalizedLink,
         } satisfies ArticleProductWithLink,
       ];
     },

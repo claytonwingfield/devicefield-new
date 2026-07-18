@@ -54,8 +54,12 @@ function ConfirmResetPasswordContent() {
 
       router.push("/admin");
       router.refresh();
-    } catch (error: any) {
-      setError(error.message || "An error occurred while updating password");
+    } catch (error: unknown) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "An error occurred while updating password",
+      );
     } finally {
       setLoading(false);
     }

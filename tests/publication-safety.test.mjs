@@ -21,15 +21,15 @@ async function loadProductionBlogServer() {
     define: { "process.env.NODE_ENV": '"production"' },
     logLevel: "silent",
   });
-  const module = { exports: {} };
+  const bundledModule = { exports: {} };
   const execute = new Function(
     "require",
     "module",
     "exports",
     result.outputFiles[0].text,
   );
-  execute(require, module, module.exports);
-  return module.exports;
+  execute(require, bundledModule, bundledModule.exports);
+  return bundledModule.exports;
 }
 
 async function loadSearchUtilities() {
@@ -41,15 +41,15 @@ async function loadSearchUtilities() {
     write: false,
     logLevel: "silent",
   });
-  const module = { exports: {} };
+  const bundledModule = { exports: {} };
   const execute = new Function(
     "require",
     "module",
     "exports",
     result.outputFiles[0].text,
   );
-  execute(require, module, module.exports);
-  return module.exports;
+  execute(require, bundledModule, bundledModule.exports);
+  return bundledModule.exports;
 }
 
 test("production never returns sample posts when Supabase is unavailable", async () => {
@@ -76,15 +76,15 @@ test("production never returns sample posts when Supabase is unavailable", async
 
 test("publishing and scheduling require a prior approved state", async () => {
   const migration = await source(
-    "supabase/migrations/20260717200609_publication_editorial_workflow.sql",
+    "supabase/migrations/20260718001334_atomic_article_workflow_and_affiliate_visibility.sql",
   );
   assert.match(
     migration,
-    /NEW\.workflow_status = 'published' AND OLD\.workflow_status <> 'approved'/,
+    /NEW\.workflow_status = 'published'[\s\S]*OLD\.workflow_status NOT IN \('approved', 'scheduled'\)/,
   );
   assert.match(
     migration,
-    /OLD\.workflow_status <> 'approved'[\s\S]*must be approved before it can be scheduled/,
+    /NEW\.workflow_status = 'scheduled'[\s\S]*OLD\.workflow_status <> 'approved'/,
   );
   assert.match(migration, /New articles must start as draft/);
   assert.match(
@@ -98,7 +98,7 @@ test("non-admin writers and automation identities cannot publish", async () => {
     "supabase/migrations/20260716200545_devicefield_blog_cms.sql",
   );
   const workflow = await source(
-    "supabase/migrations/20260717200609_publication_editorial_workflow.sql",
+    "supabase/migrations/20260718001334_atomic_article_workflow_and_affiliate_visibility.sql",
   );
   assert.match(
     base,
@@ -110,7 +110,7 @@ test("non-admin writers and automation identities cannot publish", async () => {
   );
   assert.match(
     workflow,
-    /transition_article_workflow[\s\S]*profiles\.role = 'admin'/,
+    /persist_article_workflow[\s\S]*profiles\.role = 'admin'/,
   );
   assert.doesNotMatch(workflow, /role\s*=\s*'automation'/);
 });
@@ -208,7 +208,7 @@ test("search relevance and structured filters share one implementation", async (
 test("drafts and archived articles are excluded from public queries", async () => {
   const server = await source("lib/blog/server.ts");
   const migration = await source(
-    "supabase/migrations/20260717200609_publication_editorial_workflow.sql",
+    "supabase/migrations/20260718001334_atomic_article_workflow_and_affiliate_visibility.sql",
   );
   assert.match(server, /\.eq\("workflow_status", "published"\)/);
   assert.match(server, /\.not\("published_at", "is", null\)/);
@@ -220,6 +220,92 @@ test("drafts and archived articles are excluded from public queries", async () =
     migration,
     /workflow_status = 'published'[\s\S]*published_at IS NOT NULL[\s\S]*published_at <= NOW\(\)/,
   );
+});
+
+test("article content and workflow are persisted atomically", async () => {
+  const admin = await source("app/(default)/admin/page.tsx");
+  const endpoint = await source("app/api/admin/articles/persist/route.ts");
+  const migration = await source(
+    "supabase/migrations/20260718001334_atomic_article_workflow_and_affiliate_visibility.sql",
+  );
+
+  assert.match(admin, /fetch\("\/api\/admin\/articles\/persist"/);
+  assert.doesNotMatch(admin, /\.from\("blog_posts"\)\s*\.update\(payload\)/);
+  assert.doesNotMatch(admin, /transition_article_workflow/);
+  assert.match(endpoint, /rpc\("persist_article_workflow"/);
+  assert.match(migration, /FOR UPDATE/);
+  assert.match(
+    migration,
+    /Published articles must be unpublished before content editing/,
+  );
+});
+
+test("Codex ingestion is server-only and limited to researched drafts", async () => {
+  const endpoint = await source("app/api/internal/codex/drafts/route.ts");
+  const migration = await source(
+    "supabase/migrations/20260718004059_add_codex_draft_ingest.sql",
+  );
+
+  assert.match(endpoint, /process\.env\.SUPABASE_SECRET_KEY/);
+  assert.match(endpoint, /hasValidCodexDraftToken\(request\)/);
+  assert.match(endpoint, /rpc\("ingest_codex_draft"/);
+  assert.doesNotMatch(endpoint, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(migration, /testing_status,\s*workflow_status/);
+  assert.match(migration, /'researched',\s*'draft'/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.ingest_codex_draft\(JSONB\)[\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.ingest_codex_draft\(JSONB\)[\s\S]*TO service_role/,
+  );
+});
+
+test("workflow changes trigger on-demand public route revalidation", async () => {
+  const endpoint = await source("app/api/admin/articles/persist/route.ts");
+  for (const path of [
+    "/",
+    "/blog",
+    "/blog/[slug]",
+    "/category/[slug]",
+    "/sitemap.xml",
+    "/feed.xml",
+  ]) {
+    assert.ok(endpoint.includes(`revalidatePath("${path}"`));
+  }
+});
+
+test("affiliate visibility requires an active link and approved program", async () => {
+  const server = await source("lib/affiliate/server.ts");
+  const migration = await source(
+    "supabase/migrations/20260718001334_atomic_article_workflow_and_affiliate_visibility.sql",
+  );
+
+  assert.match(server, /\.eq\("active", true\)/);
+  assert.match(server, /affiliate_programs\?\.status === "approved"/);
+  assert.match(
+    migration,
+    /affiliate_links\.active = true[\s\S]*affiliate_programs\.status = 'approved'/,
+  );
+  assert.match(
+    migration,
+    /Affiliate links can be activated only for approved programs/,
+  );
+});
+
+test("sign-in accepts only configured same-origin requests", async () => {
+  const signIn = await source("app/auth/sign-in/route.ts");
+  const callback = await source("app/auth/callback/route.ts");
+  const origin = await source("lib/site-origin.ts");
+
+  assert.match(signIn, /hasAllowedRequestOrigin\(request\)/);
+  assert.match(signIn, /getSameOriginUrl\(request, "\/admin"\)/);
+  assert.match(callback, /!requestedNext\.startsWith\("\/\/"\)/);
+  assert.match(origin, /process\.env\.NEXT_PUBLIC_SITE_URL/);
+  assert.match(origin, /https:\/\/devicefield\.com/);
+  assert.match(origin, /process\.env\.NODE_ENV !== "development"/);
+  assert.doesNotMatch(signIn, /x-forwarded-host/);
 });
 
 test("affiliate links are labeled sponsored nofollow and disclosure is conditional", async () => {

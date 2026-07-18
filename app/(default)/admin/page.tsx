@@ -72,6 +72,17 @@ type BlogPostForm = {
   featured: boolean;
 };
 
+type ArticleWorkflowAction =
+  | "save_draft"
+  | "mark_ready"
+  | "return_to_draft"
+  | "approve"
+  | "schedule"
+  | "unschedule"
+  | "publish"
+  | "unpublish"
+  | "archive";
+
 type AuthorForm = {
   name: string;
   slug: string;
@@ -312,21 +323,6 @@ function getDefaultImageAlt(file: File) {
     .trim();
 }
 
-function includesKeyword(value: string, keyword: string) {
-  const normalizedKeyword = normalizeText(keyword);
-  if (!normalizedKeyword) return false;
-  return normalizeText(value).includes(normalizedKeyword);
-}
-
-function keywordWithinFirstWords(
-  value: string,
-  keyword: string,
-  limit: number,
-) {
-  const firstWords = value.trim().split(/\s+/).slice(0, limit).join(" ");
-  return includesKeyword(firstWords, keyword);
-}
-
 function countWords(value: string) {
   return value.trim().split(/\s+/).filter(Boolean).length;
 }
@@ -377,61 +373,12 @@ function formatFaqInput(value: BlogPost["faq_items"]) {
     .join("\n");
 }
 
-function hasCallToAction(value: string) {
-  return /\b(read|compare|learn|choose|get|see|try|find|discover|start)\b/i.test(
-    value,
-  );
-}
-
-function getTestingStatus(value: string) {
-  const statuses = new Set(["tested", "researched", "mixed"]);
-  return (
-    splitList(value).find((tag) => statuses.has(normalizeText(tag))) ?? null
-  );
-}
-
-function setTestingStatus(value: string, status: string) {
-  const statuses = new Set(["tested", "researched", "mixed"]);
-  const tags = splitList(value).filter(
-    (tag) => !statuses.has(normalizeText(tag)),
-  );
-  return status ? [status, ...tags].join(", ") : tags.join(", ");
-}
-
-function getReviewerName(value: string) {
-  return (
-    value.match(/^(?:#{2,3}\s+)?reviewed by\s*:\s*(.+)$/im)?.[1]?.trim() ?? ""
-  );
-}
-
-function setReviewerName(value: string, reviewer: string) {
-  const pattern = /^(?:#{2,3}\s+)?reviewed by\s*:\s*.*$/im;
-  const attribution = reviewer.trim() ? `Reviewed by: ${reviewer}` : "";
-
-  if (pattern.test(value)) {
-    return value
-      .replace(pattern, attribution)
-      .replace(/\n{3,}/g, "\n\n")
-      .trimStart();
-  }
-
-  return attribution ? `${attribution}\n\n${value}` : value;
-}
-
 function countUnresolvedClaims(value: string) {
   return (
     value.match(
       /\b(?:todo|tbd|tk|needs? source|verify this)\b|\[citation needed\]/gi,
     ) ?? []
   ).length;
-}
-
-function getCommercialVerificationDate(value: string) {
-  const match = value.match(/last verified:\s*(\d{4}-\d{2}-\d{2})/i);
-  if (!match) return null;
-
-  const date = new Date(`${match[1]}T00:00:00Z`);
-  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function isWithinDays(value: Date | null, days: number) {
@@ -761,6 +708,13 @@ export default function AdminDashboard() {
         (link) => !link.active || link.destination_url.trim().length === 0,
       ),
     [affiliateLinks],
+  );
+  const selectedAffiliateProgram = useMemo(
+    () =>
+      affiliatePrograms.find(
+        (program) => program.id === affiliateLinkForm.programId,
+      ) ?? affiliatePrograms[0] ?? null,
+    [affiliateLinkForm.programId, affiliatePrograms],
   );
   const currentArticleProducts = useMemo(
     () =>
@@ -1406,20 +1360,12 @@ export default function AdminDashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const persistArticle = async () => {
+  const persistArticle = async (
+    action: ArticleWorkflowAction,
+    scheduledFor: string | null,
+  ) => {
     setSaving(true);
     setErrorMessage(null);
-
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setSaving(false);
-      router.push("/devicefield-editor-login");
-      return null;
-    }
 
     const sources = safeParseArray(formData.sourcesInput);
     const claims = safeParseArray(formData.claimsInput);
@@ -1470,40 +1416,43 @@ export default function AdminDashboard() {
       internal_notes: formData.internalNotes.trim() || null,
       featured: formData.featured,
     };
+    const previousPost = posts.find((post) => post.id === editingId);
 
-    if (editingId) {
-      const result = await supabase
-        .from("blog_posts")
-        .update(payload)
-        .eq("id", editingId);
-      if (result.error) {
-        setErrorMessage(result.error.message);
-        setSaving(false);
+    try {
+      const response = await fetch("/api/admin/articles/persist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          articleId: editingId,
+          article: payload,
+          action,
+          scheduledFor,
+          previousSlug: previousPost?.slug ?? null,
+          previousCategory: previousPost?.category ?? null,
+        }),
+      });
+      const result = (await response.json().catch(() => null)) as
+        | { article?: BlogPost; error?: string }
+        | null;
+
+      if (response.status === 401) {
+        router.push("/devicefield-editor-login");
         return null;
       }
-      setSaving(false);
-      return editingId;
-    }
 
-    const result = await supabase
-      .from("blog_posts")
-      .insert({
-        ...payload,
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
+      if (!response.ok || !result?.article) {
+        setErrorMessage(result?.error ?? "Unable to save the article.");
+        return null;
+      }
 
-    if (result.error) {
-      setErrorMessage(result.error.message);
-      setSaving(false);
+      setEditingId(result.article.id);
+      return result.article;
+    } catch {
+      setErrorMessage("Unable to reach the article publishing service.");
       return null;
+    } finally {
+      setSaving(false);
     }
-
-    const articleId = result.data.id as string;
-    setEditingId(articleId);
-    setSaving(false);
-    return articleId;
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -1511,25 +1460,10 @@ export default function AdminDashboard() {
     await handleWorkflowAction("save_draft");
   };
 
-  const handleWorkflowAction = async (
-    action:
-      | "save_draft"
-      | "mark_ready"
-      | "approve"
-      | "schedule"
-      | "publish"
-      | "archive",
-  ) => {
+  const handleWorkflowAction = async (action: ArticleWorkflowAction) => {
     setWorkflowSaving(true);
     setErrorMessage(null);
     setSuccessMessage(null);
-    const articleId = await persistArticle();
-    if (!articleId) {
-      setWorkflowSaving(false);
-      return;
-    }
-
-    const supabase = createClient();
     const scheduledFor =
       action === "schedule" ? toIsoOrNull(formData.scheduledFor) : null;
     if (action === "schedule" && !scheduledFor) {
@@ -1538,28 +1472,42 @@ export default function AdminDashboard() {
       return;
     }
 
-    const { data, error } = await supabase.rpc("transition_article_workflow", {
-      p_article_id: articleId,
-      p_action: action,
-      p_scheduled_for: scheduledFor,
-    });
-    if (error) {
-      setErrorMessage(error.message);
+    if (
+      formData.workflowStatus === "published" &&
+      !["unpublish", "archive"].includes(action)
+    ) {
+      setErrorMessage(
+        "Unpublish this article to draft before editing or changing its review state.",
+      );
       setWorkflowSaving(false);
       return;
     }
 
-    const workflowStatus = Array.isArray(data)
-      ? data[0]?.workflow_status
-      : data?.workflow_status;
-    if (workflowStatus) {
-      setFormData((current) => ({
-        ...current,
-        workflowStatus: workflowStatus as ArticleWorkflowStatus,
-      }));
+    if (
+      action === "unpublish" &&
+      !window.confirm(
+        "Unpublish this article? It will be removed from the public site until it is reviewed and published again.",
+      )
+    ) {
+      setWorkflowSaving(false);
+      return;
     }
+
+    const article = await persistArticle(action, scheduledFor);
+    if (!article) {
+      setWorkflowSaving(false);
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      workflowStatus: article.workflow_status,
+      reviewedAt: toDatetimeLocal(article.reviewed_at),
+      lastReviewedAt: toDatetimeLocal(article.last_reviewed_at),
+      scheduledFor: toDatetimeLocal(article.scheduled_for),
+    }));
     setSuccessMessage(
-      `Workflow updated: ${formatWorkflowStatus((workflowStatus ?? formData.workflowStatus) as ArticleWorkflowStatus)}.`,
+      `Workflow updated: ${formatWorkflowStatus(article.workflow_status)}.`,
     );
     await refreshPosts();
     setWorkflowSaving(false);
@@ -1763,6 +1711,15 @@ export default function AdminDashboard() {
       return;
     }
 
+    const program = affiliatePrograms.find((item) => item.id === programId);
+    if (affiliateLinkForm.active && program?.status !== "approved") {
+      setErrorMessage(
+        "A link can be activated only after its affiliate program is approved.",
+      );
+      setAffiliateSaving(false);
+      return;
+    }
+
     const slug = slugify(affiliateLinkForm.slug || affiliateLinkForm.label);
     const payload = {
       slug,
@@ -1836,6 +1793,13 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (formData.workflowStatus === "published") {
+      setErrorMessage(
+        "Unpublish this article to draft before changing its product recommendations.",
+      );
+      return;
+    }
+
     if (
       !articleProductForm.affiliateLinkId ||
       !articleProductForm.productName.trim()
@@ -1889,6 +1853,13 @@ export default function AdminDashboard() {
   };
 
   const handleArticleProductDelete = async (product: ArticleProduct) => {
+    if (formData.workflowStatus === "published") {
+      setErrorMessage(
+        "Unpublish this article to draft before changing its product recommendations.",
+      );
+      return;
+    }
+
     if (!window.confirm(`Remove ${product.product_name} from this article?`)) {
       return;
     }
@@ -2019,7 +1990,22 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-5">
-                <label className="block">
+                {formData.workflowStatus === "published" && (
+                  <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                    <p className="font-semibold">Published content is locked.</p>
+                    <p>
+                      Use Unpublish to draft before editing. Unpublishing
+                      temporarily removes this article from the public site and
+                      requires review and approval before it can be published
+                      again.
+                    </p>
+                  </div>
+                )}
+                <fieldset
+                  disabled={formData.workflowStatus === "published"}
+                  className="contents disabled:opacity-60"
+                >
+                  <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-zinc-800">
                     Title
                   </span>
@@ -2031,7 +2017,7 @@ export default function AdminDashboard() {
                     className="form-input w-full rounded-2xl border-zinc-200"
                     placeholder="Best secure laptops for remote teams in 2026"
                   />
-                </label>
+                  </label>
 
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-zinc-800">
@@ -2681,6 +2667,8 @@ export default function AdminDashboard() {
                   </p>
                 </label>
 
+                </fieldset>
+
                 <div className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-4">
                   <p className="text-sm font-semibold text-zinc-950">
                     Editorial workflow
@@ -2691,7 +2679,11 @@ export default function AdminDashboard() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="submit"
-                      disabled={saving || workflowSaving}
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        formData.workflowStatus !== "draft"
+                      }
                       className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
                     >
                       {saving ? "Saving..." : "Save draft"}
@@ -2710,18 +2702,28 @@ export default function AdminDashboard() {
                       disabled={
                         saving ||
                         workflowSaving ||
+                        !editingId ||
                         formData.workflowStatus !== "draft"
                       }
                       onClick={() => void handleWorkflowAction("mark_ready")}
+                    />
+                    <WorkflowButton
+                      label="Return to draft"
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        formData.workflowStatus !== "ready_for_review"
+                      }
+                      onClick={() =>
+                        void handleWorkflowAction("return_to_draft")
+                      }
                     />
                     <WorkflowButton
                       label="Approve article"
                       disabled={
                         saving ||
                         workflowSaving ||
-                        !["ready_for_review", "scheduled"].includes(
-                          formData.workflowStatus,
-                        )
+                        formData.workflowStatus !== "ready_for_review"
                       }
                       onClick={() => void handleWorkflowAction("approve")}
                     />
@@ -2735,13 +2737,34 @@ export default function AdminDashboard() {
                       onClick={() => void handleWorkflowAction("schedule")}
                     />
                     <WorkflowButton
+                      label="Unschedule"
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        formData.workflowStatus !== "scheduled"
+                      }
+                      onClick={() => void handleWorkflowAction("unschedule")}
+                    />
+                    <WorkflowButton
                       label="Publish now"
                       disabled={
                         saving ||
                         workflowSaving ||
-                        formData.workflowStatus !== "approved"
+                        !["approved", "scheduled"].includes(
+                          formData.workflowStatus,
+                        )
                       }
                       onClick={() => void handleWorkflowAction("publish")}
+                    />
+                    <WorkflowButton
+                      label="Unpublish to draft"
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        formData.workflowStatus !== "published"
+                      }
+                      onClick={() => void handleWorkflowAction("unpublish")}
+                      tone="danger"
                     />
                     <WorkflowButton
                       label="Archive article"
@@ -3557,6 +3580,14 @@ export default function AdminDashboard() {
                       </label>
                     </div>
 
+                    {affiliateLinkForm.active &&
+                      selectedAffiliateProgram?.status !== "approved" && (
+                        <p className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                          This link cannot be activated until the selected
+                          program is approved.
+                        </p>
+                      )}
+
                     <div className="rounded-2xl bg-zinc-100 p-4 text-sm leading-6 text-zinc-600">
                       Links always render with{" "}
                       <span className="font-mono text-zinc-950">
@@ -4114,6 +4145,12 @@ export default function AdminDashboard() {
                   </p>
                 ) : (
                   <div className="mt-5 space-y-5">
+                    {formData.workflowStatus === "published" && (
+                      <p className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                        Product recommendations are locked while this article is
+                        published. Unpublish it to draft before making changes.
+                      </p>
+                    )}
                     <div className="space-y-3">
                       {currentArticleProducts.map((product) => {
                         const affiliateLink = affiliateLinks.find(
@@ -4149,7 +4186,10 @@ export default function AdminDashboard() {
                                 onClick={() =>
                                   handleArticleProductEdit(product)
                                 }
-                                className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-semibold text-zinc-700"
+                                disabled={
+                                  formData.workflowStatus === "published"
+                                }
+                                className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-semibold text-zinc-700 disabled:opacity-50"
                               >
                                 Edit
                               </button>
@@ -4174,7 +4214,10 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    <div className="space-y-3 border-t border-zinc-200 pt-5">
+                    <fieldset
+                      disabled={formData.workflowStatus === "published"}
+                      className="space-y-3 border-t border-zinc-200 pt-5 disabled:opacity-60"
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="font-semibold text-zinc-950">
                           {editingArticleProductId
@@ -4383,7 +4426,7 @@ export default function AdminDashboard() {
                             ? "Update product"
                             : "Add product"}
                       </button>
-                    </div>
+                    </fieldset>
                   </div>
                 )}
               </div>
