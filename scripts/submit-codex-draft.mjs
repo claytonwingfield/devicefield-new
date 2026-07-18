@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { access, readFile, stat } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
-const [submissionArgument, imageArgument] = process.argv.slice(2);
+const [submissionArgument, ...imageArguments] = process.argv.slice(2);
 const ingestUrl = process.env.CODEX_DRAFT_INGEST_URL;
 const ingestToken =
   process.env.DEVICEFIELD_INGEST_AUTH ??
@@ -42,15 +42,51 @@ async function getRunId(payload, submissionPath, submissionBytes, imageBytes) {
   return `codex-${createHash("sha256")
     .update(submissionBytes)
     .update("\0")
-    .update(imageBytes)
+    .update(Buffer.concat(imageBytes))
     .digest("hex")
     .slice(0, 32)}`;
 }
 
+function getImageType(fileName) {
+  const extension = extname(fileName).toLowerCase();
+  if (extension === ".webp") return "image/webp";
+  if (extension === ".png") return "image/png";
+  return null;
+}
+
+async function getBodyImages(payload, submissionPath) {
+  const manifest = payload.body_images ?? [];
+  if (!Array.isArray(manifest) || manifest.length > 4) {
+    throw new Error("body_images must contain at most four items.");
+  }
+
+  return Promise.all(
+    manifest.map(async (item) => {
+      if (
+        !isRecord(item) ||
+        typeof item.file_name !== "string" ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*\.(?:png|webp)$/.test(item.file_name)
+      ) {
+        throw new Error("Each body image must have a safe PNG or WebP file name.");
+      }
+      const type = getImageType(item.file_name);
+      const path = resolve(dirname(submissionPath), "body-images", item.file_name);
+      const expectedDirectory = resolve(dirname(submissionPath), "body-images");
+      if (dirname(path) !== expectedDirectory || !type) {
+        throw new Error("Body images must be stored in the article body-images folder.");
+      }
+      await access(path);
+      const info = await stat(path);
+      if (!info.isFile()) throw new Error("Body image paths must be files.");
+      return { bytes: await readFile(path), fileName: item.file_name, type };
+    }),
+  );
+}
+
 async function main() {
-  if (!submissionArgument || !imageArgument) {
+  if (!submissionArgument || imageArguments.length !== 3) {
     throw new Error(
-      "Usage: node scripts/submit-codex-draft.mjs <submission.json> <featured-image.webp>",
+      "Usage: node scripts/submit-codex-draft.mjs <submission.json> <cover-option-1.webp> <cover-option-2.webp> <cover-option-3.webp>",
     );
   }
   if (!ingestUrl || !ingestToken) {
@@ -74,28 +110,27 @@ async function main() {
   }
 
   const submissionPath = resolve(submissionArgument);
-  const imagePath = resolve(imageArgument);
-  await Promise.all([access(submissionPath), access(imagePath)]);
-  const [submissionInfo, imageInfo] = await Promise.all([
-    stat(submissionPath),
-    stat(imagePath),
+  const imagePaths = imageArguments.map((argument) => resolve(argument));
+  await Promise.all([
+    access(submissionPath),
+    ...imagePaths.map((path) => access(path)),
   ]);
-  if (!submissionInfo.isFile() || !imageInfo.isFile()) {
-    throw new Error("Submission and featured image paths must be files.");
+  const [submissionInfo, ...imageInfos] = await Promise.all([
+    stat(submissionPath),
+    ...imagePaths.map((path) => stat(path)),
+  ]);
+  if (!submissionInfo.isFile() || imageInfos.some((info) => !info.isFile())) {
+    throw new Error("Submission and cover image paths must be files.");
   }
 
-  const extension = extname(imagePath).toLowerCase();
-  const imageType =
-    extension === ".webp"
-      ? "image/webp"
-      : extension === ".png"
-        ? "image/png"
-        : null;
-  if (!imageType) throw new Error("Featured image must be a WebP or PNG file.");
+  const imageTypes = imagePaths.map((path) => getImageType(path));
+  if (imageTypes.some((type) => !type)) {
+    throw new Error("Cover images must be WebP or PNG files.");
+  }
 
-  const [submissionBytes, imageBytes] = await Promise.all([
+  const [submissionBytes, ...imageBytes] = await Promise.all([
     readFile(submissionPath),
-    readFile(imagePath),
+    ...imagePaths.map((path) => readFile(path)),
   ]);
   let payload;
   try {
@@ -106,22 +141,69 @@ async function main() {
   if (!isRecord(payload)) {
     throw new Error("Submission payload must be a JSON object.");
   }
+  if (!Array.isArray(payload.cover_images) || payload.cover_images.length !== 3) {
+    throw new Error("Submission cover_images must contain exactly three items.");
+  }
+  const mismatchedCover = payload.cover_images.find(
+    (item, index) =>
+      !isRecord(item) || item.file_name !== basename(imagePaths[index]),
+  );
+  if (mismatchedCover) {
+    throw new Error(
+      "Cover image arguments must match the ordered cover_images manifest.",
+    );
+  }
+  const socialPlatforms = ["x", "facebook", "instagram"];
+  const socialLimits = { x: 280, facebook: 5_000, instagram: 2_200 };
+  if (!Array.isArray(payload.social_posts) || payload.social_posts.length !== 3) {
+    throw new Error("Submission social_posts must contain exactly three items.");
+  }
+  payload.social_posts.forEach((item, index) => {
+    const platform = socialPlatforms[index];
+    if (
+      !isRecord(item) ||
+      item.platform !== platform ||
+      typeof item.content !== "string" ||
+      !item.content.trim() ||
+      item.content.trim().length > socialLimits[platform]
+    ) {
+      throw new Error(
+        "Social drafts must be valid and ordered as X, Facebook, and Instagram.",
+      );
+    }
+    if (
+      typeof payload.canonical_url !== "string" ||
+      !item.content.includes(payload.canonical_url)
+    ) {
+      throw new Error("Every social draft must include the canonical article URL.");
+    }
+  });
+  const bodyImages = await getBodyImages(payload, submissionPath);
 
   const runId = await getRunId(
     payload,
     submissionPath,
     submissionBytes,
-    imageBytes,
+    [...imageBytes, ...bodyImages.map((image) => image.bytes)],
   );
   const article = { ...payload };
   delete article.run_id;
   const formData = new FormData();
   formData.set("payload", JSON.stringify(article));
-  formData.set(
-    "featured_image",
-    new Blob([imageBytes], { type: imageType }),
-    basename(imagePath),
-  );
+  imageBytes.forEach((bytes, index) => {
+    formData.append(
+      "featured_image",
+      new Blob([bytes], { type: imageTypes[index] }),
+      basename(imagePaths[index]),
+    );
+  });
+  for (const bodyImage of bodyImages) {
+    formData.append(
+      "body_image",
+      new Blob([bodyImage.bytes], { type: bodyImage.type }),
+      bodyImage.fileName,
+    );
+  }
 
   let response;
   try {
@@ -151,6 +233,10 @@ async function main() {
     typeof result.slug !== "string" ||
     result.workflow_status !== "ready_for_review" ||
     typeof result.cover_image_url !== "string" ||
+    !Array.isArray(result.cover_image_urls) ||
+    result.cover_image_urls.length !== 3 ||
+    result.cover_image_urls.some((url) => typeof url !== "string") ||
+    result.social_post_count !== 3 ||
     typeof result.created_at !== "string"
   ) {
     throw new Error("Draft endpoint returned an invalid response.");
@@ -163,6 +249,8 @@ async function main() {
         slug: result.slug,
         workflow_status: result.workflow_status,
         cover_image_url: result.cover_image_url,
+        cover_image_urls: result.cover_image_urls,
+        social_post_count: result.social_post_count,
         created_at: result.created_at,
       },
       null,

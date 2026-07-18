@@ -2,13 +2,16 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  CODEX_DRAFT_COVER_IMAGE_COUNT,
   CODEX_DRAFT_MAX_BODY_BYTES,
+  CODEX_DRAFT_MAX_INLINE_IMAGES,
   consumeCodexDraftRateLimit,
   getCodexRequestFingerprint,
   hasValidCodexDraftToken,
   hashCodexDraftSubmission,
   isCodexDraftIngestConfigured,
   validateCodexDraftPayload,
+  validateCodexBodyImage,
   validateCodexFeaturedImage,
   validateCodexRunId,
 } from "@/lib/codex/draft-ingest";
@@ -118,28 +121,42 @@ export async function POST(request: NextRequest) {
   }
 
   const formKeys = Array.from(new Set(formData.keys()));
+  const coverImageEntries = formData.getAll("featured_image");
+  const bodyImageEntries = formData.getAll("body_image");
   if (
-    formKeys.some((key) => !["payload", "featured_image"].includes(key)) ||
+    formKeys.some(
+      (key) => !["payload", "featured_image", "body_image"].includes(key),
+    ) ||
     formData.getAll("payload").length !== 1 ||
-    formData.getAll("featured_image").length !== 1
+    coverImageEntries.length !== CODEX_DRAFT_COVER_IMAGE_COUNT ||
+    bodyImageEntries.length > CODEX_DRAFT_MAX_INLINE_IMAGES
   ) {
     return json(
-      { error: "Submit one payload and one featured image." },
+      {
+        error: `Submit one payload, exactly ${CODEX_DRAFT_COVER_IMAGE_COUNT} cover images, and at most ${CODEX_DRAFT_MAX_INLINE_IMAGES} body images.`,
+      },
       400,
     );
   }
 
   const payloadEntry = formData.get("payload");
-  const imageEntry = formData.get("featured_image");
-  if (typeof payloadEntry !== "string" || !(imageEntry instanceof File)) {
+  if (
+    typeof payloadEntry !== "string" ||
+    coverImageEntries.some((entry) => !(entry instanceof File)) ||
+    bodyImageEntries.some((entry) => !(entry instanceof File))
+  ) {
     return json(
-      { error: "Submit one JSON payload and one featured image." },
+      { error: "Submit JSON plus valid cover and body image files." },
       400,
     );
   }
 
+  const coverImageFiles = coverImageEntries as File[];
+  const bodyImageFiles = bodyImageEntries as File[];
   if (
-    new TextEncoder().encode(payloadEntry).byteLength + imageEntry.size >
+    new TextEncoder().encode(payloadEntry).byteLength +
+      coverImageFiles.reduce((total, file) => total + file.size, 0) +
+      bodyImageFiles.reduce((total, file) => total + file.size, 0) >
     CODEX_DRAFT_MAX_BODY_BYTES
   ) {
     return json({ error: "Draft submission is too large." }, 413);
@@ -155,39 +172,133 @@ export async function POST(request: NextRequest) {
   const validation = validateCodexDraftPayload(rawPayload);
   if (!validation.ok) return json({ error: validation.error }, 400);
 
-  const imageValidation = await validateCodexFeaturedImage(imageEntry);
-  if (!imageValidation.ok) {
-    return json({ error: imageValidation.error }, 400);
+  const mismatchedCoverImage = coverImageFiles.find(
+    (file, index) =>
+      file.name !== validation.article.cover_images[index]?.file_name,
+  );
+  if (mismatchedCoverImage) {
+    return json(
+      { error: "Cover image file names must match the cover_images manifest." },
+      400,
+    );
   }
+
+  if (bodyImageFiles.length !== validation.article.body_images.length) {
+    return json(
+      { error: "Submitted body images must match the body_images manifest." },
+      400,
+    );
+  }
+  const mismatchedBodyImage = bodyImageFiles.find(
+    (file, index) =>
+      file.name !== validation.article.body_images[index]?.file_name,
+  );
+  if (mismatchedBodyImage) {
+    return json(
+      { error: "Body image file names must match the body_images manifest." },
+      400,
+    );
+  }
+
+  const coverImageValidations = await Promise.all(
+    coverImageFiles.map((file) => validateCodexFeaturedImage(file)),
+  );
+  const invalidCoverImage = coverImageValidations.find(
+    (result) => !result.ok,
+  );
+  if (invalidCoverImage && !invalidCoverImage.ok) {
+    return json({ error: invalidCoverImage.error }, 400);
+  }
+  const validCoverImages = coverImageValidations.filter(
+    (result): result is Extract<typeof result, { ok: true }> => result.ok,
+  );
+  const bodyImageValidations = await Promise.all(
+    bodyImageFiles.map((file) => validateCodexBodyImage(file)),
+  );
+  const invalidBodyImage = bodyImageValidations.find((result) => !result.ok);
+  if (invalidBodyImage && !invalidBodyImage.ok) {
+    return json({ error: invalidBodyImage.error }, 400);
+  }
+  const validBodyImages = bodyImageValidations.filter(
+    (result): result is Extract<typeof result, { ok: true }> => result.ok,
+  );
 
   const supabase = createDraftIngestClient();
   if (!supabase) {
     return json({ error: "Draft storage is not configured." }, 503);
   }
 
-  const { article_products: articleProducts, ...article } = validation.article;
-  const imagePath = `covers/${article.slug}/${randomUUID()}.${imageValidation.extension}`;
-  const { data: publicImage } = supabase.storage
-    .from(ARTICLE_IMAGE_BUCKET)
-    .getPublicUrl(imagePath);
+  const {
+    cover_images: coverImageManifest,
+    social_posts: socialPosts,
+    body_images: bodyImageManifest,
+    article_products: articleProducts,
+    affiliate_suggestions: affiliateSuggestions,
+    ...article
+  } = validation.article;
+  const coverImageUploads = validCoverImages.map((image, index) => {
+    const manifest = coverImageManifest[index];
+    const path = `covers/${article.slug}/${index + 1}-${randomUUID()}.${image.extension}`;
+    const { data } = supabase.storage
+      .from(ARTICLE_IMAGE_BUCKET)
+      .getPublicUrl(path);
+    return { ...image, ...manifest, path, publicUrl: data.publicUrl };
+  });
+  const bodyImageUploads = validBodyImages.map((image, index) => {
+    const manifest = bodyImageManifest[index];
+    const path = `body/${article.slug}/${manifest.id}-${randomUUID()}.${image.extension}`;
+    const { data } = supabase.storage
+      .from(ARTICLE_IMAGE_BUCKET)
+      .getPublicUrl(path);
+    return { ...image, ...manifest, path, publicUrl: data.publicUrl };
+  });
+  const resolvedContent = bodyImageUploads.reduce(
+    (content, image) =>
+      content.replace(
+        `![${image.alt}](devicefield-body-image://${image.id})`,
+        `![${image.alt}](${image.publicUrl})`,
+      ),
+    article.content,
+  );
   const requestFingerprint = getCodexRequestFingerprint(request);
   const payloadHash = hashCodexDraftSubmission(
     payloadEntry,
-    imageValidation.bytes,
+    [
+      ...validCoverImages.map((image) => image.bytes),
+      ...validBodyImages.map((image) => image.bytes),
+    ],
   );
+  const uploadedImagePaths = [
+    ...coverImageUploads.map((image) => image.path),
+    ...bodyImageUploads.map((image) => image.path),
+  ];
 
   try {
     const row = await withUploadedImageCleanup({
       upload: async () => {
-        const { error } = await supabase.storage
-          .from(ARTICLE_IMAGE_BUCKET)
-          .upload(imagePath, imageValidation.bytes, {
-            contentType: imageValidation.contentType,
-            cacheControl: "31536000",
-            upsert: false,
-          });
-        if (error) {
-          throw new DraftIngestError("Featured image could not be stored.", 503);
+        for (const coverImage of coverImageUploads) {
+          const { error: coverImageError } = await supabase.storage
+            .from(ARTICLE_IMAGE_BUCKET)
+            .upload(coverImage.path, coverImage.bytes, {
+              contentType: coverImage.contentType,
+              cacheControl: "31536000",
+              upsert: false,
+            });
+          if (coverImageError) {
+            throw new DraftIngestError("Cover image could not be stored.", 503);
+          }
+        }
+        for (const bodyImage of bodyImageUploads) {
+          const { error: bodyImageError } = await supabase.storage
+            .from(ARTICLE_IMAGE_BUCKET)
+            .upload(bodyImage.path, bodyImage.bytes, {
+              contentType: bodyImage.contentType,
+              cacheControl: "31536000",
+              upsert: false,
+            });
+          if (bodyImageError) {
+            throw new DraftIngestError("Body image could not be stored.", 503);
+          }
         }
       },
       operation: async () => {
@@ -199,9 +310,20 @@ export async function POST(request: NextRequest) {
             p_request_fingerprint: requestFingerprint,
             p_article: {
               ...article,
-              cover_image_url: publicImage.publicUrl,
+              content: resolvedContent,
+              cover_image_url: coverImageUploads[0].publicUrl,
+              cover_image_alt: coverImageUploads[0].alt,
             },
             p_products: articleProducts,
+            p_suggestions: affiliateSuggestions,
+            p_cover_images: coverImageUploads.map((image, index) => ({
+              image_url: image.publicUrl,
+              image_alt: image.alt,
+              label: image.label,
+              display_order: index,
+              selected: index === 0,
+            })),
+            p_social_posts: socialPosts,
           },
         );
         if (error) throw mapDatabaseError(error);
@@ -219,7 +341,9 @@ export async function POST(request: NextRequest) {
         return result;
       },
       cleanup: async () => {
-        await supabase.storage.from(ARTICLE_IMAGE_BUCKET).remove([imagePath]);
+        await supabase.storage
+          .from(ARTICLE_IMAGE_BUCKET)
+          .remove(uploadedImagePaths);
       },
     });
 
@@ -229,6 +353,9 @@ export async function POST(request: NextRequest) {
         slug: row.slug,
         workflow_status: "ready_for_review",
         cover_image_url: row.cover_image_url,
+        cover_image_urls: coverImageUploads.map((image) => image.publicUrl),
+        body_image_urls: bodyImageUploads.map((image) => image.publicUrl),
+        social_post_count: socialPosts.length,
         created_at: row.created_at,
       },
       201,

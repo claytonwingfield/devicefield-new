@@ -58,6 +58,32 @@ input[type="search"]::-webkit-search-results-decoration {
   @apply pr-10;
 }
 
+/* Keep the dense CMS usable on small screens without iOS zoom or overflow. */
+.admin-shell .form-input,
+.admin-shell .form-textarea,
+.admin-shell .form-multiselect,
+.admin-shell .form-select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.admin-shell .form-textarea {
+  resize: vertical;
+}
+
+@media (min-width: 640px) {
+  .admin-shell .form-input,
+  .admin-shell .form-textarea,
+  .admin-shell .form-multiselect,
+  .admin-shell .form-select {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}
+
 .form-checkbox,
 .form-radio {
   @apply rounded-sm text-gray-800;

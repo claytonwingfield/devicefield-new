@@ -14,6 +14,8 @@ import {
   type AffiliateNetwork,
   type AffiliateProgram,
   type AffiliateProgramStatus,
+  type AffiliateSuggestionReviewStatus,
+  type ArticleAffiliateSuggestion,
   type ArticleProduct,
   type ArticleProductPlacement,
 } from "@/lib/affiliate/types";
@@ -21,12 +23,17 @@ import {
   ARTICLE_TYPES,
   TESTING_STATUSES,
   BLOG_CATEGORIES,
+  SOCIAL_PLATFORMS,
+  SOCIAL_PLATFORM_LIMITS,
   formatWorkflowStatus,
   slugify,
   type ArticleType,
+  type ArticleCoverImage,
+  type ArticleSocialPost,
   type ArticleWorkflowStatus,
   type Author,
   type BlogPost,
+  type SocialPlatform,
   type TestingStatus,
 } from "@/lib/blog/types";
 import {
@@ -141,6 +148,8 @@ type AdminSection =
   | "newsletter"
   | "affiliates";
 
+type SocialDraftForm = Record<SocialPlatform, string>;
+
 type NewsletterSubscriber = {
   id: string;
   email: string;
@@ -227,6 +236,49 @@ const emptyForm: BlogPostForm = {
   internalNotes: "",
   featured: false,
 };
+
+const emptySocialDrafts: SocialDraftForm = {
+  x: "",
+  facebook: "",
+  instagram: "",
+};
+
+const socialPlatformDetails: Record<
+  SocialPlatform,
+  { label: string; description: string; rows: number }
+> = {
+  x: {
+    label: "X / Twitter",
+    description: "One concise post with the article URL.",
+    rows: 5,
+  },
+  facebook: {
+    label: "Facebook",
+    description: "Reader-focused context, CTA, and article URL.",
+    rows: 7,
+  },
+  instagram: {
+    label: "Instagram",
+    description: "Caption, Link in bio CTA, reference URL, and hashtags.",
+    rows: 9,
+  },
+};
+
+function getSocialDraftForm(
+  posts: ArticleSocialPost[],
+  articleId: string,
+): SocialDraftForm {
+  return SOCIAL_PLATFORMS.reduce<SocialDraftForm>(
+    (drafts, platform) => {
+      drafts[platform] =
+        posts.find(
+          (post) => post.article_id === articleId && post.platform === platform,
+        )?.content ?? "";
+      return drafts;
+    },
+    { ...emptySocialDrafts },
+  );
+}
 
 const emptyAuthorForm: AuthorForm = {
   name: "",
@@ -596,6 +648,133 @@ function MetricList({
   );
 }
 
+function AffiliateSuggestionCard({
+  suggestion,
+  articleTitle,
+  saving,
+  onOpenArticle,
+  onStatusChange,
+}: {
+  suggestion: ArticleAffiliateSuggestion;
+  articleTitle?: string;
+  saving: boolean;
+  onOpenArticle?: () => void;
+  onStatusChange: (status: AffiliateSuggestionReviewStatus) => void;
+}) {
+  return (
+    <article className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+            {formatOptionLabel(suggestion.network)} · {articleTitle ?? "Current article"}
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-zinc-950">
+            {suggestion.program_name}
+          </h3>
+          {suggestion.product_name && (
+            <p className="mt-1 text-sm text-zinc-600">
+              {suggestion.product_name}
+            </p>
+          )}
+        </div>
+        <span
+          className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+            suggestion.review_status === "shortlisted"
+              ? "bg-lime-200 text-zinc-950"
+              : suggestion.review_status === "dismissed"
+                ? "bg-zinc-100 text-zinc-500"
+                : "bg-amber-100 text-amber-900"
+          }`}
+        >
+          {formatOptionLabel(suggestion.review_status)}
+        </span>
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-zinc-950 p-4 text-white">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lime-300">
+          Suggested placement
+        </p>
+        <p className="mt-2 font-semibold">{suggestion.target_heading}</p>
+        <p className="mt-1 text-xs text-zinc-400">
+          {formatOptionLabel(suggestion.suggested_placement)}
+        </p>
+        <p className="mt-3 text-sm leading-6 text-zinc-300">
+          {suggestion.insertion_note}
+        </p>
+        {suggestion.suggested_cta && (
+          <p className="mt-3 text-sm text-lime-200">
+            Suggested CTA: {suggestion.suggested_cta}
+          </p>
+        )}
+      </div>
+
+      <p className="mt-4 text-sm leading-6 text-zinc-600">
+        {suggestion.rationale}
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+        <a
+          href={suggestion.program_url}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full border border-zinc-300 px-3 py-2 text-zinc-700 hover:border-zinc-950"
+        >
+          Program page
+        </a>
+        <a
+          href={suggestion.evidence_url}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full border border-zinc-300 px-3 py-2 text-zinc-700 hover:border-zinc-950"
+        >
+          Research evidence
+        </a>
+        <span className="rounded-full bg-zinc-100 px-3 py-2 text-zinc-500">
+          Checked {new Date(suggestion.evidence_checked_at).toLocaleDateString()}
+        </span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-100 pt-4">
+        {onOpenArticle && (
+          <button
+            type="button"
+            onClick={onOpenArticle}
+            className="rounded-full border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-950"
+          >
+            Open article
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={saving || suggestion.review_status === "shortlisted"}
+          onClick={() => onStatusChange("shortlisted")}
+          className="rounded-full bg-zinc-950 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+        >
+          Shortlist
+        </button>
+        <button
+          type="button"
+          disabled={saving || suggestion.review_status === "dismissed"}
+          onClick={() => onStatusChange("dismissed")}
+          className="rounded-full border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 disabled:opacity-40"
+        >
+          Dismiss
+        </button>
+        {suggestion.review_status !== "pending" && (
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => onStatusChange("pending")}
+            className="rounded-full border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 disabled:opacity-40"
+          >
+            Reset to pending
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
 function WorkflowButton({
   label,
   disabled,
@@ -612,7 +791,7 @@ function WorkflowButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`w-full rounded-full px-4 py-2 text-sm font-semibold sm:w-auto disabled:cursor-not-allowed disabled:opacity-40 ${
         tone === "danger"
           ? "border border-red-200 bg-red-50 text-red-700"
           : "bg-zinc-950 text-white"
@@ -636,6 +815,14 @@ export default function AdminDashboard() {
     [],
   );
   const [articleProducts, setArticleProducts] = useState<ArticleProduct[]>([]);
+  const [articleCoverImages, setArticleCoverImages] = useState<
+    ArticleCoverImage[]
+  >([]);
+  const [articleSocialPosts, setArticleSocialPosts] = useState<
+    ArticleSocialPost[]
+  >([]);
+  const [articleAffiliateSuggestions, setArticleAffiliateSuggestions] =
+    useState<ArticleAffiliateSuggestion[]>([]);
   const [activeSection, setActiveSection] = useState<AdminSection>("articles");
   const [formData, setFormData] = useState<BlogPostForm>(emptyForm);
   const [pageFormData, setPageFormData] = useState<SitePageForm>(emptyPageForm);
@@ -662,9 +849,18 @@ export default function AdminDashboard() {
   const [pageSaving, setPageSaving] = useState(false);
   const [affiliateSaving, setAffiliateSaving] = useState(false);
   const [articleProductSaving, setArticleProductSaving] = useState(false);
+  const [socialDraftSaving, setSocialDraftSaving] = useState(false);
+  const [socialDrafts, setSocialDrafts] = useState<SocialDraftForm>({
+    ...emptySocialDrafts,
+  });
+  const [affiliateSuggestionSavingId, setAffiliateSuggestionSavingId] =
+    useState<string | null>(null);
   const [authorSaving, setAuthorSaving] = useState(false);
   const [workflowSaving, setWorkflowSaving] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [coverImageSelectingId, setCoverImageSelectingId] = useState<
+    string | null
+  >(null);
   const [bodyImageUploading, setBodyImageUploading] = useState(false);
   const [bodyImageAlt, setBodyImageAlt] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -723,6 +919,30 @@ export default function AdminDashboard() {
         .sort((left, right) => left.display_order - right.display_order),
     [articleProducts, editingId],
   );
+  const currentCoverImages = useMemo(
+    () =>
+      articleCoverImages
+        .filter((image) => image.article_id === editingId)
+        .sort((left, right) => left.display_order - right.display_order),
+    [articleCoverImages, editingId],
+  );
+  const currentAffiliateSuggestions = useMemo(
+    () =>
+      articleAffiliateSuggestions
+        .filter((suggestion) => suggestion.article_id === editingId)
+        .sort((left, right) => left.display_order - right.display_order),
+    [articleAffiliateSuggestions, editingId],
+  );
+  const pendingAffiliateSuggestions = useMemo(
+    () =>
+      articleAffiliateSuggestions.filter(
+        (suggestion) => suggestion.review_status === "pending",
+      ),
+    [articleAffiliateSuggestions],
+  );
+  const reviewPosts = posts.filter(
+    (post) => post.workflow_status === "ready_for_review",
+  );
   const activePageDefaults = defaultSitePages[pageFormData.slug].content;
   const excerptCharacters = formData.excerpt.length;
   const seoTitle = formData.seoTitle.trim() || formData.title.trim();
@@ -755,7 +975,8 @@ export default function AdminDashboard() {
       formData.content,
     );
   const hasAffiliateReferences =
-    currentArticleProducts.length > 0 || links.some((link) => link.sponsored);
+    currentArticleProducts.some((product) => product.affiliate_link_id) ||
+    links.some((link) => link.sponsored);
   const hasCommercialClaims =
     hasAffiliateReferences ||
     /\b(?:price|pricing|cost|discount|deal|subscription|per month|per year)\b/i.test(
@@ -915,6 +1136,36 @@ export default function AdminDashboard() {
       }
     };
 
+    const fetchCoverImages = async () => {
+      const { data, error } = await supabase
+        .from("article_cover_images")
+        .select("*")
+        .order("display_order", { ascending: true });
+
+      if (error) {
+        setErrorMessage(
+          `Unable to load article cover options. Run the latest Supabase migration first. ${error.message}`,
+        );
+      } else {
+        setArticleCoverImages((data ?? []) as ArticleCoverImage[]);
+      }
+    };
+
+    const fetchSocialPosts = async () => {
+      const { data, error } = await supabase
+        .from("article_social_posts")
+        .select("*")
+        .order("platform", { ascending: true });
+
+      if (error) {
+        setErrorMessage(
+          `Unable to load article social drafts. Run the latest Supabase migration first. ${error.message}`,
+        );
+      } else {
+        setArticleSocialPosts((data ?? []) as ArticleSocialPost[]);
+      }
+    };
+
     const fetchSubscribers = async () => {
       const { data, error } = await supabase
         .from("newsletter_subscribers")
@@ -957,7 +1208,13 @@ export default function AdminDashboard() {
     };
 
     const fetchAffiliateData = async () => {
-      const [programsResult, linksResult, clicksResult, productsResult] =
+      const [
+        programsResult,
+        linksResult,
+        clicksResult,
+        productsResult,
+        suggestionsResult,
+      ] =
         await Promise.all([
           supabase
             .from("affiliate_programs")
@@ -978,6 +1235,10 @@ export default function AdminDashboard() {
             .from("article_products")
             .select("*")
             .order("display_order", { ascending: true }),
+          supabase
+            .from("article_affiliate_suggestions")
+            .select("*")
+            .order("created_at", { ascending: false }),
         ]);
 
       if (programsResult.error) {
@@ -1015,6 +1276,16 @@ export default function AdminDashboard() {
       } else {
         setArticleProducts((productsResult.data ?? []) as ArticleProduct[]);
       }
+
+      if (suggestionsResult.error) {
+        setErrorMessage(
+          `Unable to load affiliate suggestions. Run the latest Supabase migration first. ${suggestionsResult.error.message}`,
+        );
+      } else {
+        setArticleAffiliateSuggestions(
+          (suggestionsResult.data ?? []) as ArticleAffiliateSuggestion[],
+        );
+      }
     };
 
     const checkAdmin = async () => {
@@ -1042,6 +1313,8 @@ export default function AdminDashboard() {
       await Promise.all([
         fetchPosts(),
         fetchAuthors(),
+        fetchCoverImages(),
+        fetchSocialPosts(),
         fetchPages(),
         fetchSubscribers(),
         fetchAffiliateData(),
@@ -1123,7 +1396,13 @@ export default function AdminDashboard() {
 
   const refreshAffiliateData = async () => {
     const supabase = createClient();
-    const [programsResult, linksResult, clicksResult, productsResult] =
+    const [
+      programsResult,
+      linksResult,
+      clicksResult,
+      productsResult,
+      suggestionsResult,
+    ] =
       await Promise.all([
         supabase
           .from("affiliate_programs")
@@ -1144,6 +1423,10 @@ export default function AdminDashboard() {
           .from("article_products")
           .select("*")
           .order("display_order", { ascending: true }),
+        supabase
+          .from("article_affiliate_suggestions")
+          .select("*")
+          .order("created_at", { ascending: false }),
       ]);
 
     if (programsResult.error) {
@@ -1173,11 +1456,20 @@ export default function AdminDashboard() {
     } else {
       setArticleProducts((productsResult.data ?? []) as ArticleProduct[]);
     }
+
+    if (suggestionsResult.error) {
+      setErrorMessage(suggestionsResult.error.message);
+    } else {
+      setArticleAffiliateSuggestions(
+        (suggestionsResult.data ?? []) as ArticleAffiliateSuggestion[],
+      );
+    }
   };
 
   const resetForm = (clearMessages = true) => {
     setEditingId(null);
     setFormData(emptyForm);
+    setSocialDrafts({ ...emptySocialDrafts });
     setEditingArticleProductId(null);
     setArticleProductForm(emptyArticleProductForm);
     if (clearMessages) {
@@ -1274,6 +1566,60 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCoverImageSelect = async (coverImage: ArticleCoverImage) => {
+    if (!editingId || coverImage.article_id !== editingId) return;
+    if (formData.workflowStatus === "published") {
+      setErrorMessage(
+        "Unpublish this article to draft before changing its cover image.",
+      );
+      return;
+    }
+
+    setCoverImageSelectingId(coverImage.id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("select_article_cover_image", {
+      p_article_id: editingId,
+      p_cover_image_id: coverImage.id,
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      const selected = Array.isArray(data) ? data[0] : data;
+      const imageUrl = selected?.image_url ?? coverImage.image_url;
+      const imageAlt = selected?.image_alt ?? coverImage.image_alt;
+      setArticleCoverImages((current) =>
+        current.map((image) =>
+          image.article_id === editingId
+            ? { ...image, selected: image.id === coverImage.id }
+            : image,
+        ),
+      );
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === editingId
+            ? {
+                ...post,
+                cover_image_url: imageUrl,
+                cover_image_alt: imageAlt,
+              }
+            : post,
+        ),
+      );
+      setFormData((current) => ({
+        ...current,
+        coverImageUrl: imageUrl,
+        coverImageAlt: imageAlt,
+      }));
+      setSuccessMessage(`Selected ${coverImage.label} as the article cover.`);
+    }
+
+    setCoverImageSelectingId(null);
+  };
+
   const handleBodyImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -1281,14 +1627,20 @@ export default function AdminDashboard() {
     event.target.value = "";
     if (!file) return;
 
+    const alt = bodyImageAlt.trim();
+    if (alt.length < 8) {
+      setErrorMessage(
+        "Enter descriptive alt text of at least 8 characters before uploading an inline image.",
+      );
+      return;
+    }
+
     setBodyImageUploading(true);
     setErrorMessage(null);
     setSuccessMessage(null);
 
     try {
       const publicUrl = await uploadArticleImage(file, "body");
-      const alt =
-        bodyImageAlt.trim() || getDefaultImageAlt(file) || "Article image";
       const markdown = `![${alt}](${publicUrl})`;
       setFormData((current) => ({
         ...current,
@@ -1349,6 +1701,7 @@ export default function AdminDashboard() {
       internalNotes: post.internal_notes ?? "",
       featured: post.featured,
     });
+    setSocialDrafts(getSocialDraftForm(articleSocialPosts, post.id));
     setActiveSection("articles");
     setEditingArticleProductId(null);
     setArticleProductForm({
@@ -1358,6 +1711,68 @@ export default function AdminDashboard() {
     setErrorMessage(null);
     setSuccessMessage(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSocialDraftSave = async () => {
+    if (!editingId) return;
+
+    const canonicalUrl =
+      formData.canonicalUrl.trim() ||
+      `https://devicefield.com/blog/${formData.slug}`;
+    for (const platform of SOCIAL_PLATFORMS) {
+      const content = socialDrafts[platform].trim();
+      if (!content) {
+        setErrorMessage(`Add the ${socialPlatformDetails[platform].label} draft.`);
+        return;
+      }
+      if (content.length > SOCIAL_PLATFORM_LIMITS[platform]) {
+        setErrorMessage(
+          `${socialPlatformDetails[platform].label} exceeds its ${SOCIAL_PLATFORM_LIMITS[platform]} character limit.`,
+        );
+        return;
+      }
+      if (!content.includes(canonicalUrl)) {
+        setErrorMessage(
+          `${socialPlatformDetails[platform].label} must include ${canonicalUrl}.`,
+        );
+        return;
+      }
+      if (platform === "instagram" && !/link in bio/i.test(content)) {
+        setErrorMessage('The Instagram draft must include a "Link in bio" CTA.');
+        return;
+      }
+    }
+
+    setSocialDraftSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("article_social_posts")
+      .upsert(
+        SOCIAL_PLATFORMS.map((platform) => ({
+          article_id: editingId,
+          platform,
+          content: socialDrafts[platform].trim(),
+        })),
+        { onConflict: "article_id,platform" },
+      )
+      .select("*");
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      const saved = (data ?? []) as ArticleSocialPost[];
+      setArticleSocialPosts((current) => [
+        ...current.filter((post) => post.article_id !== editingId),
+        ...saved,
+      ]);
+      setSocialDrafts(getSocialDraftForm(saved, editingId));
+      setSuccessMessage("Social drafts saved for this article.");
+    }
+
+    setSocialDraftSaving(false);
   };
 
   const persistArticle = async (
@@ -1770,7 +2185,7 @@ export default function AdminDashboard() {
   const handleArticleProductEdit = (product: ArticleProduct) => {
     setEditingArticleProductId(product.id);
     setArticleProductForm({
-      affiliateLinkId: product.affiliate_link_id,
+      affiliateLinkId: product.affiliate_link_id ?? "",
       productName: product.product_name,
       award: product.award ?? "",
       bestFor: product.best_for ?? "",
@@ -1800,11 +2215,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    if (
-      !articleProductForm.affiliateLinkId ||
-      !articleProductForm.productName.trim()
-    ) {
-      setErrorMessage("Choose an affiliate link and enter a product name.");
+    if (!articleProductForm.productName.trim()) {
+      setErrorMessage("Enter a product name.");
       return;
     }
 
@@ -1814,7 +2226,7 @@ export default function AdminDashboard() {
 
     const payload = {
       article_id: editingId,
-      affiliate_link_id: articleProductForm.affiliateLinkId,
+      affiliate_link_id: articleProductForm.affiliateLinkId || null,
       product_name: articleProductForm.productName.trim(),
       award: articleProductForm.award.trim() || null,
       best_for: articleProductForm.bestFor.trim() || null,
@@ -1883,6 +2295,40 @@ export default function AdminDashboard() {
     setArticleProductSaving(false);
   };
 
+  const handleAffiliateSuggestionStatus = async (
+    suggestion: ArticleAffiliateSuggestion,
+    reviewStatus: AffiliateSuggestionReviewStatus,
+  ) => {
+    setAffiliateSuggestionSavingId(suggestion.id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("article_affiliate_suggestions")
+      .update({ review_status: reviewStatus })
+      .eq("id", suggestion.id);
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      setArticleAffiliateSuggestions((current) =>
+        current.map((item) =>
+          item.id === suggestion.id
+            ? { ...item, review_status: reviewStatus }
+            : item,
+        ),
+      );
+      setSuccessMessage(
+        reviewStatus === "shortlisted"
+          ? "Suggestion shortlisted. This does not approve or activate an affiliate program."
+          : `Suggestion marked ${reviewStatus}.`,
+      );
+    }
+
+    setAffiliateSuggestionSavingId(null);
+  };
+
   const exportSubscribers = () => {
     const subscribed = subscribers.filter(
       (subscriber) => subscriber.status === "subscribed",
@@ -1909,7 +2355,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="bg-zinc-50 px-4 pb-20 pt-32 sm:px-6">
+    <div className="admin-shell bg-zinc-50 px-3 pb-20 pt-24 sm:px-6 sm:pt-32">
       <div className="mx-auto max-w-6xl">
         <header className="mb-8 flex flex-col justify-between gap-4 border-b border-zinc-200 pb-8 sm:flex-row sm:items-end">
           <div>
@@ -1932,15 +2378,21 @@ export default function AdminDashboard() {
           </Link>
         </header>
 
-        <div className="mb-8 flex flex-wrap gap-2 rounded-full border border-zinc-200 bg-white p-1 shadow-sm">
+        <div
+          role="tablist"
+          aria-label="Admin sections"
+          className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-sm sm:mb-8 sm:gap-2 sm:rounded-full"
+        >
           {(
             ["articles", "pages", "people", "newsletter", "affiliates"] as const
           ).map((section) => (
             <button
               key={section}
               type="button"
+              role="tab"
+              aria-selected={activeSection === section}
               onClick={() => setActiveSection(section)}
-              className={`rounded-full px-5 py-2 text-sm font-semibold capitalize transition ${
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold capitalize transition sm:px-5 ${
                 activeSection === section
                   ? "bg-zinc-950 text-white"
                   : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
@@ -1963,11 +2415,193 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        {activeSection === "articles" && editingId && (
+          <section
+            id="admin-article-preview"
+            className="mb-6 scroll-mt-28 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6"
+          >
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-700 sm:text-sm">
+                  Selected article
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                  Live preview
+                </h2>
+              </div>
+              <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                {formatWorkflowStatus(formData.workflowStatus)}
+              </span>
+            </div>
+
+            <article className="mt-4 grid overflow-hidden rounded-[1.25rem] border border-zinc-200 bg-zinc-50 sm:grid-cols-[14rem_minmax(0,1fr)] sm:rounded-[1.5rem]">
+              {formData.coverImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={formData.coverImageUrl}
+                  alt={formData.coverImageAlt}
+                  className="h-48 w-full object-cover sm:h-full sm:min-h-52"
+                />
+              ) : (
+                <div className="flex h-48 items-end bg-[radial-gradient(circle_at_20%_20%,rgba(190,242,100,0.7),transparent_32%),linear-gradient(135deg,#18181b,#3f3f46)] p-5 text-white sm:h-full sm:min-h-52">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em]">
+                    Devicefield
+                  </p>
+                </div>
+              )}
+              <div className="min-w-0 p-5 sm:p-6">
+                <p className="text-sm font-semibold text-lime-700">
+                  {formData.category}
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl">
+                  {seoTitle || "Article title preview"}
+                </h3>
+                <p className="mt-3 line-clamp-3 leading-6 text-zinc-600">
+                  {metaDescription ||
+                    "The article meta description will appear here."}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {splitList(formData.tagsInput)
+                    .slice(0, 4)
+                    .map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-600"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            </article>
+          </section>
+        )}
+
+        {activeSection === "articles" && editingId && (
+          <section className="mb-6 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-700 sm:text-sm">
+                  Publishing assets
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                  Social media drafts
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
+                  Codex creates these with the article. Review and edit them here,
+                  then publish them manually after the article is live.
+                </p>
+              </div>
+              <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Private drafts
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              {SOCIAL_PLATFORMS.map((platform) => {
+                const details = socialPlatformDetails[platform];
+                const count = socialDrafts[platform].length;
+                const limit = SOCIAL_PLATFORM_LIMITS[platform];
+                return (
+                  <label
+                    key={platform}
+                    className="flex min-w-0 flex-col rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+                  >
+                    <span className="flex items-start justify-between gap-3">
+                      <span>
+                        <span className="block font-semibold text-zinc-950">
+                          {details.label}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                          {details.description}
+                        </span>
+                      </span>
+                      <span
+                        className={`shrink-0 text-xs font-semibold ${
+                          count > limit ? "text-red-600" : "text-zinc-400"
+                        }`}
+                      >
+                        {count}/{limit}
+                      </span>
+                    </span>
+                    <textarea
+                      rows={details.rows}
+                      value={socialDrafts[platform]}
+                      onChange={(event) =>
+                        setSocialDrafts((current) => ({
+                          ...current,
+                          [platform]: event.target.value,
+                        }))
+                      }
+                      className="form-textarea mt-4 min-h-40 w-full flex-1 rounded-2xl border-zinc-200 bg-white text-sm leading-6"
+                      placeholder={`Codex ${details.label} draft will appear here.`}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 flex flex-col justify-between gap-3 border-t border-zinc-200 pt-4 sm:flex-row sm:items-center">
+              <p className="text-xs leading-5 text-zinc-500">
+                Each draft must include the canonical article URL. Instagram
+                must also include a Link in bio CTA.
+              </p>
+              <button
+                type="button"
+                disabled={socialDraftSaving}
+                onClick={() => void handleSocialDraftSave()}
+                className="w-full rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {socialDraftSaving ? "Saving drafts..." : "Save social drafts"}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {activeSection === "articles" && reviewPosts.length > 0 && (
+          <section className="mb-6 rounded-[1.5rem] border border-lime-300 bg-zinc-950 p-4 text-white shadow-sm sm:rounded-[2rem] sm:p-6">
+            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300 sm:text-sm">
+                  Review queue
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+                  Articles awaiting review
+                </h2>
+              </div>
+              <span className="w-fit rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-lime-200">
+                {reviewPosts.length} ready
+              </span>
+            </div>
+            <div className="mt-4 grid gap-2 md:grid-cols-2">
+              {reviewPosts.map((post) => (
+                <button
+                  key={post.id}
+                  type="button"
+                  onClick={() => handleEdit(post)}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    editingId === post.id
+                      ? "border-lime-300 bg-lime-300 text-zinc-950"
+                      : "border-white/15 bg-white/5 text-white hover:border-lime-300"
+                  }`}
+                >
+                  <span className="block text-xs font-semibold uppercase tracking-[0.16em] opacity-70">
+                    {post.category}
+                  </span>
+                  <span className="mt-1 block font-semibold leading-6">
+                    {post.title}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)] xl:gap-8">
           {activeSection === "articles" && (
             <form
               onSubmit={handleSubmit}
-              className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm"
+              className="min-w-0 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6"
             >
               <div className="mb-6 flex items-center justify-between gap-4">
                 <div>
@@ -1989,7 +2623,7 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {formData.workflowStatus === "published" && (
                   <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
                     <p className="font-semibold">Published content is locked.</p>
@@ -2155,7 +2789,7 @@ export default function AdminDashboard() {
                   />
                 </label>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-2 block text-sm font-semibold text-zinc-800">
                       Category
@@ -2224,13 +2858,15 @@ export default function AdminDashboard() {
                       ))}
                     </select>
                   </label>
-                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-                    <p className="text-sm font-semibold text-zinc-800">
+                  <div className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
                       Workflow
-                    </p>
-                    <p className="mt-2 text-sm text-zinc-600">
-                      {formatWorkflowStatus(formData.workflowStatus)}
-                    </p>
+                    </span>
+                    <div className="flex min-h-12 items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                      <p className="text-sm font-medium text-zinc-600">
+                        {formatWorkflowStatus(formData.workflowStatus)}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -2261,7 +2897,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
-                <label className="block">
+                <div className="block">
                   <span className="mb-2 block text-sm font-semibold text-zinc-800">
                     Article body
                   </span>
@@ -2269,7 +2905,7 @@ export default function AdminDashboard() {
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                       <label className="block">
                         <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                          Body image alt text
+                          Alt text for a new inline image
                         </span>
                         <input
                           type="text"
@@ -2281,7 +2917,7 @@ export default function AdminDashboard() {
                           placeholder="Descriptive image alt text"
                         />
                       </label>
-                      <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800">
+                      <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto">
                         {bodyImageUploading
                           ? "Uploading..."
                           : "Upload body image"}
@@ -2295,10 +2931,31 @@ export default function AdminDashboard() {
                       </label>
                     </div>
                     <p className="mt-3 text-xs leading-5 text-zinc-500">
-                      Uploads to Supabase Storage and inserts a Markdown image
-                      at the bottom of the article body. Move the inserted line
-                      where you want the image to appear.
+                      This field applies only to the next inline upload and
+                      resets afterward. Existing inline image alt text is stored
+                      inside the Markdown below. The featured image uses the
+                      separate Cover image alt text field above.
                     </p>
+                    {bodyImages.length > 0 ? (
+                      <div className="mt-3 space-y-2 border-t border-zinc-200 pt-3">
+                        {bodyImages.map((image, index) => (
+                          <p
+                            key={`${image.src}-${index}`}
+                            className="text-xs leading-5 text-zinc-600"
+                          >
+                            <span className="font-semibold text-zinc-800">
+                              Inline image {index + 1} alt:
+                            </span>{" "}
+                            {image.alt || "Missing alt text"}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-3 border-t border-zinc-200 pt-3 text-xs text-zinc-500">
+                        No inline body images are in this article. A featured
+                        cover image is tracked separately.
+                      </p>
+                    )}
                   </div>
                   <textarea
                     required
@@ -2315,11 +2972,11 @@ export default function AdminDashboard() {
                       "## Verdict\n\nWrite the review, comparison, or buying guide here.\n\nUse the body image uploader above to insert Supabase-hosted images.\nUse [affiliate link](https://...){sponsored} for paid links."
                     }
                   />
-                </label>
+                </div>
 
                 <details
                   open
-                  className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5"
+                  className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-4 sm:p-5"
                 >
                   <summary className="cursor-pointer font-semibold text-zinc-950">
                     Verdict and trust fields
@@ -2426,7 +3083,7 @@ export default function AdminDashboard() {
                   </div>
                 </details>
 
-                <details className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5">
+                <details className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-4 sm:p-5">
                   <summary className="cursor-pointer font-semibold text-zinc-950">
                     Sources, claims, and evidence JSON
                   </summary>
@@ -2511,80 +3168,161 @@ export default function AdminDashboard() {
                   />
                 </label>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                      Tags
-                    </span>
-                    <input
-                      type="text"
-                      value={formData.tagsInput}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          tagsInput: event.target.value,
-                        }))
-                      }
-                      className="form-input w-full rounded-2xl border-zinc-200"
-                      placeholder="security, laptops, remote work"
-                    />
-                  </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                    Tags
+                  </span>
+                  <input
+                    type="text"
+                    value={formData.tagsInput}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        tagsInput: event.target.value,
+                      }))
+                    }
+                    className="form-input w-full rounded-2xl border-zinc-200"
+                    placeholder="security, laptops, remote work"
+                  />
+                </label>
 
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                      Cover image URL
-                    </span>
-                    <input
-                      type="url"
-                      value={formData.coverImageUrl}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          coverImageUrl: event.target.value,
-                        }))
-                      }
-                      className="form-input w-full rounded-2xl border-zinc-200"
-                      placeholder="https://..."
-                    />
-                    <label className="mt-3 inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950">
-                      {coverUploading
-                        ? "Uploading..."
-                        : "Upload / replace cover"}
+                <div className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-4 sm:p-5">
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold text-zinc-950">
+                      Cover image
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      Keep the public URL and descriptive alt text together.
+                    </p>
+                  </div>
+                  {currentCoverImages.length > 0 && (
+                    <div className="mb-5 border-b border-zinc-200 pb-5">
+                      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-950">
+                            Generated cover options
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-zinc-500">
+                            Select the strongest image before approving the
+                            article. The public article uses only the selected
+                            option.
+                          </p>
+                        </div>
+                        <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-500">
+                          {currentCoverImages.length} option
+                          {currentCoverImages.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        {currentCoverImages.map((image) => {
+                          const isSelected =
+                            image.image_url === formData.coverImageUrl;
+                          return (
+                            <button
+                              key={image.id}
+                              type="button"
+                              aria-pressed={isSelected}
+                              disabled={
+                                isSelected ||
+                                coverImageSelectingId !== null ||
+                                formData.workflowStatus === "published"
+                              }
+                              onClick={() =>
+                                void handleCoverImageSelect(image)
+                              }
+                              className={`overflow-hidden rounded-2xl border bg-white text-left transition disabled:cursor-not-allowed ${
+                                isSelected
+                                  ? "border-lime-500 ring-2 ring-lime-300"
+                                  : "border-zinc-200 hover:border-zinc-950 disabled:opacity-60"
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={image.image_url}
+                                alt={image.image_alt}
+                                className="aspect-[2/1] w-full object-cover"
+                              />
+                              <span className="block p-3">
+                                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-zinc-950">
+                                  <span>{image.label}</span>
+                                  {isSelected && (
+                                    <span className="rounded-full bg-lime-200 px-2 py-1 text-[0.65rem] uppercase tracking-[0.12em]">
+                                      Selected
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="mt-2 line-clamp-2 block text-xs leading-5 text-zinc-500">
+                                  {image.image_alt}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {formData.workflowStatus === "published" && (
+                        <p className="mt-3 text-xs font-medium text-amber-800">
+                          Published covers are locked. Unpublish to draft before
+                          selecting another option.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block min-w-0">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Cover image URL
+                      </span>
                       <input
-                        type="file"
-                        accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
-                        onChange={handleCoverImageUpload}
-                        disabled={coverUploading}
-                        className="sr-only"
+                        type="url"
+                        value={formData.coverImageUrl}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            coverImageUrl: event.target.value,
+                          }))
+                        }
+                        className="form-input w-full rounded-2xl border-zinc-200"
+                        placeholder="https://..."
                       />
                     </label>
-                    <p className="mt-2 text-xs leading-5 text-zinc-500">
-                      Uploads to Supabase Storage and replaces the cover image
-                      URL.
-                    </p>
-                  </label>
 
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                      Cover image alt
-                    </span>
+                    <label className="block min-w-0">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Cover image alt
+                      </span>
+                      <input
+                        type="text"
+                        value={formData.coverImageAlt}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            coverImageAlt: event.target.value,
+                          }))
+                        }
+                        className="form-input w-full rounded-2xl border-zinc-200"
+                        placeholder="Describe the featured image"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950 sm:w-auto">
+                    {coverUploading ? "Uploading..." : "Upload / replace cover"}
                     <input
-                      type="text"
-                      value={formData.coverImageAlt}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          coverImageAlt: event.target.value,
-                        }))
-                      }
-                      className="form-input w-full rounded-2xl border-zinc-200"
-                      placeholder="Keyword-rich description of the featured image"
+                      type="file"
+                      accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+                      onChange={handleCoverImageUpload}
+                      disabled={coverUploading}
+                      className="sr-only"
                     />
                   </label>
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">
+                    Uploads to Supabase Storage and replaces the cover image URL.
+                  </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block">
+                  <label className="block min-w-0">
                     <span className="mb-2 block text-sm font-semibold text-zinc-800">
                       Schedule for
                     </span>
@@ -2601,22 +3339,27 @@ export default function AdminDashboard() {
                     />
                   </label>
 
-                  <label className="flex items-center gap-3 rounded-2xl border border-zinc-200 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={formData.featured}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          featured: event.target.checked,
-                        }))
-                      }
-                      className="rounded border-zinc-300 text-zinc-950"
-                    />
-                    <span className="text-sm font-semibold text-zinc-800">
-                      Feature on homepage
+                  <div className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Homepage placement
                     </span>
-                  </label>
+                    <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.featured}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            featured: event.target.checked,
+                          }))
+                        }
+                        className="rounded border-zinc-300 text-zinc-950"
+                      />
+                      <span className="text-sm font-semibold text-zinc-800">
+                        Feature on homepage
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -2676,7 +3419,7 @@ export default function AdminDashboard() {
                   <p className="mt-1 text-xs leading-5 text-zinc-500">
                     Actions are enforced by Supabase, not only by these buttons.
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                     <button
                       type="submit"
                       disabled={
@@ -2684,7 +3427,7 @@ export default function AdminDashboard() {
                         workflowSaving ||
                         formData.workflowStatus !== "draft"
                       }
-                      className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+                      className="w-full rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 sm:w-auto disabled:opacity-50"
                     >
                       {saving ? "Saving..." : "Save draft"}
                     </button>
@@ -2692,7 +3435,7 @@ export default function AdminDashboard() {
                       <Link
                         href={`/preview/${editingId}`}
                         target="_blank"
-                        className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950"
+                        className="w-full rounded-full border border-zinc-300 bg-white px-4 py-2 text-center text-sm font-semibold text-zinc-950 sm:w-auto"
                       >
                         Preview
                       </Link>
@@ -3165,7 +3908,7 @@ export default function AdminDashboard() {
                   </button>
                 </div>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="rounded-2xl bg-white/10 p-4">
                     <p className="text-3xl font-semibold tracking-tight">
                       {affiliateClicks.length}
@@ -3198,8 +3941,60 @@ export default function AdminDashboard() {
                       Inactive or broken
                     </p>
                   </div>
+                  <div className="rounded-2xl bg-white/10 p-4">
+                    <p className="text-3xl font-semibold tracking-tight">
+                      {pendingAffiliateSuggestions.length}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-300">
+                      Pending suggestions
+                    </p>
+                  </div>
                 </div>
               </div>
+
+              <section className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                  Research queue
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                  Article affiliate opportunities
+                </h3>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-600">
+                  Codex-researched opportunities stay private until you verify
+                  the program, apply, receive approval, create an affiliate
+                  link, and add a structured article product.
+                </p>
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                  {articleAffiliateSuggestions.map((suggestion) => {
+                    const post = posts.find(
+                      (item) => item.id === suggestion.article_id,
+                    );
+                    return (
+                      <AffiliateSuggestionCard
+                        key={suggestion.id}
+                        suggestion={suggestion}
+                        articleTitle={post?.title ?? "Unknown article"}
+                        saving={affiliateSuggestionSavingId === suggestion.id}
+                        onOpenArticle={
+                          post ? () => handleEdit(post) : undefined
+                        }
+                        onStatusChange={(status) =>
+                          void handleAffiliateSuggestionStatus(
+                            suggestion,
+                            status,
+                          )
+                        }
+                      />
+                    );
+                  })}
+                  {articleAffiliateSuggestions.length === 0 && (
+                    <p className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-600 lg:col-span-2">
+                      No affiliate suggestions have been submitted with an
+                      article yet.
+                    </p>
+                  )}
+                </div>
+              </section>
 
               <div className="grid gap-6 lg:grid-cols-2">
                 <form
@@ -3788,63 +4583,47 @@ export default function AdminDashboard() {
             </section>
           )}
 
-          <aside className="space-y-6">
+          <aside className="min-w-0 space-y-6">
             {activeSection === "articles" && (
-              <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-                      Live preview
-                    </p>
-                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
-                      Article card
-                    </h2>
-                  </div>
-                  <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    {formatWorkflowStatus(formData.workflowStatus)}
-                  </span>
-                </div>
-
-                <article className="mt-5 overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-zinc-50">
-                  {formData.coverImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={formData.coverImageUrl}
-                      alt={formData.coverImageAlt}
-                      className="h-44 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-44 items-end bg-[radial-gradient(circle_at_20%_20%,rgba(190,242,100,0.7),transparent_32%),linear-gradient(135deg,#18181b,#3f3f46)] p-5 text-white">
-                      <p className="text-sm font-semibold uppercase tracking-[0.18em]">
-                        Devicefield
+              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                  Affiliate research
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                  Suggested programs and placements
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-zinc-600">
+                  These are private research leads, not approved programs or
+                  public affiliate links. Verify each opportunity before using
+                  it in the article.
+                </p>
+                {!editingId ? (
+                  <p className="mt-4 rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-600">
+                    Select an article to review its affiliate suggestions.
+                  </p>
+                ) : (
+                  <div className="mt-5 space-y-4">
+                    {currentAffiliateSuggestions.map((suggestion) => (
+                      <AffiliateSuggestionCard
+                        key={suggestion.id}
+                        suggestion={suggestion}
+                        saving={affiliateSuggestionSavingId === suggestion.id}
+                        onStatusChange={(status) =>
+                          void handleAffiliateSuggestionStatus(
+                            suggestion,
+                            status,
+                          )
+                        }
+                      />
+                    ))}
+                    {currentAffiliateSuggestions.length === 0 && (
+                      <p className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-600">
+                        No researched affiliate opportunities were submitted for
+                        this article.
                       </p>
-                    </div>
-                  )}
-                  <div className="p-5">
-                    <p className="text-sm font-semibold text-lime-700">
-                      {formData.category}
-                    </p>
-                    <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-950">
-                      {seoTitle || "Article title preview"}
-                    </h3>
-                    <p className="mt-3 line-clamp-3 text-zinc-600">
-                      {metaDescription ||
-                        "The article meta description will appear here."}
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {splitList(formData.tagsInput)
-                        .slice(0, 4)
-                        .map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-600"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                    </div>
+                    )}
                   </div>
-                </article>
+                )}
               </div>
             )}
 
@@ -4061,7 +4840,7 @@ export default function AdminDashboard() {
             )}
 
             {activeSection === "articles" && (
-              <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
                   Publish readiness
                 </p>
@@ -4130,7 +4909,7 @@ export default function AdminDashboard() {
             )}
 
             {activeSection === "articles" && (
-              <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
                   Structured recommendations
                 </p>
@@ -4237,7 +5016,7 @@ export default function AdminDashboard() {
 
                       <label className="block">
                         <span className="mb-1 block text-xs font-semibold text-zinc-700">
-                          Affiliate link
+                          Affiliate link (optional until approved)
                         </span>
                         <select
                           value={articleProductForm.affiliateLinkId}
@@ -4249,7 +5028,7 @@ export default function AdminDashboard() {
                           }
                           className="form-select w-full rounded-2xl border-zinc-200 text-sm"
                         >
-                          <option value="">Select a link</option>
+                          <option value="">No approved link yet</option>
                           {affiliateLinks
                             .filter(
                               (link) =>
@@ -4286,7 +5065,7 @@ export default function AdminDashboard() {
                         />
                       </label>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         <label className="block">
                           <span className="mb-1 block text-xs font-semibold text-zinc-700">
                             Placement
@@ -4433,7 +5212,7 @@ export default function AdminDashboard() {
             )}
 
             {activeSection === "articles" && (
-              <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
                 <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
                   Articles
                 </h2>

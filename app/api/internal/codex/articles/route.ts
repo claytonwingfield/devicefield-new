@@ -22,6 +22,16 @@ const ARTICLE_INVENTORY_SELECT = [
 ].join(",");
 const ARTICLE_INVENTORY_PAGE_SIZE = 1_000;
 const ARTICLE_INVENTORY_MAX_ROWS = 10_000;
+const APPROVED_AFFILIATE_LINK_LIMIT = 1_000;
+
+type AffiliateInventoryRow = {
+  slug?: unknown;
+  label?: unknown;
+  affiliate_programs?:
+    | { name?: unknown; network?: unknown; status?: unknown }
+    | Array<{ name?: unknown; network?: unknown; status?: unknown }>
+    | null;
+};
 
 function json(body: Record<string, unknown>, status: number) {
   return NextResponse.json(body, {
@@ -77,6 +87,7 @@ export async function GET(request: NextRequest) {
   }
 
   const articles: unknown[] = [];
+  let articleInventoryComplete = false;
   while (articles.length < ARTICLE_INVENTORY_MAX_ROWS) {
     const from = articles.length;
     const { data, error } = await supabase
@@ -92,9 +103,55 @@ export async function GET(request: NextRequest) {
     const page = data ?? [];
     articles.push(...page);
     if (page.length < ARTICLE_INVENTORY_PAGE_SIZE) {
-      return json({ articles }, 200);
+      articleInventoryComplete = true;
+      break;
     }
   }
 
-  return json({ error: "Article inventory exceeds the safe row limit." }, 503);
+  if (!articleInventoryComplete) {
+    return json({ error: "Article inventory exceeds the safe row limit." }, 503);
+  }
+
+  const { data: affiliateRows, error: affiliateError } = await supabase
+    .from("affiliate_links")
+    .select(
+      "slug,label,affiliate_programs!inner(name,network,status)",
+    )
+    .eq("active", true)
+    .eq("affiliate_programs.status", "approved")
+    .order("label", { ascending: true })
+    .limit(APPROVED_AFFILIATE_LINK_LIMIT);
+
+  if (affiliateError) {
+    return json({ error: "Affiliate-link inventory could not be loaded." }, 503);
+  }
+
+  const affiliateLinks = (
+    (affiliateRows ?? []) as unknown as AffiliateInventoryRow[]
+  ).flatMap((row) => {
+    const program = Array.isArray(row.affiliate_programs)
+      ? row.affiliate_programs[0]
+      : row.affiliate_programs;
+    if (
+      typeof row.slug !== "string" ||
+      typeof row.label !== "string" ||
+      !program ||
+      typeof program.name !== "string" ||
+      typeof program.network !== "string" ||
+      program.status !== "approved"
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        slug: row.slug,
+        label: row.label,
+        program_name: program.name,
+        network: program.network,
+      },
+    ];
+  });
+
+  return json({ articles, affiliate_links: affiliateLinks }, 200);
 }

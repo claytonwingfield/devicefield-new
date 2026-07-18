@@ -249,15 +249,29 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   const grants = await source(
     "supabase/migrations/20260718013402_grant_codex_ingest_service_role.sql",
   );
+  const suggestions = await source(
+    "supabase/migrations/20260718162726_add_article_affiliate_suggestions.sql",
+  );
+  const coverImages = await source(
+    "supabase/migrations/20260718174755_article_cover_image_options.sql",
+  );
 
   assert.match(endpoint, /process\.env\.SUPABASE_SECRET_KEY/);
   assert.match(endpoint, /hasValidCodexDraftToken\(request\)/);
   assert.doesNotMatch(endpoint, /sharp/);
-  assert.match(endpoint, /imageValidation\.extension/);
-  assert.match(endpoint, /contentType: imageValidation\.contentType/);
+  assert.match(endpoint, /CODEX_DRAFT_COVER_IMAGE_COUNT/);
+  assert.match(endpoint, /coverImageUploads/);
+  assert.match(endpoint, /contentType: coverImage\.contentType/);
   assert.match(endpoint, /request\.formData\(\)/);
   assert.match(endpoint, /X-Devicefield-Run-ID|x-devicefield-run-id/);
   assert.match(endpoint, /rpc\(\s*"create_codex_review_draft"/);
+  assert.match(endpoint, /p_suggestions: affiliateSuggestions/);
+  assert.match(endpoint, /validateCodexBodyImage/);
+  assert.match(endpoint, /devicefield-body-image:/);
+  assert.match(endpoint, /body_image_urls/);
+  assert.match(endpoint, /cover_image_urls/);
+  assert.match(endpoint, /p_social_posts:\s*socialPosts/);
+  assert.match(endpoint, /social_post_count:\s*socialPosts\.length/);
   assert.match(endpoint, /withUploadedImageCleanup/);
   assert.match(endpoint, /workflow_status: "ready_for_review"/);
   assert.doesNotMatch(endpoint, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
@@ -276,6 +290,11 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   assert.match(helper, /process\.env\.DEVICEFIELD_INGEST_AUTH/);
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_TOKEN/);
   assert.match(helper, /new FormData\(\)/);
+  assert.match(helper, /imageArguments\.length !== 3/);
+  assert.match(helper, /formData\.append\(\s*"featured_image"/);
+  assert.match(helper, /result\.social_post_count !== 3/);
+  assert.match(helper, /formData\.append\(\s*"body_image"/);
+  assert.match(helper, /resolve\(dirname\(submissionPath\), "body-images"/);
   assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);
   await assert.rejects(() => source("scripts/ingest-codex-draft.mjs"), {
     code: "ENOENT",
@@ -286,6 +305,81 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
     /GRANT SELECT, INSERT, UPDATE ON public\.blog_posts TO service_role/,
   );
   assert.doesNotMatch(grants, /GRANT DELETE/);
+  assert.match(suggestions, /CREATE TABLE public\.article_affiliate_suggestions/);
+  assert.match(
+    suggestions,
+    /ALTER COLUMN affiliate_link_id DROP NOT NULL/,
+  );
+  assert.match(
+    suggestions,
+    /GRANT SELECT, UPDATE, DELETE ON public\.article_affiliate_suggestions[\s\S]*TO authenticated/,
+  );
+  assert.doesNotMatch(
+    suggestions,
+    /GRANT SELECT[^;]*article_affiliate_suggestions[^;]*TO anon/,
+  );
+  assert.match(suggestions, /review_status IN \('pending', 'shortlisted', 'dismissed'\)/);
+  assert.match(suggestions, /blog_post\.slug = 'zebra-ds2208-shopify-pos'/);
+  assert.match(suggestions, /'Amazon Associates'::TEXT/);
+  assert.match(suggestions, /'B&H Affiliate Program'::TEXT/);
+  assert.doesNotMatch(suggestions, /'approved'::TEXT/);
+  assert.match(coverImages, /CREATE TABLE public\.article_cover_images/);
+  assert.match(coverImages, /Exactly three cover image options are required/);
+  assert.match(coverImages, /CREATE FUNCTION public\.select_article_cover_image/);
+  assert.match(coverImages, /Published articles must be unpublished/);
+  assert.doesNotMatch(
+    coverImages,
+    /GRANT SELECT[^;]*article_cover_images[^;]*TO anon/,
+  );
+
+  const socialPosts = await source(
+    "supabase/migrations/20260718181443_article_social_posts.sql",
+  );
+  assert.match(socialPosts, /CREATE TABLE public\.article_social_posts/);
+  assert.match(socialPosts, /ALTER TABLE public\.article_social_posts ENABLE ROW LEVEL SECURITY/);
+  assert.match(socialPosts, /p_social_posts JSONB/);
+  assert.doesNotMatch(
+    socialPosts,
+    /GRANT SELECT[^;]*article_social_posts[^;]*TO anon/,
+  );
+});
+
+test("admin reviews private affiliate suggestions and unlinked products", async () => {
+  const admin = await source("app/(default)/admin/page.tsx");
+  const affiliateServer = await source("lib/affiliate/server.ts");
+
+  assert.match(admin, /\.from\("article_affiliate_suggestions"\)/);
+  assert.match(admin, /Suggested programs and placements/);
+  assert.match(admin, /This does not approve or activate an affiliate program/);
+  assert.match(admin, /affiliate_link_id: articleProductForm\.affiliateLinkId \|\| null/);
+  assert.match(affiliateServer, /!row\.affiliate_link_id/);
+});
+
+test("admin displays and saves private social drafts per article", async () => {
+  const admin = await source("app/(default)/admin/page.tsx");
+
+  assert.match(admin, /\.from\("article_social_posts"\)/);
+  assert.match(admin, /Social media drafts/);
+  assert.match(admin, /Save social drafts/);
+  assert.match(admin, /onConflict: "article_id,platform"/);
+  assert.match(admin, /SOCIAL_PLATFORM_LIMITS/);
+});
+
+test("cover and inline image alt text have separate validation paths", async () => {
+  const admin = await source("app/(default)/admin/page.tsx");
+  const article = await source("app/(default)/blog/[slug]/page.tsx");
+  const ingest = await source("lib/codex/draft-ingest.ts");
+
+  assert.match(admin, /Alt text for a new inline image/);
+  assert.match(admin, /featured image uses the[\s\S]*Cover image alt text/);
+  assert.match(admin, /Generated cover options/);
+  assert.match(admin, /select_article_cover_image/);
+  assert.match(admin, /No inline body images are in this article/);
+  assert.match(ingest, /Every inline body image must have descriptive alt text/);
+  assert.match(ingest, /Exactly three cover image options are required/);
+  assert.match(ingest, /cover_image_alt: coverImageAlt/);
+  assert.match(article, /const coverImageAlt = getPostCoverImageAlt\(post\)/);
+  assert.match(article, /alt=\{coverImageAlt\}/);
 });
 
 test("Codex article inventory is private and field-restricted", async () => {
@@ -296,6 +390,9 @@ test("Codex article inventory is private and field-restricted", async () => {
   assert.match(endpoint, /consumeCodexDraftRateLimit\(request\)/);
   assert.match(endpoint, /process\.env\.SUPABASE_SECRET_KEY/);
   assert.match(endpoint, /\.from\("blog_posts"\)/);
+  assert.match(endpoint, /\.from\("affiliate_links"\)/);
+  assert.match(endpoint, /\.eq\("active", true\)/);
+  assert.match(endpoint, /\.eq\("affiliate_programs\.status", "approved"\)/);
   assert.match(endpoint, /\.range\(from, from \+ ARTICLE_INVENTORY_PAGE_SIZE - 1\)/);
   assert.doesNotMatch(endpoint, /\.eq\("workflow_status"/);
   for (const field of [
@@ -321,10 +418,13 @@ test("Codex article inventory is private and field-restricted", async () => {
   ]) {
     assert.doesNotMatch(endpoint, new RegExp(`"${prohibitedField}"`));
   }
+  assert.doesNotMatch(endpoint, /destination_url/);
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_URL/);
   assert.match(helper, /process\.env\.DEVICEFIELD_INGEST_AUTH/);
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_TOKEN/);
   assert.match(helper, /\/api\/internal\/codex\/articles/);
+  assert.match(helper, /affiliate_links: result\.affiliate_links/);
+  assert.match(helper, /program_name/);
   assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);
   assert.doesNotMatch(helper, /dotenv|loadEnvFile|readFile\([^)]*\.env/);
 });
@@ -474,6 +574,8 @@ test("empty categories are not rendered or added to the sitemap", async () => {
 test("newsletter subscriptions stay behind server endpoints and double opt-in", async () => {
   const form = await source("components/newsletter-form.tsx");
   const endpoint = await source("app/api/newsletter/subscribe/route.ts");
+  const confirmation = await source("app/api/newsletter/confirm/route.ts");
+  const provider = await source("lib/newsletter/provider.ts");
   const migration = await source(
     "supabase/migrations/20260717195325_secure_newsletter_double_opt_in.sql",
   );
@@ -482,6 +584,10 @@ test("newsletter subscriptions stay behind server endpoints and double opt-in", 
   assert.doesNotMatch(endpoint, /request\.nextUrl\.host/);
   assert.match(endpoint, /body\.company/);
   assert.match(endpoint, /rate_limited/);
+  assert.match(confirmation, /getSameOriginUrl\(request, "\/"\)/);
+  assert.doesNotMatch(confirmation, /new URL\([^\n]*request\.url/);
+  assert.match(provider, /getSiteOrigin\(\)/);
+  assert.doesNotMatch(provider, /process\.env\.SITE_URL/);
   assert.match(
     migration,
     /REVOKE INSERT ON public\.newsletter_subscribers FROM anon, authenticated/,

@@ -116,6 +116,7 @@ export async function getArticleProducts(articleId: string) {
         ? normalizeAffiliateLink(affiliateLink)
         : null;
       if (
+        !row.affiliate_link_id ||
         !normalizedLink?.active ||
         normalizedLink.affiliate_programs?.status !== "approved"
       ) {
@@ -125,6 +126,7 @@ export async function getArticleProducts(articleId: string) {
       return [
         {
           ...row,
+          affiliate_link_id: row.affiliate_link_id,
           affiliate_links: normalizedLink,
         } satisfies ArticleProductWithLink,
       ];
