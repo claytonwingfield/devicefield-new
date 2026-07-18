@@ -70,6 +70,12 @@ export type CodexBodyImage = {
   alt: string;
 };
 
+export type CodexCoverImage = {
+  file_name: string;
+  alt: string;
+  label: string;
+};
+
 export type CodexReviewDraftPayload = {
   title: string;
   slug: string;
@@ -102,6 +108,7 @@ export type CodexReviewDraftPayload = {
   original_evidence: CodexOriginalEvidence[];
   internal_notes: string | null;
   featured: false;
+  cover_images: CodexCoverImage[];
   body_images: CodexBodyImage[];
   article_products: CodexArticleProduct[];
   affiliate_suggestions: CodexAffiliateSuggestion[];
@@ -126,6 +133,7 @@ type RateLimitBucket = {
 export const CODEX_DRAFT_MAX_BODY_BYTES = 24 * 1024 * 1024;
 export const CODEX_DRAFT_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const CODEX_DRAFT_MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
+export const CODEX_DRAFT_COVER_IMAGE_COUNT = 3;
 export const CODEX_DRAFT_MAX_INLINE_IMAGES = 4;
 export const CODEX_DRAFT_RATE_LIMIT = 12;
 export const CODEX_DRAFT_RATE_WINDOW_MS = 60_000;
@@ -136,6 +144,7 @@ const PLACEHOLDER_PATTERN =
   /\b(?:TODO|TBD|TK)\b|needs\s+source|\[citation\s+needed\]/i;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const BODY_IMAGE_FILE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*\.(?:png|webp)$/;
+const COVER_IMAGE_FILE_PATTERN = /^cover-option-[1-3]\.(?:png|webp)$/;
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const rateLimitBuckets = new Map<string, RateLimitBucket>();
 
@@ -181,6 +190,7 @@ const ALLOWED_FIELDS = new Set([
   "original_evidence",
   "internal_notes",
   "featured",
+  "cover_images",
   "body_images",
   "article_products",
   "affiliate_suggestions",
@@ -500,6 +510,67 @@ function bodyImages(value: unknown, content: string) {
   ) {
     throw new Error(
       "Article body-image placeholders must match the body_images manifest.",
+    );
+  }
+
+  return images;
+}
+
+function coverImages(value: unknown, selectedAlt: string) {
+  if (
+    !Array.isArray(value) ||
+    value.length !== CODEX_DRAFT_COVER_IMAGE_COUNT
+  ) {
+    throw new Error("Exactly three cover image options are required.");
+  }
+
+  const seenFiles = new Set<string>();
+  const seenLabels = new Set<string>();
+  const images = value.map((item, index) => {
+    if (!isRecord(item)) {
+      throw new Error("Each cover image option must be an object.");
+    }
+    const unknownField = Object.keys(item).find(
+      (field) => !["file_name", "alt", "label"].includes(field),
+    );
+    if (unknownField) {
+      throw new Error(`Cover image option cannot set ${unknownField}.`);
+    }
+
+    const fileName = requiredString(
+      item.file_name,
+      "Cover image file name",
+      100,
+    );
+    if (
+      !COVER_IMAGE_FILE_PATTERN.test(fileName) ||
+      fileName !== `cover-option-${index + 1}.${fileName.split(".").at(-1)}` ||
+      seenFiles.has(fileName)
+    ) {
+      throw new Error(
+        "Cover image files must be ordered as cover-option-1 through cover-option-3 in PNG or WebP format.",
+      );
+    }
+    seenFiles.add(fileName);
+
+    const alt = requiredString(item.alt, "Cover image alt text", 500);
+    if (alt.length < 8 || /[\r\n]/.test(alt)) {
+      throw new Error("Cover image alt text must be descriptive.");
+    }
+
+    const label = requiredString(item.label, "Cover image label", 120);
+    const normalizedLabel = label.toLowerCase();
+    if (seenLabels.has(normalizedLabel)) {
+      throw new Error("Cover image labels must be unique.");
+    }
+    seenLabels.add(normalizedLabel);
+
+    return { file_name: fileName, alt, label };
+  });
+
+  if (images[0].alt !== selectedAlt) {
+    throw new Error(
+      "The article cover alt text must match the first cover image option.",
     );
   }
 
@@ -1013,6 +1084,15 @@ export function validateCodexDraftPayload(value: unknown): DraftValidationResult
     const content = requiredString(value.content, "Content", 200_000);
     validateBodyImageAltText(content);
     const normalizedBodyImages = bodyImages(value.body_images ?? [], content);
+    const coverImageAlt = requiredString(
+      value.cover_image_alt,
+      "Cover image alt text",
+      500,
+    );
+    const normalizedCoverImages = coverImages(
+      value.cover_images,
+      coverImageAlt,
+    );
 
     return {
       ok: true,
@@ -1023,11 +1103,7 @@ export function validateCodexDraftPayload(value: unknown): DraftValidationResult
         content,
         category,
         tags: stringArray(value.tags, "Tags", 30),
-        cover_image_alt: requiredString(
-          value.cover_image_alt,
-          "Cover image alt text",
-          500,
-        ),
+        cover_image_alt: coverImageAlt,
         focus_keyword: requiredString(
           value.focus_keyword,
           "Focus keyword",
@@ -1068,6 +1144,7 @@ export function validateCodexDraftPayload(value: unknown): DraftValidationResult
           10_000,
         ),
         featured: false,
+        cover_images: normalizedCoverImages,
         body_images: normalizedBodyImages,
         article_products: articleProducts(value.article_products),
         affiliate_suggestions: affiliateSuggestions(

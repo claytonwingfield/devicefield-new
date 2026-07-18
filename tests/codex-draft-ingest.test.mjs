@@ -73,6 +73,14 @@ function validDraft(overrides = {}) {
     original_evidence: [],
     internal_notes: "Review source currency before approval.",
     featured: false,
+    cover_images: [1, 2, 3].map((number) => ({
+      file_name: `cover-option-${number}.webp`,
+      alt:
+        number === 1
+          ? "Diagram of receipt printer connection options"
+          : `Alternative ${number} diagram of receipt printer connections`,
+      label: `Concept ${number}`,
+    })),
     body_images: [],
     article_products: [],
     affiliate_suggestions: [],
@@ -117,7 +125,45 @@ test("valid article packages normalize without workflow authority", async () => 
   assert.equal(result.ok, true);
   assert.equal(result.article.testing_status, "researched");
   assert.equal(result.article.featured, false);
+  assert.equal(result.article.cover_images.length, 3);
   assert.equal("workflow_status" in result.article, false);
+});
+
+test("draft ingestion requires three ordered cover concepts with matching alt text", async () => {
+  const { validateCodexDraftPayload } = await loadBundledModule(
+    "lib/codex/draft-ingest.ts",
+  );
+
+  assert.equal(
+    validateCodexDraftPayload(validDraft({ cover_images: [] })).ok,
+    false,
+  );
+  assert.equal(
+    validateCodexDraftPayload(
+      validDraft({
+        cover_images: validDraft().cover_images.slice(0, 2),
+      }),
+    ).ok,
+    false,
+  );
+  assert.equal(
+    validateCodexDraftPayload(
+      validDraft({
+        cover_images: validDraft().cover_images.map((image, index) =>
+          index === 1
+            ? { ...image, file_name: "cover-option-3.webp" }
+            : image,
+        ),
+      }),
+    ).ok,
+    false,
+  );
+  assert.equal(
+    validateCodexDraftPayload(
+      validDraft({ cover_image_alt: "Alt text that does not match option one" }),
+    ).ok,
+    false,
+  );
 });
 
 test("workflow states and featured placement cannot be requested", async () => {

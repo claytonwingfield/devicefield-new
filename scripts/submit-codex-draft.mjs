@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { access, readFile, stat } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
-const [submissionArgument, imageArgument] = process.argv.slice(2);
+const [submissionArgument, ...imageArguments] = process.argv.slice(2);
 const ingestUrl = process.env.CODEX_DRAFT_INGEST_URL;
 const ingestToken =
   process.env.DEVICEFIELD_INGEST_AUTH ??
@@ -84,9 +84,9 @@ async function getBodyImages(payload, submissionPath) {
 }
 
 async function main() {
-  if (!submissionArgument || !imageArgument) {
+  if (!submissionArgument || imageArguments.length !== 3) {
     throw new Error(
-      "Usage: node scripts/submit-codex-draft.mjs <submission.json> <featured-image.webp>",
+      "Usage: node scripts/submit-codex-draft.mjs <submission.json> <cover-option-1.webp> <cover-option-2.webp> <cover-option-3.webp>",
     );
   }
   if (!ingestUrl || !ingestToken) {
@@ -110,22 +110,27 @@ async function main() {
   }
 
   const submissionPath = resolve(submissionArgument);
-  const imagePath = resolve(imageArgument);
-  await Promise.all([access(submissionPath), access(imagePath)]);
-  const [submissionInfo, imageInfo] = await Promise.all([
-    stat(submissionPath),
-    stat(imagePath),
+  const imagePaths = imageArguments.map((argument) => resolve(argument));
+  await Promise.all([
+    access(submissionPath),
+    ...imagePaths.map((path) => access(path)),
   ]);
-  if (!submissionInfo.isFile() || !imageInfo.isFile()) {
-    throw new Error("Submission and featured image paths must be files.");
+  const [submissionInfo, ...imageInfos] = await Promise.all([
+    stat(submissionPath),
+    ...imagePaths.map((path) => stat(path)),
+  ]);
+  if (!submissionInfo.isFile() || imageInfos.some((info) => !info.isFile())) {
+    throw new Error("Submission and cover image paths must be files.");
   }
 
-  const imageType = getImageType(imagePath);
-  if (!imageType) throw new Error("Featured image must be a WebP or PNG file.");
+  const imageTypes = imagePaths.map((path) => getImageType(path));
+  if (imageTypes.some((type) => !type)) {
+    throw new Error("Cover images must be WebP or PNG files.");
+  }
 
-  const [submissionBytes, imageBytes] = await Promise.all([
+  const [submissionBytes, ...imageBytes] = await Promise.all([
     readFile(submissionPath),
-    readFile(imagePath),
+    ...imagePaths.map((path) => readFile(path)),
   ]);
   let payload;
   try {
@@ -136,23 +141,37 @@ async function main() {
   if (!isRecord(payload)) {
     throw new Error("Submission payload must be a JSON object.");
   }
+  if (!Array.isArray(payload.cover_images) || payload.cover_images.length !== 3) {
+    throw new Error("Submission cover_images must contain exactly three items.");
+  }
+  const mismatchedCover = payload.cover_images.find(
+    (item, index) =>
+      !isRecord(item) || item.file_name !== basename(imagePaths[index]),
+  );
+  if (mismatchedCover) {
+    throw new Error(
+      "Cover image arguments must match the ordered cover_images manifest.",
+    );
+  }
   const bodyImages = await getBodyImages(payload, submissionPath);
 
   const runId = await getRunId(
     payload,
     submissionPath,
     submissionBytes,
-    [imageBytes, ...bodyImages.map((image) => image.bytes)],
+    [...imageBytes, ...bodyImages.map((image) => image.bytes)],
   );
   const article = { ...payload };
   delete article.run_id;
   const formData = new FormData();
   formData.set("payload", JSON.stringify(article));
-  formData.set(
-    "featured_image",
-    new Blob([imageBytes], { type: imageType }),
-    basename(imagePath),
-  );
+  imageBytes.forEach((bytes, index) => {
+    formData.append(
+      "featured_image",
+      new Blob([bytes], { type: imageTypes[index] }),
+      basename(imagePaths[index]),
+    );
+  });
   for (const bodyImage of bodyImages) {
     formData.append(
       "body_image",
@@ -189,6 +208,9 @@ async function main() {
     typeof result.slug !== "string" ||
     result.workflow_status !== "ready_for_review" ||
     typeof result.cover_image_url !== "string" ||
+    !Array.isArray(result.cover_image_urls) ||
+    result.cover_image_urls.length !== 3 ||
+    result.cover_image_urls.some((url) => typeof url !== "string") ||
     typeof result.created_at !== "string"
   ) {
     throw new Error("Draft endpoint returned an invalid response.");
@@ -201,6 +223,7 @@ async function main() {
         slug: result.slug,
         workflow_status: result.workflow_status,
         cover_image_url: result.cover_image_url,
+        cover_image_urls: result.cover_image_urls,
         created_at: result.created_at,
       },
       null,

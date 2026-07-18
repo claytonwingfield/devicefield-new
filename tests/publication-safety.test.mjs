@@ -252,12 +252,16 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   const suggestions = await source(
     "supabase/migrations/20260718162726_add_article_affiliate_suggestions.sql",
   );
+  const coverImages = await source(
+    "supabase/migrations/20260718174755_article_cover_image_options.sql",
+  );
 
   assert.match(endpoint, /process\.env\.SUPABASE_SECRET_KEY/);
   assert.match(endpoint, /hasValidCodexDraftToken\(request\)/);
   assert.doesNotMatch(endpoint, /sharp/);
-  assert.match(endpoint, /imageValidation\.extension/);
-  assert.match(endpoint, /contentType: imageValidation\.contentType/);
+  assert.match(endpoint, /CODEX_DRAFT_COVER_IMAGE_COUNT/);
+  assert.match(endpoint, /coverImageUploads/);
+  assert.match(endpoint, /contentType: coverImage\.contentType/);
   assert.match(endpoint, /request\.formData\(\)/);
   assert.match(endpoint, /X-Devicefield-Run-ID|x-devicefield-run-id/);
   assert.match(endpoint, /rpc\(\s*"create_codex_review_draft"/);
@@ -265,6 +269,7 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   assert.match(endpoint, /validateCodexBodyImage/);
   assert.match(endpoint, /devicefield-body-image:/);
   assert.match(endpoint, /body_image_urls/);
+  assert.match(endpoint, /cover_image_urls/);
   assert.match(endpoint, /withUploadedImageCleanup/);
   assert.match(endpoint, /workflow_status: "ready_for_review"/);
   assert.doesNotMatch(endpoint, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
@@ -283,6 +288,8 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   assert.match(helper, /process\.env\.DEVICEFIELD_INGEST_AUTH/);
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_TOKEN/);
   assert.match(helper, /new FormData\(\)/);
+  assert.match(helper, /imageArguments\.length !== 3/);
+  assert.match(helper, /formData\.append\(\s*"featured_image"/);
   assert.match(helper, /formData\.append\(\s*"body_image"/);
   assert.match(helper, /resolve\(dirname\(submissionPath\), "body-images"/);
   assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);
@@ -313,6 +320,14 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   assert.match(suggestions, /'Amazon Associates'::TEXT/);
   assert.match(suggestions, /'B&H Affiliate Program'::TEXT/);
   assert.doesNotMatch(suggestions, /'approved'::TEXT/);
+  assert.match(coverImages, /CREATE TABLE public\.article_cover_images/);
+  assert.match(coverImages, /Exactly three cover image options are required/);
+  assert.match(coverImages, /CREATE FUNCTION public\.select_article_cover_image/);
+  assert.match(coverImages, /Published articles must be unpublished/);
+  assert.doesNotMatch(
+    coverImages,
+    /GRANT SELECT[^;]*article_cover_images[^;]*TO anon/,
+  );
 });
 
 test("admin reviews private affiliate suggestions and unlinked products", async () => {
@@ -333,9 +348,12 @@ test("cover and inline image alt text have separate validation paths", async () 
 
   assert.match(admin, /Alt text for a new inline image/);
   assert.match(admin, /featured image uses the[\s\S]*Cover image alt text/);
+  assert.match(admin, /Generated cover options/);
+  assert.match(admin, /select_article_cover_image/);
   assert.match(admin, /No inline body images are in this article/);
   assert.match(ingest, /Every inline body image must have descriptive alt text/);
-  assert.match(ingest, /cover_image_alt: requiredString/);
+  assert.match(ingest, /Exactly three cover image options are required/);
+  assert.match(ingest, /cover_image_alt: coverImageAlt/);
   assert.match(article, /const coverImageAlt = getPostCoverImageAlt\(post\)/);
   assert.match(article, /alt=\{coverImageAlt\}/);
 });

@@ -151,6 +151,18 @@ export type BlogPost = {
   updated_at: string;
 };
 
+export type ArticleCoverImage = {
+  id: string;
+  article_id: string;
+  image_url: string;
+  image_alt: string;
+  label: string;
+  display_order: number;
+  selected: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export function slugify(value: string) {
   return value
     .toLowerCase()

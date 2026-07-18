@@ -26,6 +26,7 @@ import {
   formatWorkflowStatus,
   slugify,
   type ArticleType,
+  type ArticleCoverImage,
   type ArticleWorkflowStatus,
   type Author,
   type BlogPost,
@@ -765,6 +766,9 @@ export default function AdminDashboard() {
     [],
   );
   const [articleProducts, setArticleProducts] = useState<ArticleProduct[]>([]);
+  const [articleCoverImages, setArticleCoverImages] = useState<
+    ArticleCoverImage[]
+  >([]);
   const [articleAffiliateSuggestions, setArticleAffiliateSuggestions] =
     useState<ArticleAffiliateSuggestion[]>([]);
   const [activeSection, setActiveSection] = useState<AdminSection>("articles");
@@ -798,6 +802,9 @@ export default function AdminDashboard() {
   const [authorSaving, setAuthorSaving] = useState(false);
   const [workflowSaving, setWorkflowSaving] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [coverImageSelectingId, setCoverImageSelectingId] = useState<
+    string | null
+  >(null);
   const [bodyImageUploading, setBodyImageUploading] = useState(false);
   const [bodyImageAlt, setBodyImageAlt] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -855,6 +862,13 @@ export default function AdminDashboard() {
         .filter((product) => product.article_id === editingId)
         .sort((left, right) => left.display_order - right.display_order),
     [articleProducts, editingId],
+  );
+  const currentCoverImages = useMemo(
+    () =>
+      articleCoverImages
+        .filter((image) => image.article_id === editingId)
+        .sort((left, right) => left.display_order - right.display_order),
+    [articleCoverImages, editingId],
   );
   const currentAffiliateSuggestions = useMemo(
     () =>
@@ -1066,6 +1080,21 @@ export default function AdminDashboard() {
       }
     };
 
+    const fetchCoverImages = async () => {
+      const { data, error } = await supabase
+        .from("article_cover_images")
+        .select("*")
+        .order("display_order", { ascending: true });
+
+      if (error) {
+        setErrorMessage(
+          `Unable to load article cover options. Run the latest Supabase migration first. ${error.message}`,
+        );
+      } else {
+        setArticleCoverImages((data ?? []) as ArticleCoverImage[]);
+      }
+    };
+
     const fetchSubscribers = async () => {
       const { data, error } = await supabase
         .from("newsletter_subscribers")
@@ -1213,6 +1242,7 @@ export default function AdminDashboard() {
       await Promise.all([
         fetchPosts(),
         fetchAuthors(),
+        fetchCoverImages(),
         fetchPages(),
         fetchSubscribers(),
         fetchAffiliateData(),
@@ -1461,6 +1491,60 @@ export default function AdminDashboard() {
     } finally {
       setCoverUploading(false);
     }
+  };
+
+  const handleCoverImageSelect = async (coverImage: ArticleCoverImage) => {
+    if (!editingId || coverImage.article_id !== editingId) return;
+    if (formData.workflowStatus === "published") {
+      setErrorMessage(
+        "Unpublish this article to draft before changing its cover image.",
+      );
+      return;
+    }
+
+    setCoverImageSelectingId(coverImage.id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("select_article_cover_image", {
+      p_article_id: editingId,
+      p_cover_image_id: coverImage.id,
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      const selected = Array.isArray(data) ? data[0] : data;
+      const imageUrl = selected?.image_url ?? coverImage.image_url;
+      const imageAlt = selected?.image_alt ?? coverImage.image_alt;
+      setArticleCoverImages((current) =>
+        current.map((image) =>
+          image.article_id === editingId
+            ? { ...image, selected: image.id === coverImage.id }
+            : image,
+        ),
+      );
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === editingId
+            ? {
+                ...post,
+                cover_image_url: imageUrl,
+                cover_image_alt: imageAlt,
+              }
+            : post,
+        ),
+      );
+      setFormData((current) => ({
+        ...current,
+        coverImageUrl: imageUrl,
+        coverImageAlt: imageAlt,
+      }));
+      setSuccessMessage(`Selected ${coverImage.label} as the article cover.`);
+    }
+
+    setCoverImageSelectingId(null);
   };
 
   const handleBodyImageUpload = async (
@@ -2894,6 +2978,79 @@ export default function AdminDashboard() {
                       Keep the public URL and descriptive alt text together.
                     </p>
                   </div>
+                  {currentCoverImages.length > 0 && (
+                    <div className="mb-5 border-b border-zinc-200 pb-5">
+                      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-950">
+                            Generated cover options
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-zinc-500">
+                            Select the strongest image before approving the
+                            article. The public article uses only the selected
+                            option.
+                          </p>
+                        </div>
+                        <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-500">
+                          {currentCoverImages.length} option
+                          {currentCoverImages.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        {currentCoverImages.map((image) => {
+                          const isSelected =
+                            image.image_url === formData.coverImageUrl;
+                          return (
+                            <button
+                              key={image.id}
+                              type="button"
+                              aria-pressed={isSelected}
+                              disabled={
+                                isSelected ||
+                                coverImageSelectingId !== null ||
+                                formData.workflowStatus === "published"
+                              }
+                              onClick={() =>
+                                void handleCoverImageSelect(image)
+                              }
+                              className={`overflow-hidden rounded-2xl border bg-white text-left transition disabled:cursor-not-allowed ${
+                                isSelected
+                                  ? "border-lime-500 ring-2 ring-lime-300"
+                                  : "border-zinc-200 hover:border-zinc-950 disabled:opacity-60"
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={image.image_url}
+                                alt={image.image_alt}
+                                className="aspect-[2/1] w-full object-cover"
+                              />
+                              <span className="block p-3">
+                                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-zinc-950">
+                                  <span>{image.label}</span>
+                                  {isSelected && (
+                                    <span className="rounded-full bg-lime-200 px-2 py-1 text-[0.65rem] uppercase tracking-[0.12em]">
+                                      Selected
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="mt-2 line-clamp-2 block text-xs leading-5 text-zinc-500">
+                                  {image.image_alt}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {formData.workflowStatus === "published" && (
+                        <p className="mt-3 text-xs font-medium text-amber-800">
+                          Published covers are locked. Unpublish to draft before
+                          selecting another option.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block min-w-0">
                       <span className="mb-2 block text-sm font-semibold text-zinc-800">
