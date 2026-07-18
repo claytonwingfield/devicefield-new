@@ -4,6 +4,7 @@ import test from "node:test";
 import { build } from "esbuild";
 
 const require = createRequire(import.meta.url);
+const sharp = require("sharp");
 const root = new URL("../", import.meta.url);
 
 async function loadBundledModule(path) {
@@ -159,32 +160,71 @@ test("invalid categories, placeholders, unsupported testing claims, and high-ris
   }
 });
 
-test("image validation checks PNG and WebP signatures", async () => {
+test("image validation accepts structurally valid 1600 x 800 PNG and WebP files", async () => {
   const { validateCodexFeaturedImage } = await loadBundledModule(
     "lib/codex/draft-ingest.ts",
   );
-  const validPng = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  const invalidPng = Uint8Array.from([0, 1, 2, 3]);
-  assert.equal(
-    (
-      await validateCodexFeaturedImage({
-        size: validPng.length,
-        type: "image/png",
-        arrayBuffer: async () => validPng.buffer,
-      })
-    ).ok,
-    true,
+  const image = sharp({
+    create: {
+      width: 1600,
+      height: 800,
+      channels: 4,
+      background: "#18181b",
+    },
+  });
+  const files = [
+    ["image/png", "png", await image.clone().png().toBuffer()],
+    ["image/webp", "webp", await image.clone().webp().toBuffer()],
+  ];
+
+  for (const [type, extension, buffer] of files) {
+    const bytes = Uint8Array.from(buffer);
+    const result = await validateCodexFeaturedImage({
+      size: bytes.length,
+      type,
+      arrayBuffer: async () => bytes.buffer,
+    });
+    assert.equal(result.ok, true, type);
+    assert.equal(result.width, 1600);
+    assert.equal(result.height, 800);
+    assert.equal(result.contentType, type);
+    assert.equal(result.extension, extension);
+  }
+});
+
+test("image validation rejects malformed and incorrectly sized files", async () => {
+  const { validateCodexFeaturedImage } = await loadBundledModule(
+    "lib/codex/draft-ingest.ts",
   );
-  assert.equal(
-    (
-      await validateCodexFeaturedImage({
-        size: invalidPng.length,
-        type: "image/png",
-        arrayBuffer: async () => invalidPng.buffer,
-      })
-    ).ok,
-    false,
+  const wrongSize = Uint8Array.from(
+    await sharp({
+      create: {
+        width: 800,
+        height: 400,
+        channels: 4,
+        background: "#18181b",
+      },
+    })
+      .png()
+      .toBuffer(),
   );
+  const malformed = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+  const wrongSizeResult = await validateCodexFeaturedImage({
+    size: wrongSize.length,
+    type: "image/png",
+    arrayBuffer: async () => wrongSize.buffer,
+  });
+  assert.equal(wrongSizeResult.ok, false);
+  assert.match(wrongSizeResult.error, /1600 x 800/);
+
+  const malformedResult = await validateCodexFeaturedImage({
+    size: malformed.length,
+    type: "image/png",
+    arrayBuffer: async () => malformed.buffer,
+  });
+  assert.equal(malformedResult.ok, false);
+  assert.match(malformedResult.error, /invalid/);
 });
 
 test("rate limiting applies to both token and request fingerprint", async () => {
