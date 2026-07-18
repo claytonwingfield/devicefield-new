@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import BlogCard from "@/components/blog/blog-card";
 import { getPublishedPosts } from "@/lib/blog/server";
 import { getBlogCategoryBySlug } from "@/lib/blog/types";
+import { createPublicPageMetadata } from "@/lib/site/metadata";
 
 export const revalidate = 300;
 
@@ -31,26 +32,22 @@ export async function generateMetadata({ params }: CategoryPageProps) {
   );
 
   if (!hasPublishedPosts) {
-    return {
+    return createPublicPageMetadata({
       title: `${category.name} Guides - Devicefield`,
       description: category.description,
-      alternates: {
-        canonical: `https://devicefield.com/category/${category.slug}`,
-      },
+      canonicalUrl: `https://devicefield.com/category/${category.slug}`,
       robots: {
         index: false,
         follow: true,
       },
-    };
+    });
   }
 
-  return {
+  return createPublicPageMetadata({
     title: `${category.name} Guides - Devicefield`,
     description: category.description,
-    alternates: {
-      canonical: `https://devicefield.com/category/${category.slug}`,
-    },
-  };
+    canonicalUrl: `https://devicefield.com/category/${category.slug}`,
+  });
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {

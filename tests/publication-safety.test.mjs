@@ -541,6 +541,42 @@ test("homepage CMS migration synchronizes SEO metadata and evaluation CTA", asyn
   assert.match(migration, /WHERE slug = 'home'/);
 });
 
+test("public index metadata keeps Open Graph URLs aligned with canonicals", async () => {
+  const metadataHelper = await source("lib/site/metadata.ts");
+  const metadataPages = [
+    "app/(default)/about/page.tsx",
+    "app/(default)/contact/page.tsx",
+    "app/(default)/review-methodology/page.tsx",
+    "app/(default)/editorial-policy/page.tsx",
+    "app/(default)/affiliate-disclosure/page.tsx",
+    "app/(default)/privacy/page.tsx",
+    "app/(default)/terms/page.tsx",
+    "app/(default)/blog/page.tsx",
+    "app/(default)/category/[slug]/page.tsx",
+  ];
+
+  assert.match(metadataHelper, /alternates: \{ canonical: canonicalUrl \}/);
+  assert.match(metadataHelper, /url: canonicalUrl/);
+  for (const pagePath of metadataPages) {
+    assert.match(await source(pagePath), /createPublicPageMetadata/);
+  }
+});
+
+test("Ahrefs description fixes are mirrored in CMS data", async () => {
+  const migration = await source(
+    "supabase/migrations/20260718225557_fix_ahrefs_audit_metadata.sql",
+  );
+  const authorPage = await source("app/(default)/author/[slug]/page.tsx");
+
+  assert.match(migration, /UPDATE public\.site_pages/);
+  assert.match(migration, /contact/);
+  assert.match(migration, /affiliate-disclosure/);
+  assert.match(migration, /terms/);
+  assert.match(migration, /privacy/);
+  assert.doesNotMatch(migration, /UPDATE public\.blog_posts/);
+  assert.match(authorPage, /getAuthorMetaDescription/);
+});
+
 test("articles publish canonical BlogPosting schema and large image metadata", async () => {
   const article = await source("app/(default)/blog/[slug]/page.tsx");
   const layout = await source("app/layout.tsx");
@@ -561,6 +597,14 @@ test("articles publish canonical BlogPosting schema and large image metadata", a
   }
   assert.match(article, /logo: \{/);
   assert.match(article, /getAuthorUrl\(author\.slug\)/);
+  const articleNode = article.slice(
+    article.indexOf("const articleJsonLd"),
+    article.indexOf("const articlePageJsonLd"),
+  );
+  assert.doesNotMatch(articleNode, /reviewedBy/);
+  assert.match(article, /const articlePageJsonLd = \{/);
+  assert.match(article, /"@type": "WebPage"/);
+  assert.match(article, /reviewedBy: reviewer/);
   assert.match(layout, /"max-image-preview": "large"/);
   assert.match(types, /return getArticleUrl\(post\.slug\)/);
   assert.doesNotMatch(types, /post\.canonical_url\?\.trim\(\)/);

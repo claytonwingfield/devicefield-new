@@ -3,6 +3,7 @@ import { permanentRedirect } from "next/navigation";
 import BlogCard from "@/components/blog/blog-card";
 import { getPublishedPosts } from "@/lib/blog/server";
 import { BLOG_CATEGORY_DETAILS, getBlogCategoryBySlug } from "@/lib/blog/types";
+import { createPublicPageMetadata } from "@/lib/site/metadata";
 import { defaultSitePages, getSitePage, getString } from "@/lib/site/pages";
 
 export const revalidate = 300;
@@ -57,14 +58,12 @@ export async function generateMetadata({ searchParams }: BlogIndexPageProps) {
     : "/blog";
   const hasFilterParameters = Boolean(selectedType || searchQuery);
 
-  return {
+  return createPublicPageMetadata({
     title,
     description,
-    alternates: {
-      canonical: `https://devicefield.com${canonicalPath}`,
-    },
+    canonicalUrl: `https://devicefield.com${canonicalPath}`,
     robots: hasFilterParameters ? { index: false, follow: true } : undefined,
-  };
+  });
 }
 
 export default async function BlogIndexPage({

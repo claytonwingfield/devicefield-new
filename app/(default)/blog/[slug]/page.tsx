@@ -144,13 +144,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           url: getAuthorUrl(author.slug),
         }
       : { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
-    reviewedBy: reviewer
-      ? {
-          "@type": "Person",
-          name: reviewer.name,
-          url: getAuthorUrl(reviewer.slug),
-        }
-      : undefined,
     publisher: {
       "@type": "Organization",
       "@id": `${SITE_URL}/#organization`,
@@ -165,6 +158,21 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       "@type": "WebPage",
       "@id": canonicalUrl,
     },
+  };
+  const articlePageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": canonicalUrl,
+    url: canonicalUrl,
+    name: post.title,
+    mainEntity: { "@id": `${canonicalUrl}#article` },
+    reviewedBy: reviewer
+      ? {
+          "@type": "Person",
+          name: reviewer.name,
+          url: getAuthorUrl(reviewer.slug),
+        }
+      : undefined,
   };
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -214,8 +222,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         }
       : null;
   const structuredData = faqJsonLd
-    ? [articleJsonLd, breadcrumbJsonLd, faqJsonLd]
-    : [articleJsonLd, breadcrumbJsonLd];
+    ? [articleJsonLd, articlePageJsonLd, breadcrumbJsonLd, faqJsonLd]
+    : [articleJsonLd, articlePageJsonLd, breadcrumbJsonLd];
 
   return (
     <>

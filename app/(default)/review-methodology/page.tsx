@@ -1,15 +1,16 @@
 import PolicyPage from "@/components/site/policy-page";
+import { createPublicPageMetadata } from "@/lib/site/metadata";
 import { getSitePage } from "@/lib/site/pages";
 
 export const revalidate = 300;
 
 export async function generateMetadata() {
   const page = await getSitePage("review-methodology");
-  return {
+  return createPublicPageMetadata({
     title: page.title,
     description: page.meta_description,
-    alternates: { canonical: "https://devicefield.com/review-methodology" },
-  };
+    canonicalUrl: "https://devicefield.com/review-methodology",
+  });
 }
 
 export default function ReviewMethodologyPage() {

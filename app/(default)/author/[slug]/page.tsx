@@ -24,6 +24,13 @@ function getAuthorDescription(slug: string, bio: string | null) {
   return "Devicefield author and reviewer profile.";
 }
 
+function getAuthorMetaDescription(slug: string, name: string) {
+  if (slug === PRIMARY_AUTHOR_SLUG) {
+    return "Meet Clayton Wingfield, Devicefield founder and editor covering retail systems, POS infrastructure, business automation, and operational technology.";
+  }
+  return `Read ${name}'s Devicefield profile, areas of expertise, published business technology guides, and independent product coverage.`;
+}
+
 function getAuthorJobTitle(slug: string, jobTitle: string | null) {
   if (jobTitle) return jobTitle;
   return slug === PRIMARY_AUTHOR_SLUG
@@ -42,7 +49,7 @@ export async function generateMetadata({ params }: AuthorPageProps) {
   }
 
   const canonicalUrl = getAuthorUrl(author.slug);
-  const description = getAuthorDescription(author.slug, author.bio);
+  const description = getAuthorMetaDescription(author.slug, author.name);
 
   return {
     title: `${author.name} - Devicefield`,
