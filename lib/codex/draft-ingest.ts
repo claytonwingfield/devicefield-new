@@ -1,51 +1,111 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
+  ARTICLE_PRODUCT_PLACEMENTS,
+  type ArticleProductPlacement,
+} from "../affiliate/types";
+import {
   ARTICLE_TYPES,
   BLOG_CATEGORIES,
-  slugify,
+  TESTING_STATUSES,
   type ArticleType,
+  type TestingStatus,
 } from "../blog/types";
 
 type JsonRecord = Record<string, unknown>;
 
-export type CodexDraftPayload = {
+type CodexSource = {
+  title: string;
+  url: string;
+  note?: string;
+};
+
+type CodexClaim = {
+  claim: string;
+  source_url: string;
+  risk: "low" | "medium" | "high";
+  resolved: boolean;
+};
+
+type CodexOriginalEvidence = {
+  label: string;
+  url?: string;
+  note?: string;
+};
+
+export type CodexArticleProduct = {
+  affiliate_link_slug: string;
+  product_name: string;
+  award: string | null;
+  best_for: string | null;
+  avoid_if: string | null;
+  verdict: string | null;
+  pros: string[];
+  cons: string[];
+  placement: ArticleProductPlacement;
+  display_order: number;
+};
+
+export type CodexReviewDraftPayload = {
   title: string;
   slug: string;
   excerpt: string;
   content: string;
   category: string;
   tags: string[];
-  cover_image_url: string | null;
-  cover_image_alt: string | null;
-  focus_keyword: string | null;
-  seo_title: string | null;
-  meta_description: string | null;
-  canonical_url: string | null;
+  cover_image_alt: string;
+  focus_keyword: string;
+  seo_title: string;
+  meta_description: string;
+  canonical_url: string;
   faq_items: Array<{ question: string; answer: string }>;
   article_type: ArticleType;
-  testing_status: "researched";
-  sources: Array<{ title: string; url: string; note?: string }>;
-  claims: Array<{
-    claim: string;
-    source_url?: string;
-    risk?: "low" | "medium" | "high";
-    resolved?: boolean;
-  }>;
+  testing_status: TestingStatus;
+  author_slug: string;
+  reviewer_slug: string;
+  last_verified_at: string;
+  next_review_at: string;
+  sources: CodexSource[];
+  claims: CodexClaim[];
   quick_verdict: {
     verdict?: string;
     best_for?: string;
     avoid_if?: string;
   };
-  compatibility_notes: string | null;
-  limitations: string | null;
-  testing_method: string | null;
-  original_evidence: [];
+  compatibility_notes: string;
+  limitations: string;
+  testing_method: string;
+  original_evidence: CodexOriginalEvidence[];
   internal_notes: string | null;
+  featured: false;
+  article_products: CodexArticleProduct[];
 };
 
 type DraftValidationResult =
-  | { ok: true; article: CodexDraftPayload }
+  | { ok: true; article: CodexReviewDraftPayload }
   | { ok: false; error: string };
+
+type ImageLike = {
+  name?: string;
+  size: number;
+  type: string;
+  arrayBuffer(): Promise<ArrayBuffer>;
+};
+
+type RateLimitBucket = {
+  count: number;
+  resetAt: number;
+};
+
+export const CODEX_DRAFT_MAX_BODY_BYTES = 12 * 1024 * 1024;
+export const CODEX_DRAFT_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const CODEX_DRAFT_RATE_LIMIT = 12;
+export const CODEX_DRAFT_RATE_WINDOW_MS = 60_000;
+
+const PLACEHOLDER_PATTERN =
+  /\b(?:TODO|TBD|TK)\b|needs\s+source|\[citation\s+needed\]/i;
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
+const rateLimitBuckets = new Map<string, RateLimitBucket>();
 
 const PROHIBITED_FIELDS = [
   "workflow_status",
@@ -53,14 +113,71 @@ const PROHIBITED_FIELDS = [
   "approved_at",
   "scheduled_for",
   "published_at",
-  "featured",
+  "archived_at",
+  "created_by",
   "author_id",
   "reviewer_id",
   "reviewed_at",
+  "last_reviewed_at",
 ] as const;
+
+const ALLOWED_FIELDS = new Set([
+  "title",
+  "slug",
+  "excerpt",
+  "content",
+  "category",
+  "tags",
+  "cover_image_alt",
+  "focus_keyword",
+  "seo_title",
+  "meta_description",
+  "canonical_url",
+  "faq_items",
+  "article_type",
+  "testing_status",
+  "author_slug",
+  "reviewer_slug",
+  "last_verified_at",
+  "next_review_at",
+  "sources",
+  "claims",
+  "quick_verdict",
+  "compatibility_notes",
+  "limitations",
+  "testing_method",
+  "original_evidence",
+  "internal_notes",
+  "featured",
+  "article_products",
+]);
+
+const ALLOWED_PRODUCT_FIELDS = new Set([
+  "affiliate_link_slug",
+  "product_name",
+  "award",
+  "best_for",
+  "avoid_if",
+  "verdict",
+  "pros",
+  "cons",
+  "placement",
+  "display_order",
+]);
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function containsPlaceholder(value: unknown): boolean {
+  if (typeof value === "string") return PLACEHOLDER_PATTERN.test(value);
+  if (Array.isArray(value)) return value.some(containsPlaceholder);
+  if (isRecord(value)) return Object.values(value).some(containsPlaceholder);
+  return false;
+}
+
+function hash(value: string | Uint8Array) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function requiredString(
@@ -88,38 +205,44 @@ function optionalString(value: unknown, label: string, maximumLength: number) {
   return normalized || null;
 }
 
-function optionalUrl(value: unknown, label: string) {
-  const normalized = optionalString(value, label, 2_000);
-  if (!normalized) return null;
-
+function requiredUrl(value: unknown, label: string) {
+  const normalized = requiredString(value, label, 2_000);
   try {
     const url = new URL(normalized);
-    if (!["http:", "https:"].includes(url.protocol)) throw new Error();
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
     return url.toString();
   } catch {
     throw new Error(`${label} must be a valid HTTP or HTTPS URL.`);
   }
 }
 
+function optionalUrl(value: unknown, label: string) {
+  const normalized = optionalString(value, label, 2_000);
+  return normalized ? requiredUrl(normalized, label) : null;
+}
+
+function requiredIsoDate(value: unknown, label: string) {
+  const normalized = requiredString(value, label, 100);
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`${label} must be a valid ISO date.`);
+  }
+  return date.toISOString();
+}
+
 function stringArray(value: unknown, label: string, maximumItems: number) {
-  if (value === undefined || value === null) return [];
   if (!Array.isArray(value) || value.length > maximumItems) {
     throw new Error(`${label} must be an array with at most ${maximumItems} items.`);
   }
-
   return Array.from(
-    new Set(
-      value.map((item) => requiredString(item, `${label} item`, 120)),
-    ),
+    new Set(value.map((item) => requiredString(item, `${label} item`, 200))),
   );
 }
 
 function faqItems(value: unknown) {
-  if (value === undefined || value === null) return [];
   if (!Array.isArray(value) || value.length > 30) {
     throw new Error("FAQ items must be an array with at most 30 items.");
   }
-
   return value.map((item) => {
     if (!isRecord(item)) throw new Error("Each FAQ item must be an object.");
     return {
@@ -129,59 +252,54 @@ function faqItems(value: unknown) {
   });
 }
 
-function sourceItems(value: unknown) {
-  if (value === undefined || value === null) return [];
-  if (!Array.isArray(value) || value.length > 100) {
-    throw new Error("Sources must be an array with at most 100 items.");
+function sourceItems(value: unknown, minimumItems: number) {
+  if (
+    !Array.isArray(value) ||
+    value.length < minimumItems ||
+    value.length > 100
+  ) {
+    throw new Error(
+      `Sources must contain between ${minimumItems} and 100 items.`,
+    );
   }
-
   return value.map((item) => {
     if (!isRecord(item)) throw new Error("Each source must be an object.");
     const note = optionalString(item.note, "Source note", 2_000);
-    const url = optionalUrl(item.url, "Source URL");
-    if (!url) throw new Error("Source URL is required.");
     return {
       title: requiredString(item.title, "Source title", 500),
-      url,
+      url: requiredUrl(item.url, "Source URL"),
       ...(note ? { note } : {}),
     };
   });
 }
 
 function claimItems(value: unknown) {
-  if (value === undefined || value === null) return [];
   if (!Array.isArray(value) || value.length > 200) {
     throw new Error("Claims must be an array with at most 200 items.");
   }
-
   return value.map((item) => {
     if (!isRecord(item)) throw new Error("Each claim must be an object.");
-    const sourceUrl = optionalUrl(item.source_url, "Claim source URL");
-    const risk = item.risk;
-    if (
-      risk !== undefined &&
-      !["low", "medium", "high"].includes(String(risk))
-    ) {
+    const risk = item.risk ?? "medium";
+    if (!['low', 'medium', 'high'].includes(String(risk))) {
       throw new Error("Claim risk must be low, medium, or high.");
     }
-    if (item.resolved !== undefined && typeof item.resolved !== "boolean") {
+    if (typeof item.resolved !== "boolean") {
       throw new Error("Claim resolved must be true or false.");
+    }
+    if (risk === "high" && item.resolved !== true) {
+      throw new Error("Unresolved high-risk claims are not allowed.");
     }
     return {
       claim: requiredString(item.claim, "Claim", 4_000),
-      ...(sourceUrl ? { source_url: sourceUrl } : {}),
-      ...(risk ? { risk: risk as "low" | "medium" | "high" } : {}),
-      ...(typeof item.resolved === "boolean"
-        ? { resolved: item.resolved }
-        : {}),
+      source_url: requiredUrl(item.source_url, "Claim source URL"),
+      risk: risk as "low" | "medium" | "high",
+      resolved: item.resolved,
     };
   });
 }
 
 function quickVerdict(value: unknown) {
-  if (value === undefined || value === null) return {};
   if (!isRecord(value)) throw new Error("Quick verdict must be an object.");
-
   const verdict = optionalString(value.verdict, "Quick verdict", 4_000);
   const bestFor = optionalString(value.best_for, "Best for", 2_000);
   const avoidIf = optionalString(value.avoid_if, "Avoid if", 2_000);
@@ -190,6 +308,72 @@ function quickVerdict(value: unknown) {
     ...(bestFor ? { best_for: bestFor } : {}),
     ...(avoidIf ? { avoid_if: avoidIf } : {}),
   };
+}
+
+function originalEvidenceItems(value: unknown) {
+  if (!Array.isArray(value) || value.length > 50) {
+    throw new Error("Original evidence must be an array with at most 50 items.");
+  }
+  return value.map((item) => {
+    if (!isRecord(item)) {
+      throw new Error("Each original evidence item must be an object.");
+    }
+    const url = optionalUrl(item.url, "Original evidence URL");
+    const note = optionalString(item.note, "Original evidence note", 2_000);
+    return {
+      label: requiredString(item.label, "Original evidence label", 500),
+      ...(url ? { url } : {}),
+      ...(note ? { note } : {}),
+    };
+  });
+}
+
+function articleProducts(value: unknown) {
+  if (!Array.isArray(value) || value.length > 50) {
+    throw new Error("Article products must be an array with at most 50 items.");
+  }
+  return value.map((item) => {
+    if (!isRecord(item)) throw new Error("Each article product must be an object.");
+    const unknownField = Object.keys(item).find(
+      (field) => !ALLOWED_PRODUCT_FIELDS.has(field),
+    );
+    if (unknownField) {
+      throw new Error(`Article product cannot set ${unknownField}.`);
+    }
+    const affiliateLinkSlug = requiredString(
+      item.affiliate_link_slug,
+      "Affiliate link slug",
+      160,
+    );
+    if (!SLUG_PATTERN.test(affiliateLinkSlug)) {
+      throw new Error("Affiliate link slug is invalid.");
+    }
+    const placement = item.placement ?? "recommendation";
+    if (!ARTICLE_PRODUCT_PLACEMENTS.includes(placement as ArticleProductPlacement)) {
+      throw new Error("Article product placement is invalid.");
+    }
+    const displayOrder = item.display_order ?? 0;
+    if (
+      typeof displayOrder !== "number" ||
+      !Number.isInteger(displayOrder) ||
+      displayOrder < 0 ||
+      displayOrder > 10_000
+    ) {
+      throw new Error("Article product display order is invalid.");
+    }
+    return {
+      affiliate_link_slug: affiliateLinkSlug,
+      product_name: requiredString(item.product_name, "Product name", 500),
+      award: optionalString(item.award, "Product award", 500),
+      best_for: optionalString(item.best_for, "Product best for", 2_000),
+      avoid_if: optionalString(item.avoid_if, "Product avoid if", 2_000),
+      verdict: optionalString(item.verdict, "Product verdict", 4_000),
+      pros: stringArray(item.pros ?? [], "Product pros", 20),
+      cons: stringArray(item.cons ?? [], "Product cons", 20),
+      placement: placement as ArticleProductPlacement,
+      display_order: displayOrder,
+    };
+  });
 }
 
 export function isCodexDraftIngestConfigured() {
@@ -202,7 +386,7 @@ export function isCodexDraftIngestConfigured() {
 export function hasValidCodexDraftToken(request: Request) {
   const expected = process.env.CODEX_DRAFT_INGEST_TOKEN;
   const authorization = request.headers.get("authorization");
-  const supplied = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  const supplied = authorization?.match(/^Bearer\s+([^\s]+)$/i)?.[1];
   if (!expected || expected.length < 32 || !supplied) return false;
 
   const expectedHash = createHash("sha256").update(expected).digest();
@@ -210,97 +394,246 @@ export function hasValidCodexDraftToken(request: Request) {
   return timingSafeEqual(expectedHash, suppliedHash);
 }
 
+export function getCodexRequestFingerprint(request: Request) {
+  return hash(
+    [
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "",
+      request.headers.get("user-agent") ?? "",
+      request.headers.get("accept-language") ?? "",
+    ].join("\n"),
+  );
+}
+
+function consumeRateLimitBucket(key: string, now: number) {
+  const bucket = rateLimitBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(key, {
+      count: 1,
+      resetAt: now + CODEX_DRAFT_RATE_WINDOW_MS,
+    });
+    return true;
+  }
+  if (bucket.count >= CODEX_DRAFT_RATE_LIMIT) return false;
+  bucket.count += 1;
+  return true;
+}
+
+export function consumeCodexDraftRateLimit(
+  request: Request,
+  now = Date.now(),
+) {
+  if (rateLimitBuckets.size > 2_000) {
+    rateLimitBuckets.forEach((bucket, key) => {
+      if (bucket.resetAt <= now) rateLimitBuckets.delete(key);
+    });
+  }
+  const authorization = request.headers.get("authorization") ?? "missing";
+  const fingerprint = getCodexRequestFingerprint(request);
+  const tokenAllowed = consumeRateLimitBucket(
+    `token:${hash(authorization)}`,
+    now,
+  );
+  const fingerprintAllowed = consumeRateLimitBucket(
+    `fingerprint:${fingerprint}`,
+    now,
+  );
+  return tokenAllowed && fingerprintAllowed;
+}
+
+export function resetCodexDraftRateLimitForTests() {
+  rateLimitBuckets.clear();
+}
+
+export function validateCodexRunId(value: string | null) {
+  const normalized = value?.trim() ?? "";
+  return RUN_ID_PATTERN.test(normalized) ? normalized : null;
+}
+
+export function hashCodexDraftSubmission(
+  payload: string,
+  image: Uint8Array,
+) {
+  return createHash("sha256")
+    .update(payload)
+    .update("\0")
+    .update(image)
+    .digest("hex");
+}
+
+export async function validateCodexFeaturedImage(file: ImageLike) {
+  if (file.size <= 0 || file.size > CODEX_DRAFT_MAX_IMAGE_BYTES) {
+    return { ok: false as const, error: "Featured image size is invalid." };
+  }
+  if (!['image/png', 'image/webp'].includes(file.type)) {
+    return { ok: false as const, error: "Featured image must be PNG or WebP." };
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const isPng =
+    bytes.length >= 8 &&
+    [137, 80, 78, 71, 13, 10, 26, 10].every(
+      (value, index) => bytes[index] === value,
+    );
+  const isWebp =
+    bytes.length >= 12 &&
+    bytes[0] === 82 &&
+    bytes[1] === 73 &&
+    bytes[2] === 70 &&
+    bytes[3] === 70 &&
+    bytes[8] === 87 &&
+    bytes[9] === 69 &&
+    bytes[10] === 66 &&
+    bytes[11] === 80;
+
+  if ((file.type === "image/png" && !isPng) || (file.type === "image/webp" && !isWebp)) {
+    return {
+      ok: false as const,
+      error: "Featured image content does not match its media type.",
+    };
+  }
+  return { ok: true as const, bytes };
+}
+
 export function validateCodexDraftPayload(value: unknown): DraftValidationResult {
-  const input = isRecord(value) && isRecord(value.article) ? value.article : value;
-  if (!isRecord(input)) {
+  if (!isRecord(value)) {
     return { ok: false, error: "Draft payload must be a JSON object." };
   }
 
   try {
-    const prohibited = PROHIBITED_FIELDS.find((field) => field in input);
+    const prohibited = PROHIBITED_FIELDS.find((field) => field in value);
     if (prohibited) {
       throw new Error(`Draft payload cannot set ${prohibited}.`);
     }
-    if (
-      input.testing_status !== undefined &&
-      input.testing_status !== "researched"
-    ) {
-      throw new Error("Codex drafts must use researched testing status.");
-    }
-    if (
-      input.original_evidence !== undefined &&
-      (!Array.isArray(input.original_evidence) ||
-        input.original_evidence.length > 0)
-    ) {
-      throw new Error("Codex drafts cannot claim original testing evidence.");
-    }
-
-    const title = requiredString(input.title, "Title", 300);
-    const slug = slugify(
-      optionalString(input.slug, "Slug", 160) ?? title,
+    const unknownField = Object.keys(value).find(
+      (field) => !ALLOWED_FIELDS.has(field),
     );
-    if (!slug || slug.length > 160) throw new Error("Slug is invalid.");
+    if (unknownField) {
+      throw new Error(`Draft payload cannot set ${unknownField}.`);
+    }
+    if (value.featured !== undefined && value.featured !== false) {
+      throw new Error("Codex drafts cannot be featured.");
+    }
+    if (containsPlaceholder(value)) {
+      throw new Error("Draft payload contains an unresolved placeholder.");
+    }
 
-    const category = requiredString(input.category, "Category", 120);
+    const slug = requiredString(value.slug, "Slug", 160);
+    if (!SLUG_PATTERN.test(slug)) throw new Error("Slug is invalid.");
+
+    const category = requiredString(value.category, "Category", 120);
     if (!BLOG_CATEGORIES.includes(category as (typeof BLOG_CATEGORIES)[number])) {
       throw new Error("Category is not a supported Devicefield category.");
     }
 
-    const articleType = input.article_type ?? "buying_guide";
+    const articleType = requiredString(value.article_type, "Article type", 80);
     if (!ARTICLE_TYPES.includes(articleType as ArticleType)) {
       throw new Error("Article type is invalid.");
     }
 
+    const testingStatus = requiredString(
+      value.testing_status,
+      "Testing status",
+      40,
+    );
+    if (!TESTING_STATUSES.includes(testingStatus as TestingStatus)) {
+      throw new Error("Testing status is invalid.");
+    }
+
+    const evidence = originalEvidenceItems(value.original_evidence);
+    if (['tested', 'mixed'].includes(testingStatus) && evidence.length === 0) {
+      throw new Error("Tested or mixed drafts require original evidence.");
+    }
+
+    const authorSlug = requiredString(value.author_slug, "Author slug", 160);
+    const reviewerSlug = requiredString(
+      value.reviewer_slug,
+      "Reviewer slug",
+      160,
+    );
+    if (!SLUG_PATTERN.test(authorSlug) || !SLUG_PATTERN.test(reviewerSlug)) {
+      throw new Error("Author and reviewer slugs are invalid.");
+    }
+
+    const canonicalUrl = requiredUrl(value.canonical_url, "Canonical URL");
+    const canonical = new URL(canonicalUrl);
+    if (
+      canonical.protocol !== "https:" ||
+      canonical.hostname !== "devicefield.com" ||
+      canonical.pathname !== `/blog/${slug}`
+    ) {
+      throw new Error("Canonical URL must match the Devicefield article slug.");
+    }
+
+    const lastVerifiedAt = requiredIsoDate(
+      value.last_verified_at,
+      "Last verified date",
+    );
+    const nextReviewAt = requiredIsoDate(value.next_review_at, "Next review date");
+    if (new Date(nextReviewAt) <= new Date(lastVerifiedAt)) {
+      throw new Error("Next review date must be after the last verified date.");
+    }
+
+    const minimumSources = ['buying_guide', 'review', 'comparison'].includes(
+      articleType,
+    )
+      ? 5
+      : 3;
+
     return {
       ok: true,
       article: {
-        title,
+        title: requiredString(value.title, "Title", 300),
         slug,
-        excerpt: requiredString(input.excerpt, "Excerpt", 1_000),
-        content: requiredString(input.content, "Content", 200_000),
+        excerpt: requiredString(value.excerpt, "Excerpt", 1_000),
+        content: requiredString(value.content, "Content", 200_000),
         category,
-        tags: stringArray(input.tags, "Tags", 30),
-        cover_image_url: optionalUrl(input.cover_image_url, "Cover image URL"),
-        cover_image_alt: optionalString(
-          input.cover_image_alt,
+        tags: stringArray(value.tags, "Tags", 30),
+        cover_image_alt: requiredString(
+          value.cover_image_alt,
           "Cover image alt text",
           500,
         ),
-        focus_keyword: optionalString(
-          input.focus_keyword,
+        focus_keyword: requiredString(
+          value.focus_keyword,
           "Focus keyword",
           200,
         ),
-        seo_title: optionalString(input.seo_title, "SEO title", 300),
-        meta_description: optionalString(
-          input.meta_description,
+        seo_title: requiredString(value.seo_title, "SEO title", 300),
+        meta_description: requiredString(
+          value.meta_description,
           "Meta description",
           1_000,
         ),
-        canonical_url: optionalUrl(input.canonical_url, "Canonical URL"),
-        faq_items: faqItems(input.faq_items),
+        canonical_url: canonicalUrl,
+        faq_items: faqItems(value.faq_items),
         article_type: articleType as ArticleType,
-        testing_status: "researched",
-        sources: sourceItems(input.sources),
-        claims: claimItems(input.claims),
-        quick_verdict: quickVerdict(input.quick_verdict),
-        compatibility_notes: optionalString(
-          input.compatibility_notes,
+        testing_status: testingStatus as TestingStatus,
+        author_slug: authorSlug,
+        reviewer_slug: reviewerSlug,
+        last_verified_at: lastVerifiedAt,
+        next_review_at: nextReviewAt,
+        sources: sourceItems(value.sources, minimumSources),
+        claims: claimItems(value.claims),
+        quick_verdict: quickVerdict(value.quick_verdict),
+        compatibility_notes: requiredString(
+          value.compatibility_notes,
           "Compatibility notes",
           20_000,
         ),
-        limitations: optionalString(input.limitations, "Limitations", 20_000),
-        testing_method: optionalString(
-          input.testing_method,
+        limitations: requiredString(value.limitations, "Limitations", 20_000),
+        testing_method: requiredString(
+          value.testing_method,
           "Testing method",
           20_000,
         ),
-        original_evidence: [],
+        original_evidence: evidence,
         internal_notes: optionalString(
-          input.internal_notes,
+          value.internal_notes,
           "Internal notes",
           10_000,
         ),
+        featured: false,
+        article_products: articleProducts(value.article_products),
       },
     };
   } catch (error) {
