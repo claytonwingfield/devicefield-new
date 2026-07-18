@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import sharp from "sharp";
 import {
   CODEX_DRAFT_MAX_BODY_BYTES,
   consumeCodexDraftRateLimit,
@@ -70,6 +69,19 @@ function mapDatabaseError(error: { code?: string; message: string }) {
     return new DraftIngestError("Draft failed database validation.", 422);
   }
   return new DraftIngestError("Draft could not be stored.", 503);
+}
+
+async function normalizeFeaturedImage(bytes: Uint8Array) {
+  const { default: sharp } = await import("sharp");
+
+  return sharp(bytes, {
+    failOn: "error",
+    limitInputPixels: 40_000_000,
+  })
+    .rotate()
+    .resize(1600, 800, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 86 })
+    .toBuffer();
 }
 
 export async function POST(request: NextRequest) {
@@ -163,14 +175,7 @@ export async function POST(request: NextRequest) {
 
   let webpImage: Buffer;
   try {
-    webpImage = await sharp(imageValidation.bytes, {
-      failOn: "error",
-      limitInputPixels: 40_000_000,
-    })
-      .rotate()
-      .resize(1600, 800, { fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 86 })
-      .toBuffer();
+    webpImage = await normalizeFeaturedImage(imageValidation.bytes);
   } catch {
     return json({ error: "Featured image could not be processed." }, 400);
   }
