@@ -36,6 +36,7 @@ import {
   type SocialPlatform,
   type TestingStatus,
 } from "@/lib/blog/types";
+import { getArticleUrl } from "@/lib/site/identity";
 import {
   defaultSitePages,
   type SitePage,
@@ -1673,7 +1674,7 @@ export default function AdminDashboard() {
       tagsInput: post.tags.join(", "),
       coverImageUrl: post.cover_image_url ?? "",
       coverImageAlt: post.cover_image_alt ?? post.title,
-      canonicalUrl: post.canonical_url ?? "",
+      canonicalUrl: getArticleUrl(post.slug),
       faqInput: formatFaqInput(post.faq_items),
       articleType: post.article_type,
       testingStatus: post.testing_status ?? "",
@@ -1716,9 +1717,9 @@ export default function AdminDashboard() {
   const handleSocialDraftSave = async () => {
     if (!editingId) return;
 
-    const canonicalUrl =
-      formData.canonicalUrl.trim() ||
-      `https://devicefield.com/blog/${formData.slug}`;
+    const canonicalUrl = getArticleUrl(
+      slugify(formData.slug || formData.title),
+    );
     for (const platform of SOCIAL_PLATFORMS) {
       const content = socialDrafts[platform].trim();
       if (!content) {
@@ -1807,7 +1808,7 @@ export default function AdminDashboard() {
       tags: splitList(formData.tagsInput),
       cover_image_url: formData.coverImageUrl.trim() || null,
       cover_image_alt: formData.coverImageAlt.trim() || null,
-      canonical_url: formData.canonicalUrl.trim() || null,
+      canonical_url: getArticleUrl(slug),
       faq_items: parseFaqInput(formData.faqInput),
       article_type: formData.articleType,
       testing_status: formData.testingStatus || null,
@@ -2696,15 +2697,11 @@ export default function AdminDashboard() {
                     </span>
                     <input
                       type="url"
-                      value={formData.canonicalUrl}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          canonicalUrl: event.target.value,
-                        }))
-                      }
-                      className="form-input w-full rounded-2xl border-zinc-200"
-                      placeholder={`https://devicefield.com/blog/${formData.slug || "slug"}`}
+                      value={getArticleUrl(
+                        slugify(formData.slug || formData.title) || "slug",
+                      )}
+                      readOnly
+                      className="form-input w-full cursor-not-allowed rounded-2xl border-zinc-200 bg-zinc-100 text-zinc-600"
                     />
                   </label>
                 </div>

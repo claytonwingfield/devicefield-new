@@ -424,14 +424,14 @@ test("invalid categories, placeholders, unsupported testing claims, and high-ris
   }
 });
 
-test("image validation accepts structurally valid 1600 x 800 PNG and WebP files", async () => {
+test("image validation accepts structurally valid 1600 x 900 PNG and WebP files", async () => {
   const { validateCodexFeaturedImage } = await loadBundledModule(
     "lib/codex/draft-ingest.ts",
   );
   const image = sharp({
     create: {
       width: 1600,
-      height: 800,
+      height: 900,
       channels: 4,
       background: "#18181b",
     },
@@ -450,7 +450,7 @@ test("image validation accepts structurally valid 1600 x 800 PNG and WebP files"
     });
     assert.equal(result.ok, true, type);
     assert.equal(result.width, 1600);
-    assert.equal(result.height, 800);
+    assert.equal(result.height, 900);
     assert.equal(result.contentType, type);
     assert.equal(result.extension, extension);
   }
@@ -480,7 +480,7 @@ test("image validation rejects malformed and incorrectly sized files", async () 
     arrayBuffer: async () => wrongSize.buffer,
   });
   assert.equal(wrongSizeResult.ok, false);
-  assert.match(wrongSizeResult.error, /1600 x 800/);
+  assert.match(wrongSizeResult.error, /1600 x 900/);
 
   const malformedResult = await validateCodexFeaturedImage({
     size: malformed.length,

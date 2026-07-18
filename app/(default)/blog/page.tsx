@@ -54,11 +54,8 @@ export async function generateMetadata({ searchParams }: BlogIndexPageProps) {
         : page.meta_description;
   const canonicalPath = selectedCategory
     ? `/category/${selectedCategory.slug}`
-    : selectedType
-      ? `/blog?type=${selectedType}`
-      : searchQuery
-        ? `/blog?q=${encodeURIComponent(searchQuery)}`
-        : "/blog";
+    : "/blog";
+  const hasFilterParameters = Boolean(selectedType || searchQuery);
 
   return {
     title,
@@ -66,6 +63,7 @@ export async function generateMetadata({ searchParams }: BlogIndexPageProps) {
     alternates: {
       canonical: `https://devicefield.com${canonicalPath}`,
     },
+    robots: hasFilterParameters ? { index: false, follow: true } : undefined,
   };
 }
 

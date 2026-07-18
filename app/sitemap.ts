@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 import { getAuthorById, getPublishedPosts } from "@/lib/blog/server";
 import { BLOG_CATEGORY_DETAILS } from "@/lib/blog/types";
+import { getAuthorUrl, SITE_URL } from "@/lib/site/identity";
 import { getSitePage, type SitePageSlug } from "@/lib/site/pages";
 
-const siteUrl = "https://devicefield.com";
+const siteUrl = SITE_URL;
 const publicPages: Array<{
   slug: Exclude<SitePageSlug, "global">;
   path: string;
@@ -83,7 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     })),
     ...authors.map((author) => ({
-      url: `${siteUrl}/authors/${author.slug}`,
+      url: getAuthorUrl(author.slug),
       lastModified: new Date(author.updated_at),
       changeFrequency: "monthly" as const,
       priority: 0.6,

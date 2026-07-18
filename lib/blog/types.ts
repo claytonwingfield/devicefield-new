@@ -1,3 +1,5 @@
+import { getArticleUrl } from "@/lib/site/identity";
+
 export const BLOG_CATEGORY_DETAILS = [
   {
     name: "Barcode & Inventory",
@@ -230,9 +232,7 @@ export function getPostMetaDescription(post: BlogPost) {
 }
 
 export function getPostCanonicalUrl(post: BlogPost) {
-  return (
-    post.canonical_url?.trim() || `https://devicefield.com/blog/${post.slug}`
-  );
+  return getArticleUrl(post.slug);
 }
 
 export function getPostCoverImageAlt(post: BlogPost) {

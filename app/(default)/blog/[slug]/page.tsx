@@ -24,6 +24,12 @@ import {
   getBlogCategoryByName,
   type BlogFaqItem,
 } from "@/lib/blog/types";
+import {
+  getAuthorUrl,
+  SITE_LOGO_URL,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/site/identity";
 
 export const revalidate = 300;
 
@@ -124,8 +130,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     articleProducts.length > 0 || /\{sponsored\}/i.test(post.content);
   const articleJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
-    headline: getPostSeoTitle(post),
+    "@type": "BlogPosting",
+    "@id": `${canonicalUrl}#article`,
+    headline: post.title,
     description: metaDescription,
     datePublished: publishedDate,
     dateModified: post.updated_at,
@@ -134,18 +141,30 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       ? {
           "@type": "Person",
           name: author.name,
-          url: `https://devicefield.com/authors/${author.slug}`,
+          url: getAuthorUrl(author.slug),
         }
-      : { "@type": "Organization", name: "Devicefield" },
+      : { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
     reviewedBy: reviewer
-      ? { "@type": "Person", name: reviewer.name }
+      ? {
+          "@type": "Person",
+          name: reviewer.name,
+          url: getAuthorUrl(reviewer.slug),
+        }
       : undefined,
     publisher: {
       "@type": "Organization",
-      name: "Devicefield",
-      url: "https://devicefield.com",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: SITE_LOGO_URL,
+      },
     },
-    mainEntityOfPage: canonicalUrl,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": canonicalUrl,
+    },
   };
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -254,7 +273,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     <dt className="font-semibold text-zinc-950">Written by</dt>
                     <dd>
                       <Link
-                        href={`/authors/${author.slug}`}
+                        href={`/author/${author.slug}`}
                         className="underline decoration-lime-400 decoration-2 underline-offset-4"
                       >
                         {author.name}
@@ -267,7 +286,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     <dt className="font-semibold text-zinc-950">Reviewed by</dt>
                     <dd>
                       <Link
-                        href={`/authors/${reviewer.slug}`}
+                        href={`/author/${reviewer.slug}`}
                         className="underline decoration-lime-400 decoration-2 underline-offset-4"
                       >
                         {reviewer.name}
@@ -298,7 +317,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
           {post.cover_image_url && (
             <div className="my-10 rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-[0_20px_80px_rgba(24,24,27,0.07)]">
-              <div className="relative aspect-[16/8] overflow-hidden rounded-[1.5rem] bg-zinc-950">
+              <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-zinc-950">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={post.cover_image_url}
