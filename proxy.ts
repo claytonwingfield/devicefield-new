@@ -13,9 +13,10 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.host;
 
   if (requestedHost.split(":")[0]?.toLowerCase() === "www.devicefield.com") {
-    const canonicalUrl = request.nextUrl.clone();
-    canonicalUrl.protocol = "https:";
-    canonicalUrl.host = "devicefield.com";
+    const canonicalUrl = new URL(
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+      "https://devicefield.com",
+    );
     return NextResponse.redirect(canonicalUrl, 308);
   }
 

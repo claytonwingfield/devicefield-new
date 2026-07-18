@@ -559,7 +559,9 @@ test("filtered blog parameters are noindex and www redirects to the canonical ho
   assert.match(nextConfig, /trailingSlash: false/);
   assert.match(proxy, /x-fh-requested-host/);
   assert.match(proxy, /requestedHost\.split\(":"\)/);
-  assert.match(proxy, /canonicalUrl\.host = "devicefield\.com"/);
+  assert.match(proxy, /"https:\/\/devicefield\.com"/);
+  assert.match(proxy, /request\.nextUrl\.pathname/);
+  assert.match(proxy, /request\.nextUrl\.search/);
   assert.match(proxy, /NextResponse\.redirect\(canonicalUrl, 308\)/);
 });
 
