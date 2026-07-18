@@ -136,6 +136,8 @@ FROM public.create_codex_review_draft(
   ))
 );
 
+RESET ROLE;
+
 SELECT ok(
   (
     SELECT blog_post.workflow_status = 'ready_for_review'
@@ -165,6 +167,8 @@ SELECT is(
   1::BIGINT,
   'approved active product recommendations are inserted atomically'
 );
+
+SET LOCAL ROLE service_role;
 
 SELECT throws_ok(
   $$
