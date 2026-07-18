@@ -4,7 +4,9 @@ import { basename, dirname, extname, join, resolve } from "node:path";
 
 const [submissionArgument, imageArgument] = process.argv.slice(2);
 const ingestUrl = process.env.CODEX_DRAFT_INGEST_URL;
-const ingestToken = process.env.CODEX_DRAFT_INGEST_TOKEN;
+const ingestToken =
+  process.env.DEVICEFIELD_INGEST_AUTH ??
+  process.env.CODEX_DRAFT_INGEST_TOKEN;
 
 function fail(message) {
   console.error(message);
@@ -53,11 +55,14 @@ async function main() {
   }
   if (!ingestUrl || !ingestToken) {
     throw new Error(
-      "Missing CODEX_DRAFT_INGEST_URL or CODEX_DRAFT_INGEST_TOKEN.",
+      "Missing CODEX_DRAFT_INGEST_URL or Devicefield ingest authorization.",
     );
   }
+
   if (ingestToken.length < 32) {
-    throw new Error("CODEX_DRAFT_INGEST_TOKEN is not configured correctly.");
+    throw new Error(
+      "Devicefield ingest authorization is not configured correctly.",
+    );
   }
 
   const endpoint = new URL(ingestUrl);

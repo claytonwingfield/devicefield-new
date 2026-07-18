@@ -33,7 +33,6 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
   if (!author) notFound();
 
   const authoredPosts = posts.filter((post) => post.author_id === author.id);
-  if (authoredPosts.length === 0) notFound();
 
   const personJsonLd = {
     "@context": "https://schema.org",
@@ -71,11 +70,13 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
               {author.bio ?? "Devicefield author and reviewer profile."}
             </p>
           </header>
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {authoredPosts.map((post) => (
-              <BlogCard key={post.id} post={post} />
-            ))}
-          </div>
+          {authoredPosts.length > 0 && (
+            <div className="mt-10 grid gap-6 lg:grid-cols-3">
+              {authoredPosts.map((post) => (
+                <BlogCard key={post.id} post={post} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>
