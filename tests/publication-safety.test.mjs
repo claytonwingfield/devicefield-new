@@ -323,6 +323,13 @@ test("Codex article inventory is private and field-restricted", async () => {
   assert.doesNotMatch(helper, /dotenv|loadEnvFile|readFile\([^)]*\.env/);
 });
 
+test("configured authors resolve before their first article is published", async () => {
+  const authorPage = await source("app/(default)/authors/[slug]/page.tsx");
+
+  assert.match(authorPage, /if \(!author\) notFound\(\)/);
+  assert.doesNotMatch(authorPage, /if \(authoredPosts\.length === 0\) notFound\(\)/);
+});
+
 test("workflow changes trigger on-demand public route revalidation", async () => {
   const endpoint = await source("app/api/admin/articles/persist/route.ts");
   for (const path of [
