@@ -470,6 +470,8 @@ test("homepage metadata includes branded large-image social previews and RSS dis
   assert.match(layout, /\/apple-touch-icon\.png/);
   assert.match(layout, /\/icon-192\.png/);
   assert.match(home, /SITE_SOCIAL_IMAGE_URL/);
+  assert.match(home, /"application\/rss\+xml"/);
+  assert.match(home, /Devicefield RSS Feed/);
 });
 
 test("homepage evaluation graphic uses a semantic section heading hierarchy", async () => {

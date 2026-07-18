@@ -35,6 +35,14 @@ export async function generateMetadata() {
     description: page.meta_description,
     alternates: {
       canonical: "https://devicefield.com",
+      types: {
+        "application/rss+xml": [
+          {
+            url: `${SITE_URL}/feed.xml`,
+            title: "Devicefield RSS Feed",
+          },
+        ],
+      },
     },
     openGraph: {
       title: page.title,
