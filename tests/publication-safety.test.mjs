@@ -252,8 +252,9 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
 
   assert.match(endpoint, /process\.env\.SUPABASE_SECRET_KEY/);
   assert.match(endpoint, /hasValidCodexDraftToken\(request\)/);
-  assert.match(endpoint, /await import\("sharp"\)/);
-  assert.doesNotMatch(endpoint, /^import sharp from "sharp";/m);
+  assert.doesNotMatch(endpoint, /sharp/);
+  assert.match(endpoint, /imageValidation\.extension/);
+  assert.match(endpoint, /contentType: imageValidation\.contentType/);
   assert.match(endpoint, /request\.formData\(\)/);
   assert.match(endpoint, /X-Devicefield-Run-ID|x-devicefield-run-id/);
   assert.match(endpoint, /rpc\(\s*"create_codex_review_draft"/);

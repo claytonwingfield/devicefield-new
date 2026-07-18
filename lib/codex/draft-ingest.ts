@@ -100,6 +100,8 @@ export const CODEX_DRAFT_MAX_BODY_BYTES = 12 * 1024 * 1024;
 export const CODEX_DRAFT_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const CODEX_DRAFT_RATE_LIMIT = 12;
 export const CODEX_DRAFT_RATE_WINDOW_MS = 60_000;
+export const CODEX_FEATURED_IMAGE_WIDTH = 1600;
+export const CODEX_FEATURED_IMAGE_HEIGHT = 800;
 
 const PLACEHOLDER_PATTERN =
   /\b(?:TODO|TBD|TK)\b|needs\s+source|\[citation\s+needed\]/i;
@@ -460,38 +462,174 @@ export function hashCodexDraftSubmission(
     .digest("hex");
 }
 
+function matchesBytes(
+  bytes: Uint8Array,
+  offset: number,
+  expected: readonly number[],
+) {
+  return expected.every((value, index) => bytes[offset + index] === value);
+}
+
+function readAscii(bytes: Uint8Array, offset: number, length: number) {
+  let value = "";
+  for (let index = 0; index < length; index += 1) {
+    value += String.fromCharCode(bytes[offset + index]);
+  }
+  return value;
+}
+
+function getPngDimensions(bytes: Uint8Array) {
+  if (
+    bytes.length < 45 ||
+    !matchesBytes(bytes, 0, [137, 80, 78, 71, 13, 10, 26, 10])
+  ) {
+    return null;
+  }
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let sawImageData = false;
+
+  while (offset + 12 <= bytes.length) {
+    const chunkLength = view.getUint32(offset);
+    const chunkType = readAscii(bytes, offset + 4, 4);
+    const dataOffset = offset + 8;
+    const nextOffset = dataOffset + chunkLength + 4;
+    if (nextOffset > bytes.length) return null;
+
+    if (offset === 8) {
+      if (chunkType !== "IHDR" || chunkLength !== 13) return null;
+      width = view.getUint32(dataOffset);
+      height = view.getUint32(dataOffset + 4);
+      if (width === 0 || height === 0) return null;
+    } else if (chunkType === "IHDR") {
+      return null;
+    }
+
+    if (chunkType === "IDAT" && chunkLength > 0) sawImageData = true;
+    if (chunkType === "IEND") {
+      return chunkLength === 0 && sawImageData && nextOffset === bytes.length
+        ? { width, height }
+        : null;
+    }
+
+    offset = nextOffset;
+  }
+
+  return null;
+}
+
+function readUint24Le(bytes: Uint8Array, offset: number) {
+  return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
+}
+
+function getWebpDimensions(bytes: Uint8Array) {
+  if (
+    bytes.length < 30 ||
+    readAscii(bytes, 0, 4) !== "RIFF" ||
+    readAscii(bytes, 8, 4) !== "WEBP"
+  ) {
+    return null;
+  }
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(4, true) + 8 !== bytes.length) return null;
+
+  let offset = 12;
+  let canvas: { width: number; height: number } | null = null;
+  let image: { width: number; height: number } | null = null;
+  let sawImageData = false;
+
+  while (offset + 8 <= bytes.length) {
+    const chunkType = readAscii(bytes, offset, 4);
+    const chunkLength = view.getUint32(offset + 4, true);
+    const dataOffset = offset + 8;
+    const dataEnd = dataOffset + chunkLength;
+    const nextOffset = dataEnd + (chunkLength % 2);
+    if (dataEnd > bytes.length || nextOffset > bytes.length) return null;
+
+    if (chunkType === "VP8X") {
+      if (chunkLength < 10) return null;
+      canvas = {
+        width: readUint24Le(bytes, dataOffset + 4) + 1,
+        height: readUint24Le(bytes, dataOffset + 7) + 1,
+      };
+    } else if (chunkType === "VP8 ") {
+      if (
+        chunkLength < 10 ||
+        !matchesBytes(bytes, dataOffset + 3, [157, 1, 42])
+      ) {
+        return null;
+      }
+      image = {
+        width: view.getUint16(dataOffset + 6, true) & 0x3fff,
+        height: view.getUint16(dataOffset + 8, true) & 0x3fff,
+      };
+      sawImageData = true;
+    } else if (chunkType === "VP8L") {
+      if (chunkLength < 5 || bytes[dataOffset] !== 47) return null;
+      const dimensions = view.getUint32(dataOffset + 1, true);
+      image = {
+        width: (dimensions & 0x3fff) + 1,
+        height: ((dimensions >>> 14) & 0x3fff) + 1,
+      };
+      sawImageData = true;
+    } else if (chunkType === "ANMF") {
+      if (chunkLength < 16) return null;
+      sawImageData = true;
+    }
+
+    offset = nextOffset;
+  }
+
+  if (offset !== bytes.length || !sawImageData) return null;
+  const dimensions = canvas ?? image;
+  return dimensions?.width && dimensions.height ? dimensions : null;
+}
+
 export async function validateCodexFeaturedImage(file: ImageLike) {
   if (file.size <= 0 || file.size > CODEX_DRAFT_MAX_IMAGE_BYTES) {
     return { ok: false as const, error: "Featured image size is invalid." };
   }
-  if (!['image/png', 'image/webp'].includes(file.type)) {
+  if (!["image/png", "image/webp"].includes(file.type)) {
     return { ok: false as const, error: "Featured image must be PNG or WebP." };
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const isPng =
-    bytes.length >= 8 &&
-    [137, 80, 78, 71, 13, 10, 26, 10].every(
-      (value, index) => bytes[index] === value,
-    );
-  const isWebp =
-    bytes.length >= 12 &&
-    bytes[0] === 82 &&
-    bytes[1] === 73 &&
-    bytes[2] === 70 &&
-    bytes[3] === 70 &&
-    bytes[8] === 87 &&
-    bytes[9] === 69 &&
-    bytes[10] === 66 &&
-    bytes[11] === 80;
+  if (bytes.length !== file.size) {
+    return { ok: false as const, error: "Featured image size is invalid." };
+  }
 
-  if ((file.type === "image/png" && !isPng) || (file.type === "image/webp" && !isWebp)) {
+  const dimensions =
+    file.type === "image/png"
+      ? getPngDimensions(bytes)
+      : getWebpDimensions(bytes);
+  if (!dimensions) {
     return {
       ok: false as const,
-      error: "Featured image content does not match its media type.",
+      error: "Featured image content is invalid or does not match its media type.",
     };
   }
-  return { ok: true as const, bytes };
+  if (
+    dimensions.width !== CODEX_FEATURED_IMAGE_WIDTH ||
+    dimensions.height !== CODEX_FEATURED_IMAGE_HEIGHT
+  ) {
+    return {
+      ok: false as const,
+      error: `Featured image must be exactly ${CODEX_FEATURED_IMAGE_WIDTH} x ${CODEX_FEATURED_IMAGE_HEIGHT} pixels.`,
+    };
+  }
+
+  return {
+    ok: true as const,
+    bytes,
+    width: dimensions.width,
+    height: dimensions.height,
+    contentType: file.type as "image/png" | "image/webp",
+    extension: file.type === "image/png" ? ("png" as const) : ("webp" as const),
+  };
 }
 
 export function validateCodexDraftPayload(value: unknown): DraftValidationResult {

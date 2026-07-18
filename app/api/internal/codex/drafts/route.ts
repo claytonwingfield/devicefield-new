@@ -71,19 +71,6 @@ function mapDatabaseError(error: { code?: string; message: string }) {
   return new DraftIngestError("Draft could not be stored.", 503);
 }
 
-async function normalizeFeaturedImage(bytes: Uint8Array) {
-  const { default: sharp } = await import("sharp");
-
-  return sharp(bytes, {
-    failOn: "error",
-    limitInputPixels: 40_000_000,
-  })
-    .rotate()
-    .resize(1600, 800, { fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 86 })
-    .toBuffer();
-}
-
 export async function POST(request: NextRequest) {
   if (!isCodexDraftIngestConfigured()) {
     return json({ error: "Draft ingestion is not configured." }, 503);
@@ -173,20 +160,13 @@ export async function POST(request: NextRequest) {
     return json({ error: imageValidation.error }, 400);
   }
 
-  let webpImage: Buffer;
-  try {
-    webpImage = await normalizeFeaturedImage(imageValidation.bytes);
-  } catch {
-    return json({ error: "Featured image could not be processed." }, 400);
-  }
-
   const supabase = createDraftIngestClient();
   if (!supabase) {
     return json({ error: "Draft storage is not configured." }, 503);
   }
 
   const { article_products: articleProducts, ...article } = validation.article;
-  const imagePath = `covers/${article.slug}/${randomUUID()}.webp`;
+  const imagePath = `covers/${article.slug}/${randomUUID()}.${imageValidation.extension}`;
   const { data: publicImage } = supabase.storage
     .from(ARTICLE_IMAGE_BUCKET)
     .getPublicUrl(imagePath);
@@ -201,8 +181,9 @@ export async function POST(request: NextRequest) {
       upload: async () => {
         const { error } = await supabase.storage
           .from(ARTICLE_IMAGE_BUCKET)
-          .upload(imagePath, webpImage, {
-            contentType: "image/webp",
+          .upload(imagePath, imageValidation.bytes, {
+            contentType: imageValidation.contentType,
+            cacheControl: "31536000",
             upsert: false,
           });
         if (error) {
