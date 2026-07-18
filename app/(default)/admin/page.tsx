@@ -23,13 +23,17 @@ import {
   ARTICLE_TYPES,
   TESTING_STATUSES,
   BLOG_CATEGORIES,
+  SOCIAL_PLATFORMS,
+  SOCIAL_PLATFORM_LIMITS,
   formatWorkflowStatus,
   slugify,
   type ArticleType,
   type ArticleCoverImage,
+  type ArticleSocialPost,
   type ArticleWorkflowStatus,
   type Author,
   type BlogPost,
+  type SocialPlatform,
   type TestingStatus,
 } from "@/lib/blog/types";
 import {
@@ -144,6 +148,8 @@ type AdminSection =
   | "newsletter"
   | "affiliates";
 
+type SocialDraftForm = Record<SocialPlatform, string>;
+
 type NewsletterSubscriber = {
   id: string;
   email: string;
@@ -230,6 +236,49 @@ const emptyForm: BlogPostForm = {
   internalNotes: "",
   featured: false,
 };
+
+const emptySocialDrafts: SocialDraftForm = {
+  x: "",
+  facebook: "",
+  instagram: "",
+};
+
+const socialPlatformDetails: Record<
+  SocialPlatform,
+  { label: string; description: string; rows: number }
+> = {
+  x: {
+    label: "X / Twitter",
+    description: "One concise post with the article URL.",
+    rows: 5,
+  },
+  facebook: {
+    label: "Facebook",
+    description: "Reader-focused context, CTA, and article URL.",
+    rows: 7,
+  },
+  instagram: {
+    label: "Instagram",
+    description: "Caption, Link in bio CTA, reference URL, and hashtags.",
+    rows: 9,
+  },
+};
+
+function getSocialDraftForm(
+  posts: ArticleSocialPost[],
+  articleId: string,
+): SocialDraftForm {
+  return SOCIAL_PLATFORMS.reduce<SocialDraftForm>(
+    (drafts, platform) => {
+      drafts[platform] =
+        posts.find(
+          (post) => post.article_id === articleId && post.platform === platform,
+        )?.content ?? "";
+      return drafts;
+    },
+    { ...emptySocialDrafts },
+  );
+}
 
 const emptyAuthorForm: AuthorForm = {
   name: "",
@@ -769,6 +818,9 @@ export default function AdminDashboard() {
   const [articleCoverImages, setArticleCoverImages] = useState<
     ArticleCoverImage[]
   >([]);
+  const [articleSocialPosts, setArticleSocialPosts] = useState<
+    ArticleSocialPost[]
+  >([]);
   const [articleAffiliateSuggestions, setArticleAffiliateSuggestions] =
     useState<ArticleAffiliateSuggestion[]>([]);
   const [activeSection, setActiveSection] = useState<AdminSection>("articles");
@@ -797,6 +849,10 @@ export default function AdminDashboard() {
   const [pageSaving, setPageSaving] = useState(false);
   const [affiliateSaving, setAffiliateSaving] = useState(false);
   const [articleProductSaving, setArticleProductSaving] = useState(false);
+  const [socialDraftSaving, setSocialDraftSaving] = useState(false);
+  const [socialDrafts, setSocialDrafts] = useState<SocialDraftForm>({
+    ...emptySocialDrafts,
+  });
   const [affiliateSuggestionSavingId, setAffiliateSuggestionSavingId] =
     useState<string | null>(null);
   const [authorSaving, setAuthorSaving] = useState(false);
@@ -1095,6 +1151,21 @@ export default function AdminDashboard() {
       }
     };
 
+    const fetchSocialPosts = async () => {
+      const { data, error } = await supabase
+        .from("article_social_posts")
+        .select("*")
+        .order("platform", { ascending: true });
+
+      if (error) {
+        setErrorMessage(
+          `Unable to load article social drafts. Run the latest Supabase migration first. ${error.message}`,
+        );
+      } else {
+        setArticleSocialPosts((data ?? []) as ArticleSocialPost[]);
+      }
+    };
+
     const fetchSubscribers = async () => {
       const { data, error } = await supabase
         .from("newsletter_subscribers")
@@ -1243,6 +1314,7 @@ export default function AdminDashboard() {
         fetchPosts(),
         fetchAuthors(),
         fetchCoverImages(),
+        fetchSocialPosts(),
         fetchPages(),
         fetchSubscribers(),
         fetchAffiliateData(),
@@ -1397,6 +1469,7 @@ export default function AdminDashboard() {
   const resetForm = (clearMessages = true) => {
     setEditingId(null);
     setFormData(emptyForm);
+    setSocialDrafts({ ...emptySocialDrafts });
     setEditingArticleProductId(null);
     setArticleProductForm(emptyArticleProductForm);
     if (clearMessages) {
@@ -1628,6 +1701,7 @@ export default function AdminDashboard() {
       internalNotes: post.internal_notes ?? "",
       featured: post.featured,
     });
+    setSocialDrafts(getSocialDraftForm(articleSocialPosts, post.id));
     setActiveSection("articles");
     setEditingArticleProductId(null);
     setArticleProductForm({
@@ -1637,6 +1711,68 @@ export default function AdminDashboard() {
     setErrorMessage(null);
     setSuccessMessage(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSocialDraftSave = async () => {
+    if (!editingId) return;
+
+    const canonicalUrl =
+      formData.canonicalUrl.trim() ||
+      `https://devicefield.com/blog/${formData.slug}`;
+    for (const platform of SOCIAL_PLATFORMS) {
+      const content = socialDrafts[platform].trim();
+      if (!content) {
+        setErrorMessage(`Add the ${socialPlatformDetails[platform].label} draft.`);
+        return;
+      }
+      if (content.length > SOCIAL_PLATFORM_LIMITS[platform]) {
+        setErrorMessage(
+          `${socialPlatformDetails[platform].label} exceeds its ${SOCIAL_PLATFORM_LIMITS[platform]} character limit.`,
+        );
+        return;
+      }
+      if (!content.includes(canonicalUrl)) {
+        setErrorMessage(
+          `${socialPlatformDetails[platform].label} must include ${canonicalUrl}.`,
+        );
+        return;
+      }
+      if (platform === "instagram" && !/link in bio/i.test(content)) {
+        setErrorMessage('The Instagram draft must include a "Link in bio" CTA.');
+        return;
+      }
+    }
+
+    setSocialDraftSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("article_social_posts")
+      .upsert(
+        SOCIAL_PLATFORMS.map((platform) => ({
+          article_id: editingId,
+          platform,
+          content: socialDrafts[platform].trim(),
+        })),
+        { onConflict: "article_id,platform" },
+      )
+      .select("*");
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      const saved = (data ?? []) as ArticleSocialPost[];
+      setArticleSocialPosts((current) => [
+        ...current.filter((post) => post.article_id !== editingId),
+        ...saved,
+      ]);
+      setSocialDrafts(getSocialDraftForm(saved, editingId));
+      setSuccessMessage("Social drafts saved for this article.");
+    }
+
+    setSocialDraftSaving(false);
   };
 
   const persistArticle = async (
@@ -2338,6 +2474,87 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </article>
+          </section>
+        )}
+
+        {activeSection === "articles" && editingId && (
+          <section className="mb-6 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-700 sm:text-sm">
+                  Publishing assets
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                  Social media drafts
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
+                  Codex creates these with the article. Review and edit them here,
+                  then publish them manually after the article is live.
+                </p>
+              </div>
+              <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Private drafts
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              {SOCIAL_PLATFORMS.map((platform) => {
+                const details = socialPlatformDetails[platform];
+                const count = socialDrafts[platform].length;
+                const limit = SOCIAL_PLATFORM_LIMITS[platform];
+                return (
+                  <label
+                    key={platform}
+                    className="flex min-w-0 flex-col rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+                  >
+                    <span className="flex items-start justify-between gap-3">
+                      <span>
+                        <span className="block font-semibold text-zinc-950">
+                          {details.label}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                          {details.description}
+                        </span>
+                      </span>
+                      <span
+                        className={`shrink-0 text-xs font-semibold ${
+                          count > limit ? "text-red-600" : "text-zinc-400"
+                        }`}
+                      >
+                        {count}/{limit}
+                      </span>
+                    </span>
+                    <textarea
+                      rows={details.rows}
+                      value={socialDrafts[platform]}
+                      onChange={(event) =>
+                        setSocialDrafts((current) => ({
+                          ...current,
+                          [platform]: event.target.value,
+                        }))
+                      }
+                      className="form-textarea mt-4 min-h-40 w-full flex-1 rounded-2xl border-zinc-200 bg-white text-sm leading-6"
+                      placeholder={`Codex ${details.label} draft will appear here.`}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 flex flex-col justify-between gap-3 border-t border-zinc-200 pt-4 sm:flex-row sm:items-center">
+              <p className="text-xs leading-5 text-zinc-500">
+                Each draft must include the canonical article URL. Instagram
+                must also include a Link in bio CTA.
+              </p>
+              <button
+                type="button"
+                disabled={socialDraftSaving}
+                onClick={() => void handleSocialDraftSave()}
+                className="w-full rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {socialDraftSaving ? "Saving drafts..." : "Save social drafts"}
+              </button>
+            </div>
           </section>
         )}
 

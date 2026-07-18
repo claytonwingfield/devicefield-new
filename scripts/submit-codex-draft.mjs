@@ -153,6 +153,31 @@ async function main() {
       "Cover image arguments must match the ordered cover_images manifest.",
     );
   }
+  const socialPlatforms = ["x", "facebook", "instagram"];
+  const socialLimits = { x: 280, facebook: 5_000, instagram: 2_200 };
+  if (!Array.isArray(payload.social_posts) || payload.social_posts.length !== 3) {
+    throw new Error("Submission social_posts must contain exactly three items.");
+  }
+  payload.social_posts.forEach((item, index) => {
+    const platform = socialPlatforms[index];
+    if (
+      !isRecord(item) ||
+      item.platform !== platform ||
+      typeof item.content !== "string" ||
+      !item.content.trim() ||
+      item.content.trim().length > socialLimits[platform]
+    ) {
+      throw new Error(
+        "Social drafts must be valid and ordered as X, Facebook, and Instagram.",
+      );
+    }
+    if (
+      typeof payload.canonical_url !== "string" ||
+      !item.content.includes(payload.canonical_url)
+    ) {
+      throw new Error("Every social draft must include the canonical article URL.");
+    }
+  });
   const bodyImages = await getBodyImages(payload, submissionPath);
 
   const runId = await getRunId(
@@ -211,6 +236,7 @@ async function main() {
     !Array.isArray(result.cover_image_urls) ||
     result.cover_image_urls.length !== 3 ||
     result.cover_image_urls.some((url) => typeof url !== "string") ||
+    result.social_post_count !== 3 ||
     typeof result.created_at !== "string"
   ) {
     throw new Error("Draft endpoint returned an invalid response.");
@@ -224,6 +250,7 @@ async function main() {
         workflow_status: result.workflow_status,
         cover_image_url: result.cover_image_url,
         cover_image_urls: result.cover_image_urls,
+        social_post_count: result.social_post_count,
         created_at: result.created_at,
       },
       null,

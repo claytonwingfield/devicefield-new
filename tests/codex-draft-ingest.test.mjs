@@ -81,6 +81,23 @@ function validDraft(overrides = {}) {
           : `Alternative ${number} diagram of receipt printer connections`,
       label: `Concept ${number}`,
     })),
+    social_posts: [
+      {
+        platform: "x",
+        content:
+          "Compare receipt-printer connection options before deployment. https://devicefield.com/blog/receipt-printer-connection-guide",
+      },
+      {
+        platform: "facebook",
+        content:
+          "USB, Ethernet, and wireless receipt printers have different setup tradeoffs. This researched guide explains what to verify before choosing one. Read the guide: https://devicefield.com/blog/receipt-printer-connection-guide",
+      },
+      {
+        platform: "instagram",
+        content:
+          "Choosing a receipt-printer connection affects setup, reliability, and troubleshooting. This researched guide compares the practical tradeoffs before deployment. Link in bio. Reference: https://devicefield.com/blog/receipt-printer-connection-guide #ReceiptPrinter #POSHardware #BusinessTechnology",
+      },
+    ],
     body_images: [],
     article_products: [],
     affiliate_suggestions: [],
@@ -126,7 +143,50 @@ test("valid article packages normalize without workflow authority", async () => 
   assert.equal(result.article.testing_status, "researched");
   assert.equal(result.article.featured, false);
   assert.equal(result.article.cover_images.length, 3);
+  assert.equal(result.article.social_posts.length, 3);
   assert.equal("workflow_status" in result.article, false);
+});
+
+test("draft ingestion requires complete ordered social drafts", async () => {
+  const { validateCodexDraftPayload } = await loadBundledModule(
+    "lib/codex/draft-ingest.ts",
+  );
+  const drafts = validDraft().social_posts;
+
+  assert.equal(
+    validateCodexDraftPayload(validDraft({ social_posts: drafts.slice(0, 2) })).ok,
+    false,
+  );
+  assert.equal(
+    validateCodexDraftPayload(
+      validDraft({ social_posts: [drafts[1], drafts[0], drafts[2]] }),
+    ).ok,
+    false,
+  );
+  assert.equal(
+    validateCodexDraftPayload(
+      validDraft({
+        social_posts: drafts.map((draft) =>
+          draft.platform === "facebook"
+            ? { ...draft, content: "Missing the canonical article URL." }
+            : draft,
+        ),
+      }),
+    ).ok,
+    false,
+  );
+  assert.equal(
+    validateCodexDraftPayload(
+      validDraft({
+        social_posts: drafts.map((draft) =>
+          draft.platform === "instagram"
+            ? { ...draft, content: draft.content.replace("Link in bio", "Read more") }
+            : draft,
+        ),
+      }),
+    ).ok,
+    false,
+  );
 });
 
 test("draft ingestion requires three ordered cover concepts with matching alt text", async () => {

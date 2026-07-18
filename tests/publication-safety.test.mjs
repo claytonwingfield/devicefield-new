@@ -270,6 +270,8 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   assert.match(endpoint, /devicefield-body-image:/);
   assert.match(endpoint, /body_image_urls/);
   assert.match(endpoint, /cover_image_urls/);
+  assert.match(endpoint, /p_social_posts:\s*socialPosts/);
+  assert.match(endpoint, /social_post_count:\s*socialPosts\.length/);
   assert.match(endpoint, /withUploadedImageCleanup/);
   assert.match(endpoint, /workflow_status: "ready_for_review"/);
   assert.doesNotMatch(endpoint, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
@@ -290,6 +292,7 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   assert.match(helper, /new FormData\(\)/);
   assert.match(helper, /imageArguments\.length !== 3/);
   assert.match(helper, /formData\.append\(\s*"featured_image"/);
+  assert.match(helper, /result\.social_post_count !== 3/);
   assert.match(helper, /formData\.append\(\s*"body_image"/);
   assert.match(helper, /resolve\(dirname\(submissionPath\), "body-images"/);
   assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);
@@ -328,6 +331,17 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
     coverImages,
     /GRANT SELECT[^;]*article_cover_images[^;]*TO anon/,
   );
+
+  const socialPosts = await source(
+    "supabase/migrations/20260718181443_article_social_posts.sql",
+  );
+  assert.match(socialPosts, /CREATE TABLE public\.article_social_posts/);
+  assert.match(socialPosts, /ALTER TABLE public\.article_social_posts ENABLE ROW LEVEL SECURITY/);
+  assert.match(socialPosts, /p_social_posts JSONB/);
+  assert.doesNotMatch(
+    socialPosts,
+    /GRANT SELECT[^;]*article_social_posts[^;]*TO anon/,
+  );
 });
 
 test("admin reviews private affiliate suggestions and unlinked products", async () => {
@@ -339,6 +353,16 @@ test("admin reviews private affiliate suggestions and unlinked products", async 
   assert.match(admin, /This does not approve or activate an affiliate program/);
   assert.match(admin, /affiliate_link_id: articleProductForm\.affiliateLinkId \|\| null/);
   assert.match(affiliateServer, /!row\.affiliate_link_id/);
+});
+
+test("admin displays and saves private social drafts per article", async () => {
+  const admin = await source("app/(default)/admin/page.tsx");
+
+  assert.match(admin, /\.from\("article_social_posts"\)/);
+  assert.match(admin, /Social media drafts/);
+  assert.match(admin, /Save social drafts/);
+  assert.match(admin, /onConflict: "article_id,platform"/);
+  assert.match(admin, /SOCIAL_PLATFORM_LIMITS/);
 });
 
 test("cover and inline image alt text have separate validation paths", async () => {

@@ -63,9 +63,18 @@ export const ARTICLE_WORKFLOW_STATUSES = [
   "archived",
 ] as const;
 
+export const SOCIAL_PLATFORMS = ["x", "facebook", "instagram"] as const;
+
+export const SOCIAL_PLATFORM_LIMITS = {
+  x: 280,
+  facebook: 5_000,
+  instagram: 2_200,
+} as const;
+
 export type ArticleType = (typeof ARTICLE_TYPES)[number];
 export type TestingStatus = (typeof TESTING_STATUSES)[number];
 export type ArticleWorkflowStatus = (typeof ARTICLE_WORKFLOW_STATUSES)[number];
+export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
 export type BlogPostStatus = "draft" | "published" | "archived";
 
 export type BlogFaqItem = {
@@ -159,6 +168,15 @@ export type ArticleCoverImage = {
   label: string;
   display_order: number;
   selected: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ArticleSocialPost = {
+  id: string;
+  article_id: string;
+  platform: SocialPlatform;
+  content: string;
   created_at: string;
   updated_at: string;
 };

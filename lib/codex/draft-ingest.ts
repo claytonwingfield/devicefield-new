@@ -10,8 +10,11 @@ import {
 import {
   ARTICLE_TYPES,
   BLOG_CATEGORIES,
+  SOCIAL_PLATFORMS,
+  SOCIAL_PLATFORM_LIMITS,
   TESTING_STATUSES,
   type ArticleType,
+  type SocialPlatform,
   type TestingStatus,
 } from "../blog/types";
 
@@ -76,6 +79,11 @@ export type CodexCoverImage = {
   label: string;
 };
 
+export type CodexSocialPost = {
+  platform: SocialPlatform;
+  content: string;
+};
+
 export type CodexReviewDraftPayload = {
   title: string;
   slug: string;
@@ -109,6 +117,7 @@ export type CodexReviewDraftPayload = {
   internal_notes: string | null;
   featured: false;
   cover_images: CodexCoverImage[];
+  social_posts: CodexSocialPost[];
   body_images: CodexBodyImage[];
   article_products: CodexArticleProduct[];
   affiliate_suggestions: CodexAffiliateSuggestion[];
@@ -191,6 +200,7 @@ const ALLOWED_FIELDS = new Set([
   "internal_notes",
   "featured",
   "cover_images",
+  "social_posts",
   "body_images",
   "article_products",
   "affiliate_suggestions",
@@ -575,6 +585,51 @@ function coverImages(value: unknown, selectedAlt: string) {
   }
 
   return images;
+}
+
+function socialPosts(value: unknown, canonicalUrl: string) {
+  if (!Array.isArray(value) || value.length !== SOCIAL_PLATFORMS.length) {
+    throw new Error("Exactly three social drafts are required.");
+  }
+
+  return value.map((item, index) => {
+    if (!isRecord(item)) {
+      throw new Error("Each social draft must be an object.");
+    }
+    const unknownField = Object.keys(item).find(
+      (field) => !["platform", "content"].includes(field),
+    );
+    if (unknownField) {
+      throw new Error(`Social draft cannot set ${unknownField}.`);
+    }
+
+    const platform = requiredString(item.platform, "Social platform", 40);
+    if (
+      !SOCIAL_PLATFORMS.includes(platform as SocialPlatform) ||
+      platform !== SOCIAL_PLATFORMS[index]
+    ) {
+      throw new Error(
+        "Social drafts must be ordered as X, Facebook, and Instagram.",
+      );
+    }
+
+    const typedPlatform = platform as SocialPlatform;
+    const content = requiredString(
+      item.content,
+      `${platform} social draft`,
+      SOCIAL_PLATFORM_LIMITS[typedPlatform],
+    );
+    if (!content.includes(canonicalUrl)) {
+      throw new Error(
+        "Every social draft must include the canonical Devicefield article URL.",
+      );
+    }
+    if (typedPlatform === "instagram" && !/link in bio/i.test(content)) {
+      throw new Error('The Instagram draft must include a "Link in bio" CTA.');
+    }
+
+    return { platform: typedPlatform, content };
+  });
 }
 
 function affiliateSuggestions(value: unknown, content: string) {
@@ -1093,6 +1148,7 @@ export function validateCodexDraftPayload(value: unknown): DraftValidationResult
       value.cover_images,
       coverImageAlt,
     );
+    const normalizedSocialPosts = socialPosts(value.social_posts, canonicalUrl);
 
     return {
       ok: true,
@@ -1145,6 +1201,7 @@ export function validateCodexDraftPayload(value: unknown): DraftValidationResult
         ),
         featured: false,
         cover_images: normalizedCoverImages,
+        social_posts: normalizedSocialPosts,
         body_images: normalizedBodyImages,
         article_products: articleProducts(value.article_products),
         affiliate_suggestions: affiliateSuggestions(

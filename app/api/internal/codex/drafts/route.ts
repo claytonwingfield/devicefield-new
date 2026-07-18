@@ -230,6 +230,7 @@ export async function POST(request: NextRequest) {
 
   const {
     cover_images: coverImageManifest,
+    social_posts: socialPosts,
     body_images: bodyImageManifest,
     article_products: articleProducts,
     affiliate_suggestions: affiliateSuggestions,
@@ -322,6 +323,7 @@ export async function POST(request: NextRequest) {
               display_order: index,
               selected: index === 0,
             })),
+            p_social_posts: socialPosts,
           },
         );
         if (error) throw mapDatabaseError(error);
@@ -353,6 +355,7 @@ export async function POST(request: NextRequest) {
         cover_image_url: row.cover_image_url,
         cover_image_urls: coverImageUploads.map((image) => image.publicUrl),
         body_image_urls: bodyImageUploads.map((image) => image.publicUrl),
+        social_post_count: socialPosts.length,
         created_at: row.created_at,
       },
       201,
