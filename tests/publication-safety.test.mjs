@@ -283,6 +283,46 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   assert.doesNotMatch(grants, /GRANT DELETE/);
 });
 
+test("Codex article inventory is private and field-restricted", async () => {
+  const endpoint = await source("app/api/internal/codex/articles/route.ts");
+  const helper = await source("scripts/get-codex-article-inventory.mjs");
+
+  assert.match(endpoint, /hasValidCodexDraftToken\(request\)/);
+  assert.match(endpoint, /consumeCodexDraftRateLimit\(request\)/);
+  assert.match(endpoint, /process\.env\.SUPABASE_SECRET_KEY/);
+  assert.match(endpoint, /\.from\("blog_posts"\)/);
+  assert.match(endpoint, /\.range\(from, from \+ ARTICLE_INVENTORY_PAGE_SIZE - 1\)/);
+  assert.doesNotMatch(endpoint, /\.eq\("workflow_status"/);
+  for (const field of [
+    "id",
+    "title",
+    "slug",
+    "focus_keyword",
+    "category",
+    "article_type",
+    "testing_status",
+    "workflow_status",
+    "tags",
+    "updated_at",
+  ]) {
+    assert.match(endpoint, new RegExp(`"${field}"`));
+  }
+  for (const prohibitedField of [
+    "content",
+    "internal_notes",
+    "newsletter",
+    "approved_at",
+    "published_at",
+  ]) {
+    assert.doesNotMatch(endpoint, new RegExp(`"${prohibitedField}"`));
+  }
+  assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_URL/);
+  assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_TOKEN/);
+  assert.match(helper, /\/api\/internal\/codex\/articles/);
+  assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);
+  assert.doesNotMatch(helper, /dotenv|loadEnvFile|readFile\([^)]*\.env/);
+});
+
 test("workflow changes trigger on-demand public route revalidation", async () => {
   const endpoint = await source("app/api/admin/articles/persist/route.ts");
   for (const path of [
