@@ -11,6 +11,7 @@ import {
   normalizeNewsletterEmail,
   requestNewsletterSubscription,
 } from "@/lib/newsletter/server";
+import { hasAllowedRequestOrigin } from "@/lib/site-origin";
 
 type SubscriptionBody = {
   email?: unknown;
@@ -25,17 +26,6 @@ function json(message: string, status = 200) {
   );
 }
 
-function hasValidOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
-
 function getVisitorFingerprint(request: NextRequest) {
   const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0];
   const address =
@@ -48,7 +38,7 @@ function getVisitorFingerprint(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!hasValidOrigin(request)) {
+  if (!hasAllowedRequestOrigin(request)) {
     return json("Subscription request rejected.", 403);
   }
 

@@ -246,6 +246,9 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   const migration = await source(
     "supabase/migrations/20260718005926_secure_codex_review_draft_ingest.sql",
   );
+  const grants = await source(
+    "supabase/migrations/20260718013402_grant_codex_ingest_service_role.sql",
+  );
 
   assert.match(endpoint, /process\.env\.SUPABASE_SECRET_KEY/);
   assert.match(endpoint, /hasValidCodexDraftToken\(request\)/);
@@ -270,6 +273,12 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_TOKEN/);
   assert.match(helper, /new FormData\(\)/);
   assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);
+  assert.match(grants, /GRANT SELECT ON public\.authors TO service_role/);
+  assert.match(
+    grants,
+    /GRANT SELECT, INSERT, UPDATE ON public\.blog_posts TO service_role/,
+  );
+  assert.doesNotMatch(grants, /GRANT DELETE/);
 });
 
 test("workflow changes trigger on-demand public route revalidation", async () => {
@@ -414,6 +423,8 @@ test("newsletter subscriptions stay behind server endpoints and double opt-in", 
     "supabase/migrations/20260717195325_secure_newsletter_double_opt_in.sql",
   );
   assert.match(form, /fetch\("\/api\/newsletter\/subscribe"/);
+  assert.match(endpoint, /hasAllowedRequestOrigin\(request\)/);
+  assert.doesNotMatch(endpoint, /request\.nextUrl\.host/);
   assert.match(endpoint, /body\.company/);
   assert.match(endpoint, /rate_limited/);
   assert.match(

@@ -77,8 +77,6 @@ SELECT ok(
   'authenticated clients cannot execute review-draft ingestion'
 );
 
-SET LOCAL ROLE service_role;
-
 INSERT INTO public.authors (id, slug, name)
 VALUES
   ('30000000-0000-0000-0000-000000000001', 'test-codex-author', 'Test author'),
@@ -118,6 +116,8 @@ WHERE id IN (
   '31000000-0000-0000-0000-000000000003',
   '31000000-0000-0000-0000-000000000004'
 );
+
+SET LOCAL ROLE service_role;
 
 INSERT INTO codex_ingest_results
 SELECT id, slug, workflow_status
