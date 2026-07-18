@@ -6,9 +6,9 @@ import { build } from "esbuild";
 const require = createRequire(import.meta.url);
 const root = new URL("../", import.meta.url);
 
-async function loadDraftIngestUtilities() {
+async function loadBundledModule(path) {
   const result = await build({
-    entryPoints: [new URL("lib/codex/draft-ingest.ts", root).pathname],
+    entryPoints: [new URL(path, root).pathname],
     bundle: true,
     platform: "node",
     format: "cjs",
@@ -33,41 +33,72 @@ function validDraft(overrides = {}) {
     excerpt: "A researched guide to common receipt-printer connections.",
     content: "## Connection types\n\nVerify the interface before setup.",
     category: "Receipt & Label Printing",
-    article_type: "compatibility_guide",
     tags: ["receipt printers", "compatibility"],
-    sources: [
+    cover_image_alt: "Diagram of receipt printer connection options",
+    focus_keyword: "receipt printer connections",
+    seo_title: "Receipt Printer Connection Guide",
+    meta_description:
+      "Compare USB, Ethernet, and wireless receipt printer connections for a business setup.",
+    canonical_url:
+      "https://devicefield.com/blog/receipt-printer-connection-guide",
+    faq_items: [],
+    article_type: "compatibility_guide",
+    testing_status: "researched",
+    author_slug: "clayton-wingfield",
+    reviewer_slug: "clayton-wingfield",
+    last_verified_at: "2026-07-17T12:00:00.000Z",
+    next_review_at: "2027-07-17T12:00:00.000Z",
+    sources: [1, 2, 3].map((number) => ({
+      title: `Manufacturer documentation ${number}`,
+      url: `https://example.com/documentation-${number}`,
+      note: "Connection specification",
+    })),
+    claims: [
       {
-        title: "Manufacturer documentation",
-        url: "https://example.com/documentation",
+        claim: "Connection support varies by printer model.",
+        source_url: "https://example.com/documentation-1",
+        risk: "medium",
+        resolved: true,
       },
     ],
+    quick_verdict: {
+      verdict: "Match the printer interface to the POS host before purchase.",
+      best_for: "Operators planning a documented deployment",
+      avoid_if: "The printer interface cannot be verified",
+    },
+    compatibility_notes: "Confirm the host port, driver, and network mode.",
+    limitations: "No hands-on connection testing was performed.",
+    testing_method: "Specifications were compared across primary documentation.",
+    original_evidence: [],
+    internal_notes: "Review source currency before approval.",
+    featured: false,
+    article_products: [],
     ...overrides,
   };
 }
 
-test("draft ingestion accepts only the configured bearer token", async () => {
-  const { hasValidCodexDraftToken, isCodexDraftIngestConfigured } =
-    await loadDraftIngestUtilities();
+test("draft ingestion rejects missing and incorrect bearer tokens", async () => {
+  const utilities = await loadBundledModule("lib/codex/draft-ingest.ts");
   const previous = process.env.CODEX_DRAFT_INGEST_TOKEN;
   process.env.CODEX_DRAFT_INGEST_TOKEN = "a".repeat(64);
-
   try {
-    assert.equal(isCodexDraftIngestConfigured(), true);
+    const url = "https://devicefield.com/api/internal/codex/drafts";
+    assert.equal(utilities.hasValidCodexDraftToken(new Request(url)), false);
     assert.equal(
-      hasValidCodexDraftToken(
-        new Request("https://devicefield.com/api/internal/codex/drafts", {
-          headers: { Authorization: `Bearer ${"a".repeat(64)}` },
-        }),
-      ),
-      true,
-    );
-    assert.equal(
-      hasValidCodexDraftToken(
-        new Request("https://devicefield.com/api/internal/codex/drafts", {
+      utilities.hasValidCodexDraftToken(
+        new Request(url, {
           headers: { Authorization: `Bearer ${"b".repeat(64)}` },
         }),
       ),
       false,
+    );
+    assert.equal(
+      utilities.hasValidCodexDraftToken(
+        new Request(url, {
+          headers: { Authorization: `Bearer ${"a".repeat(64)}` },
+        }),
+      ),
+      true,
     );
   } finally {
     if (previous === undefined) delete process.env.CODEX_DRAFT_INGEST_TOKEN;
@@ -75,29 +106,126 @@ test("draft ingestion accepts only the configured bearer token", async () => {
   }
 });
 
-test("draft ingestion normalizes valid packages as researched drafts", async () => {
-  const { validateCodexDraftPayload } = await loadDraftIngestUtilities();
-  const result = validateCodexDraftPayload({ article: validDraft() });
-
+test("valid article packages normalize without workflow authority", async () => {
+  const { validateCodexDraftPayload } = await loadBundledModule(
+    "lib/codex/draft-ingest.ts",
+  );
+  const result = validateCodexDraftPayload(validDraft());
   assert.equal(result.ok, true);
-  assert.equal(result.article.slug, "receipt-printer-connection-guide");
   assert.equal(result.article.testing_status, "researched");
-  assert.deepEqual(result.article.original_evidence, []);
-  assert.equal(result.article.sources[0].url, "https://example.com/documentation");
+  assert.equal(result.article.featured, false);
   assert.equal("workflow_status" in result.article, false);
 });
 
-test("draft ingestion rejects editorial and unsupported trust claims", async () => {
-  const { validateCodexDraftPayload } = await loadDraftIngestUtilities();
-  const invalidPackages = [
-    validDraft({ workflow_status: "published" }),
-    validDraft({ testing_status: "tested" }),
-    validDraft({ original_evidence: [{ label: "Hands-on test" }] }),
-    validDraft({ category: "AI Tools" }),
-    validDraft({ sources: [{ title: "Missing URL" }] }),
-  ];
-
-  for (const article of invalidPackages) {
-    assert.equal(validateCodexDraftPayload(article).ok, false);
+test("workflow states and featured placement cannot be requested", async () => {
+  const { validateCodexDraftPayload } = await loadBundledModule(
+    "lib/codex/draft-ingest.ts",
+  );
+  for (const workflowStatus of ["published", "approved", "scheduled"]) {
+    assert.equal(
+      validateCodexDraftPayload(
+        validDraft({ workflow_status: workflowStatus }),
+      ).ok,
+      false,
+    );
   }
+  assert.equal(validateCodexDraftPayload(validDraft({ featured: true })).ok, false);
+});
+
+test("invalid categories, placeholders, unsupported testing claims, and high-risk claims are rejected", async () => {
+  const { validateCodexDraftPayload } = await loadBundledModule(
+    "lib/codex/draft-ingest.ts",
+  );
+  const invalidPackages = [
+    ["category", validDraft({ category: "AI Tools" })],
+    ["placeholder", validDraft({ content: "## Setup\n\nTODO: finish this section." })],
+    ["testing status", validDraft({ testing_status: "tested", original_evidence: [] })],
+    [
+      "high-risk claim",
+      validDraft({
+        claims: [
+          {
+            claim: "A high-risk compatibility claim.",
+            source_url: "https://example.com/claim",
+            risk: "high",
+            resolved: false,
+          },
+        ],
+      }),
+    ],
+  ];
+  for (const [label, article] of invalidPackages) {
+    assert.equal(validateCodexDraftPayload(article).ok, false, label);
+  }
+});
+
+test("image validation checks PNG and WebP signatures", async () => {
+  const { validateCodexFeaturedImage } = await loadBundledModule(
+    "lib/codex/draft-ingest.ts",
+  );
+  const validPng = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const invalidPng = Uint8Array.from([0, 1, 2, 3]);
+  assert.equal(
+    (
+      await validateCodexFeaturedImage({
+        size: validPng.length,
+        type: "image/png",
+        arrayBuffer: async () => validPng.buffer,
+      })
+    ).ok,
+    true,
+  );
+  assert.equal(
+    (
+      await validateCodexFeaturedImage({
+        size: invalidPng.length,
+        type: "image/png",
+        arrayBuffer: async () => invalidPng.buffer,
+      })
+    ).ok,
+    false,
+  );
+});
+
+test("rate limiting applies to both token and request fingerprint", async () => {
+  const utilities = await loadBundledModule("lib/codex/draft-ingest.ts");
+  utilities.resetCodexDraftRateLimitForTests();
+  const request = new Request(
+    "https://devicefield.com/api/internal/codex/drafts",
+    {
+      headers: {
+        Authorization: "Bearer test-token",
+        "User-Agent": "devicefield-test-agent",
+        "X-Forwarded-For": "192.0.2.10",
+      },
+    },
+  );
+  for (let index = 0; index < utilities.CODEX_DRAFT_RATE_LIMIT; index += 1) {
+    assert.equal(utilities.consumeCodexDraftRateLimit(request, 1_000), true);
+  }
+  assert.equal(utilities.consumeCodexDraftRateLimit(request, 1_000), false);
+});
+
+test("uploaded images are removed when database insertion fails", async () => {
+  const { withUploadedImageCleanup } = await loadBundledModule(
+    "lib/codex/upload-cleanup.ts",
+  );
+  let uploaded = false;
+  let cleaned = false;
+  await assert.rejects(
+    withUploadedImageCleanup({
+      upload: async () => {
+        uploaded = true;
+      },
+      operation: async () => {
+        throw new Error("database failure");
+      },
+      cleanup: async () => {
+        cleaned = true;
+      },
+    }),
+    /database failure/,
+  );
+  assert.equal(uploaded, true);
+  assert.equal(cleaned, true);
 });

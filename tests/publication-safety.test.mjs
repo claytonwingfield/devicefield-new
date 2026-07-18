@@ -240,26 +240,47 @@ test("article content and workflow are persisted atomically", async () => {
   );
 });
 
-test("Codex ingestion is server-only and limited to researched drafts", async () => {
+test("Codex ingestion is private and creates only review-gated drafts", async () => {
   const endpoint = await source("app/api/internal/codex/drafts/route.ts");
+  const helper = await source("scripts/submit-codex-draft.mjs");
   const migration = await source(
-    "supabase/migrations/20260718004059_add_codex_draft_ingest.sql",
+    "supabase/migrations/20260718005926_secure_codex_review_draft_ingest.sql",
+  );
+  const grants = await source(
+    "supabase/migrations/20260718013402_grant_codex_ingest_service_role.sql",
   );
 
   assert.match(endpoint, /process\.env\.SUPABASE_SECRET_KEY/);
   assert.match(endpoint, /hasValidCodexDraftToken\(request\)/);
-  assert.match(endpoint, /rpc\("ingest_codex_draft"/);
+  assert.match(endpoint, /await import\("sharp"\)/);
+  assert.doesNotMatch(endpoint, /^import sharp from "sharp";/m);
+  assert.match(endpoint, /request\.formData\(\)/);
+  assert.match(endpoint, /X-Devicefield-Run-ID|x-devicefield-run-id/);
+  assert.match(endpoint, /rpc\(\s*"create_codex_review_draft"/);
+  assert.match(endpoint, /withUploadedImageCleanup/);
+  assert.match(endpoint, /workflow_status: "ready_for_review"/);
   assert.doesNotMatch(endpoint, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
-  assert.match(migration, /testing_status,\s*workflow_status/);
-  assert.match(migration, /'researched',\s*'draft'/);
+  assert.match(migration, /workflow_status = 'ready_for_review'/);
+  assert.match(migration, /affiliate_program\.status = 'approved'/);
+  assert.match(migration, /Codex run ID has already been submitted/);
   assert.match(
     migration,
-    /REVOKE ALL ON FUNCTION public\.ingest_codex_draft\(JSONB\)[\s\S]*FROM PUBLIC, anon, authenticated/,
+    /REVOKE ALL ON FUNCTION public\.create_codex_review_draft\([\s\S]*FROM PUBLIC, anon, authenticated/,
   );
   assert.match(
     migration,
-    /GRANT EXECUTE ON FUNCTION public\.ingest_codex_draft\(JSONB\)[\s\S]*TO service_role/,
+    /GRANT EXECUTE ON FUNCTION public\.create_codex_review_draft\([\s\S]*TO service_role/,
   );
+  assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_URL/);
+  assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_TOKEN/);
+  assert.match(helper, /new FormData\(\)/);
+  assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);
+  assert.match(grants, /GRANT SELECT ON public\.authors TO service_role/);
+  assert.match(
+    grants,
+    /GRANT SELECT, INSERT, UPDATE ON public\.blog_posts TO service_role/,
+  );
+  assert.doesNotMatch(grants, /GRANT DELETE/);
 });
 
 test("workflow changes trigger on-demand public route revalidation", async () => {
@@ -404,6 +425,8 @@ test("newsletter subscriptions stay behind server endpoints and double opt-in", 
     "supabase/migrations/20260717195325_secure_newsletter_double_opt_in.sql",
   );
   assert.match(form, /fetch\("\/api\/newsletter\/subscribe"/);
+  assert.match(endpoint, /hasAllowedRequestOrigin\(request\)/);
+  assert.doesNotMatch(endpoint, /request\.nextUrl\.host/);
   assert.match(endpoint, /body\.company/);
   assert.match(endpoint, /rate_limited/);
   assert.match(
