@@ -2773,8 +2773,8 @@ export default function AdminDashboard() {
                 </h2>
                 <p className="mt-2 text-sm text-zinc-500">
                   These CMS records control the shared navigation/footer,
-                  homepage, blog index, and every publication trust page. Keep
-                  the JSON keys intact.
+                  homepage, blog and search indexes, and every publication trust
+                  page. Keep the JSON keys intact.
                 </p>
               </div>
 
@@ -3907,7 +3907,8 @@ export default function AdminDashboard() {
                         </div>
                       )}
 
-                      {pageFormData.slug === "blog" && (
+                      {(pageFormData.slug === "blog" ||
+                        pageFormData.slug === "search") && (
                         <div className="space-y-3">
                           {BLOG_CATEGORIES.slice(0, 4).map((category) => (
                             <div

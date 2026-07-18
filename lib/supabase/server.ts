@@ -1,5 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import {
+  SUPABASE_AUTH_COOKIE_ENCODING,
+  SUPABASE_AUTH_COOKIE_OPTIONS,
+} from './auth-cookies'
 
 function getSupabaseServerKey() {
   return (
@@ -15,6 +19,8 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     getSupabaseServerKey()!,
     {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
+      cookieEncoding: SUPABASE_AUTH_COOKIE_ENCODING,
       cookies: {
         getAll() {
           return cookieStore.getAll()

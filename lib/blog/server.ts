@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { cache } from "react";
 import { samplePosts } from "./sample-posts";
 import type {
   ArticleClaim,
@@ -148,7 +149,7 @@ function normalizePost(post: Partial<BlogPost>): BlogPost {
   };
 }
 
-export async function getPublishedPosts(limit?: number) {
+export const getPublishedPosts = cache(async (limit?: number) => {
   if (!hasSupabaseConfig()) {
     reportContentError(
       "Supabase configuration is missing; blog content is unavailable.",
@@ -185,7 +186,7 @@ export async function getPublishedPosts(limit?: number) {
     reportContentError("Unable to load published blog posts.", error);
     return developmentPosts(limit);
   }
-}
+});
 
 export async function getFeaturedPosts(limit = 3) {
   const posts = await getPublishedPosts();

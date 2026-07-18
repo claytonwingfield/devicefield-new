@@ -1,5 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  SUPABASE_AUTH_COOKIE_ENCODING,
+  SUPABASE_AUTH_COOKIE_OPTIONS,
+} from "@/lib/supabase/auth-cookies";
 
 export async function proxy(request: NextRequest) {
   const supabaseKey =
@@ -20,6 +24,8 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     supabaseKey,
     {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
+      cookieEncoding: SUPABASE_AUTH_COOKIE_ENCODING,
       cookies: {
         getAll() {
           return request.cookies.getAll();

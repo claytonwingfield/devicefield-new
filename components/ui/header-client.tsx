@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import SearchCombobox from "@/components/search/search-combobox";
+import type { BlogSearchSuggestion } from "@/lib/blog/search";
 import type { NavigationEntry } from "@/lib/site/pages";
 import Logo from "./logo";
 
 export default function HeaderClient({
   navItems,
+  searchDocuments,
   newsletterLabel,
 }: {
   navItems: NavigationEntry[];
+  searchDocuments: BlogSearchSuggestion[];
   newsletterLabel: string;
 }) {
   const pathname = usePathname();
@@ -52,25 +56,14 @@ export default function HeaderClient({
             className="hidden items-center gap-0.5 lg:flex"
             aria-label="Primary navigation"
           >
-            {navItems.map((item) => {
-              const isActive =
-                item.href === "/blog"
-                  ? pathname === "/blog" || pathname.startsWith("/category")
-                  : pathname === item.href.split("?")[0];
-              return (
-                <Link
-                  key={`${item.href}-${item.label}`}
-                  href={item.href}
-                  className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
-                    isActive
-                      ? "bg-zinc-950 text-white"
-                      : "text-zinc-700 hover:bg-white/80 hover:text-zinc-950"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+            {navItems.map((item) => (
+              <Suspense
+                key={`${item.href}-${item.label}`}
+                fallback={<NavigationLink item={item} />}
+              >
+                <ActiveNavigationLink item={item} />
+              </Suspense>
+            ))}
             <button
               type="button"
               aria-label="Search Devicefield"
@@ -123,14 +116,22 @@ export default function HeaderClient({
           >
             <nav aria-label="Mobile navigation" className="grid gap-1">
               {navItems.map((item) => (
-                <Link
+                <Suspense
                   key={`${item.href}-${item.label}`}
-                  href={item.href}
-                  onClick={() => setOpenPanel(null)}
-                  className="rounded-2xl px-4 py-3 text-base font-semibold text-zinc-800 transition hover:bg-white/80 hover:text-zinc-950"
+                  fallback={
+                    <NavigationLink
+                      item={item}
+                      mobile
+                      onNavigate={() => setOpenPanel(null)}
+                    />
+                  }
                 >
-                  {item.label}
-                </Link>
+                  <ActiveNavigationLink
+                    item={item}
+                    mobile
+                    onNavigate={() => setOpenPanel(null)}
+                  />
+                </Suspense>
               ))}
               <button
                 type="button"
@@ -146,32 +147,88 @@ export default function HeaderClient({
         {openPanel === "search" && (
           <div
             role="search"
-            className="absolute left-0 right-0 top-20 rounded-[1.75rem] border border-white/70 bg-white/75 p-4 shadow-[0_24px_80px_rgba(24,24,27,0.16)] backdrop-blur-2xl backdrop-saturate-150 sm:left-auto sm:w-[30rem]"
+            className="absolute left-0 right-0 top-20 rounded-[1.75rem] border border-white/70 bg-white/75 p-4 shadow-[0_24px_80px_rgba(24,24,27,0.16)] backdrop-blur-2xl backdrop-saturate-150 sm:left-auto sm:w-[34rem]"
           >
-            <form action="/blog" className="flex gap-2">
-              <label htmlFor="site-search" className="sr-only">
-                Search Devicefield articles
-              </label>
-              <input
-                id="site-search"
-                name="q"
-                type="search"
-                autoFocus
-                placeholder="Search guides, devices, and systems"
-                className="min-w-0 flex-1 rounded-full border border-white/80 bg-white/80 px-4 py-3 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-lime-300"
-              />
-              <button
-                type="submit"
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-white transition hover:bg-zinc-800"
-                aria-label="Submit search"
-              >
-                <SearchIcon />
-              </button>
-            </form>
+            <SearchCombobox
+              documents={searchDocuments}
+              onNavigate={() => setOpenPanel(null)}
+            />
           </div>
         )}
       </div>
     </header>
+  );
+}
+
+function ActiveNavigationLink({
+  item,
+  mobile = false,
+  onNavigate,
+}: {
+  item: NavigationEntry;
+  mobile?: boolean;
+  onNavigate?: () => void;
+}) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  return (
+    <NavigationLink
+      item={item}
+      active={isNavigationEntryActive(item, pathname, searchParams)}
+      mobile={mobile}
+      onNavigate={onNavigate}
+    />
+  );
+}
+
+function NavigationLink({
+  item,
+  active = false,
+  mobile = false,
+  onNavigate,
+}: {
+  item: NavigationEntry;
+  active?: boolean;
+  mobile?: boolean;
+  onNavigate?: () => void;
+}) {
+  const sizeClasses = mobile
+    ? "rounded-2xl px-4 py-3 text-base"
+    : "rounded-full px-3 py-2 text-sm";
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={`${sizeClasses} font-semibold transition ${
+        active
+          ? "bg-zinc-950 text-white"
+          : "text-zinc-700 hover:bg-white/80 hover:text-zinc-950"
+      }`}
+    >
+      {item.label}
+    </Link>
+  );
+}
+
+function isNavigationEntryActive(
+  item: NavigationEntry,
+  pathname: string,
+  searchParams: URLSearchParams,
+) {
+  const [itemPath, itemQuery = ""] = item.href.split("?");
+
+  if (pathname !== itemPath) return false;
+
+  if (!itemQuery) {
+    return itemPath !== "/blog" || !searchParams.has("type");
+  }
+
+  const expectedParams = new URLSearchParams(itemQuery);
+  return Array.from(expectedParams).every(
+    ([key, value]) => searchParams.get(key) === value,
   );
 }
 

@@ -82,18 +82,19 @@ export default async function BlogIndexPage({
     const category = getBlogCategoryBySlug(params.category);
     permanentRedirect(category ? `/category/${category.slug}` : "/blog");
   }
+  if (params.q !== undefined) {
+    const search = new URLSearchParams();
+    if (params.q.trim()) search.set("q", params.q.trim());
+    const articleType = getSelectedType(params.type);
+    if (articleType) {
+      search.set("type", articleType === "reviews" ? "review" : "comparison");
+    }
+    permanentRedirect(`/search${search.size > 0 ? `?${search}` : ""}`);
+  }
 
   const selectedType = getSelectedType(params.type);
-  const searchQuery = params.q?.trim() ?? "";
-  const normalizedQuery = searchQuery.toLowerCase();
   const visiblePosts = posts.filter((post) => {
-    if (selectedType && !matchesEditorialType(post, selectedType)) return false;
-    if (!normalizedQuery) return true;
-
-    return [post.title, post.excerpt, post.category, ...post.tags]
-      .join(" ")
-      .toLowerCase()
-      .includes(normalizedQuery);
+    return !selectedType || matchesEditorialType(post, selectedType);
   });
   const publishedCategories = BLOG_CATEGORY_DETAILS.flatMap((category) => {
     const count = posts.filter(
@@ -106,9 +107,7 @@ export default async function BlogIndexPage({
       ? "Reviews"
       : selectedType === "comparisons"
         ? "Comparisons"
-        : searchQuery
-          ? `Search: ${searchQuery}`
-          : null;
+        : null;
 
   return (
     <div className="bg-zinc-50 px-4 pb-20 pt-32 sm:px-6">
@@ -139,7 +138,7 @@ export default async function BlogIndexPage({
           <Link
             href="/blog"
             className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-              selectedType || searchQuery
+              selectedType
                 ? "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-950 hover:text-zinc-950"
                 : "border-zinc-950 bg-zinc-950 text-white"
             }`}
@@ -160,7 +159,7 @@ export default async function BlogIndexPage({
         {filterHeading && (
           <section className="mb-8 rounded-[1.5rem] border border-zinc-200 bg-white p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-              {searchQuery ? "Search results" : "Article type"}
+              Article type
             </p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-950">
               {filterHeading}

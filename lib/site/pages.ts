@@ -4,6 +4,7 @@ export type SitePageSlug =
   | "global"
   | "home"
   | "blog"
+  | "search"
   | "about"
   | "contact"
   | "review-methodology"
@@ -182,6 +183,17 @@ const blogContent = {
   heading: "Reviews, comparisons, and operating guides.",
   intro:
     "Buying guides, product reviews, comparisons, setup notes, and troubleshooting help for the devices and systems businesses rely on.",
+};
+
+const searchContent = {
+  eyebrow: "Search Devicefield",
+  heading: "Find the right field note.",
+  intro:
+    "Search independent buying guides, reviews, comparisons, setup notes, compatibility guidance, and troubleshooting articles.",
+  resultsEyebrow: "Published coverage",
+  emptyHeading: "Try a broader search.",
+  emptyIntro:
+    "Remove one or more filters, check the spelling, or browse all currently published guides.",
 };
 
 const aboutContent = {
@@ -382,6 +394,13 @@ export const defaultSitePages: Record<SitePageSlug, SitePage> = {
     meta_description:
       "Browse Devicefield buying guides, business system reviews, security checklists, and implementation playbooks.",
     content: blogContent,
+  },
+  search: {
+    slug: "search",
+    title: "Search Devicefield Business Technology Guides",
+    meta_description:
+      "Search Devicefield buying guides, product reviews, comparisons, compatibility notes, setup guides, and troubleshooting articles.",
+    content: searchContent,
   },
   about: {
     slug: "about",

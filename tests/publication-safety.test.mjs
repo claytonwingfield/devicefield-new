@@ -32,6 +32,26 @@ async function loadProductionBlogServer() {
   return module.exports;
 }
 
+async function loadSearchUtilities() {
+  const result = await build({
+    entryPoints: [new URL("lib/blog/search.ts", root).pathname],
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    write: false,
+    logLevel: "silent",
+  });
+  const module = { exports: {} };
+  const execute = new Function(
+    "require",
+    "module",
+    "exports",
+    result.outputFiles[0].text,
+  );
+  execute(require, module, module.exports);
+  return module.exports;
+}
+
 test("production never returns sample posts when Supabase is unavailable", async () => {
   const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const previousKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -109,6 +129,82 @@ test("CMS data mirrors the current homepage and liquid-glass navigation", async 
   assert.match(header, /backdrop-saturate-150/);
 });
 
+test("publication navigation has one query-aware active entry", async () => {
+  const header = await source("components/ui/header-client.tsx");
+  assert.match(header, /useSearchParams/);
+  assert.match(header, /itemPath !== "\/blog" \|\| !searchParams\.has\("type"\)/);
+  assert.match(header, /searchParams\.get\(key\) === value/);
+  assert.doesNotMatch(header, /pathname\.startsWith\("\/category"\)/);
+});
+
+test("nested publication 404 pages do not render a second footer", async () => {
+  const nestedNotFound = await source("app/(default)/not-found.tsx");
+  const rootNotFound = await source("app/not-found.tsx");
+  assert.match(nestedNotFound, /<NotFoundContent \/>/);
+  assert.doesNotMatch(nestedNotFound, /<Footer|<Header/);
+  assert.match(rootNotFound, /<Footer \/>/);
+  assert.match(rootNotFound, /<Header \/>/);
+});
+
+test("header search suggests published articles and submits to filtered results", async () => {
+  const combobox = await source("components/search/search-combobox.tsx");
+  const searchPage = await source("app/(default)/search/page.tsx");
+  assert.match(combobox, /form action="\/search" method="get"/);
+  assert.match(combobox, /findSearchSuggestions/);
+  assert.match(combobox, /event\.key === "ArrowDown"/);
+  assert.match(combobox, /event\.key === "Enter" && activeIndex >= 0/);
+  for (const filter of ["category", "type", "testing", "sort"]) {
+    assert.match(searchPage, new RegExp(`name="${filter}"`));
+  }
+  assert.match(searchPage, /robots: \{ index: false, follow: true \}/);
+});
+
+test("search relevance and structured filters share one implementation", async () => {
+  const { findSearchSuggestions, searchPublishedPosts } =
+    await loadSearchUtilities();
+  const posts = [
+    {
+      id: "one",
+      slug: "zebra-ds2208-review",
+      title: "Zebra DS2208 Barcode Scanner Review",
+      excerpt: "A researched scanner review for retail inventory workflows.",
+      content: "Compatibility notes for barcode inventory systems.",
+      category: "Barcode & Inventory",
+      tags: ["scanner", "barcode"],
+      article_type: "review",
+      testing_status: "researched",
+      published_at: "2026-07-16T00:00:00.000Z",
+      created_at: "2026-07-16T00:00:00.000Z",
+      updated_at: "2026-07-16T00:00:00.000Z",
+    },
+    {
+      id: "two",
+      slug: "receipt-printer-setup",
+      title: "Receipt Printer Setup Guide",
+      excerpt: "Connect and configure a thermal receipt printer.",
+      content: "Driver and network setup instructions.",
+      category: "Receipt & Label Printing",
+      tags: ["printer", "setup"],
+      article_type: "setup_guide",
+      testing_status: "tested",
+      published_at: "2026-07-17T00:00:00.000Z",
+      created_at: "2026-07-17T00:00:00.000Z",
+      updated_at: "2026-07-17T00:00:00.000Z",
+    },
+  ];
+
+  assert.equal(findSearchSuggestions(posts, "barcode scanner")[0].id, "one");
+  assert.deepEqual(
+    searchPublishedPosts(posts, {
+      query: "printer",
+      articleType: "setup_guide",
+      testingStatus: "tested",
+      sort: "relevance",
+    }).map((post) => post.id),
+    ["two"],
+  );
+});
+
 test("drafts and archived articles are excluded from public queries", async () => {
   const server = await source("lib/blog/server.ts");
   const migration = await source(
@@ -162,6 +258,25 @@ test("admin, login, and preview pages are noindex", async () => {
   }
   assert.match(admin, /profile\?\.role !== "admin"/);
   assert.match(preview, /Preview mode:/);
+});
+
+test("Supabase auth uses Firebase Hosting's forwarded session cookie", async () => {
+  const cookieConfig = await source("lib/supabase/auth-cookies.ts");
+  const clients = await Promise.all(
+    [
+      "app/auth/sign-in/route.ts",
+      "lib/supabase/client.ts",
+      "lib/supabase/server.ts",
+      "proxy.ts",
+    ].map(source),
+  );
+
+  assert.match(cookieConfig, /name: "__session"/);
+  assert.match(cookieConfig, /SUPABASE_AUTH_COOKIE_ENCODING = "raw"/);
+  for (const client of clients) {
+    assert.match(client, /SUPABASE_AUTH_COOKIE_OPTIONS/);
+    assert.match(client, /SUPABASE_AUTH_COOKIE_ENCODING/);
+  }
 });
 
 test("sitemap includes every public trust page and RSS", async () => {
