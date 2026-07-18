@@ -1,12 +1,11 @@
+import { getSiteOrigin } from "@/lib/site-origin";
+
 const RESEND_API_URL = "https://api.resend.com";
 
 function getProviderConfig() {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.NEWSLETTER_FROM_EMAIL;
-  const siteUrl = (process.env.SITE_URL ?? "https://devicefield.com").replace(
-    /\/$/,
-    "",
-  );
+  const siteUrl = getSiteOrigin();
 
   return apiKey && from ? { apiKey, from, siteUrl } : null;
 }

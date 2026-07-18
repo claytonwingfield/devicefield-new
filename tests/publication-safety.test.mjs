@@ -574,6 +574,8 @@ test("empty categories are not rendered or added to the sitemap", async () => {
 test("newsletter subscriptions stay behind server endpoints and double opt-in", async () => {
   const form = await source("components/newsletter-form.tsx");
   const endpoint = await source("app/api/newsletter/subscribe/route.ts");
+  const confirmation = await source("app/api/newsletter/confirm/route.ts");
+  const provider = await source("lib/newsletter/provider.ts");
   const migration = await source(
     "supabase/migrations/20260717195325_secure_newsletter_double_opt_in.sql",
   );
@@ -582,6 +584,10 @@ test("newsletter subscriptions stay behind server endpoints and double opt-in", 
   assert.doesNotMatch(endpoint, /request\.nextUrl\.host/);
   assert.match(endpoint, /body\.company/);
   assert.match(endpoint, /rate_limited/);
+  assert.match(confirmation, /getSameOriginUrl\(request, "\/"\)/);
+  assert.doesNotMatch(confirmation, /new URL\([^\n]*request\.url/);
+  assert.match(provider, /getSiteOrigin\(\)/);
+  assert.doesNotMatch(provider, /process\.env\.SITE_URL/);
   assert.match(
     migration,
     /REVOKE INSERT ON public\.newsletter_subscribers FROM anon, authenticated/,

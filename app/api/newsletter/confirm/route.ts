@@ -9,6 +9,7 @@ import {
   hashNewsletterValue,
   markNewsletterProviderSync,
 } from "@/lib/newsletter/server";
+import { getSameOriginUrl } from "@/lib/site-origin";
 
 export async function POST(request: NextRequest) {
   if (Number(request.headers.get("content-length") ?? 0) > 1_000) {
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   const formData = await request.formData();
   const token = formData.get("token");
-  const redirectUrl = new URL("/newsletter/confirmed", request.url);
+  const redirectUrl = getSameOriginUrl(request, "/newsletter/confirmed");
 
   if (typeof token !== "string" || !/^[A-Za-z0-9_-]{40,100}$/.test(token)) {
     redirectUrl.searchParams.set("status", "invalid");
@@ -60,6 +61,5 @@ export async function POST(request: NextRequest) {
     }
   });
 
-  redirectUrl.searchParams.set("status", "success");
-  return NextResponse.redirect(redirectUrl, 303);
+  return NextResponse.redirect(getSameOriginUrl(request, "/"), 303);
 }
