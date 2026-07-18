@@ -547,6 +547,7 @@ test("author pages expose ProfilePage and Person identity", async () => {
 test("filtered blog parameters are noindex and www redirects to the canonical host", async () => {
   const blogIndex = await source("app/(default)/blog/page.tsx");
   const nextConfig = await source("next.config.js");
+  const proxy = await source("proxy.ts");
 
   assert.match(blogIndex, /hasFilterParameters/);
   assert.match(
@@ -556,6 +557,10 @@ test("filtered blog parameters are noindex and www redirects to the canonical ho
   assert.match(nextConfig, /value: "www\.devicefield\.com"/);
   assert.match(nextConfig, /destination: "https:\/\/devicefield\.com\/:path\*"/);
   assert.match(nextConfig, /trailingSlash: false/);
+  assert.match(proxy, /x-fh-requested-host/);
+  assert.match(proxy, /requestedHost\.split\(":"\)/);
+  assert.match(proxy, /canonicalUrl\.host = "devicefield\.com"/);
+  assert.match(proxy, /NextResponse\.redirect\(canonicalUrl, 308\)/);
 });
 
 test("admin and server persistence derive the canonical URL from the slug", async () => {
