@@ -15,18 +15,31 @@ type CategoryPageProps = {
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { slug } = await params;
   const category = getBlogCategoryBySlug(slug);
-  const hasPublishedPosts = category
-    ? (await getPublishedPosts()).some(
-        (post) => post.category === category.name,
-      )
-    : false;
 
-  if (!category || !hasPublishedPosts) {
+  if (!category) {
     return {
       title: "Category not found - Devicefield",
       robots: {
         index: false,
         follow: false,
+      },
+    };
+  }
+
+  const hasPublishedPosts = (await getPublishedPosts()).some(
+    (post) => post.category === category.name,
+  );
+
+  if (!hasPublishedPosts) {
+    return {
+      title: `${category.name} Guides - Devicefield`,
+      description: category.description,
+      alternates: {
+        canonical: `https://devicefield.com/category/${category.slug}`,
+      },
+      robots: {
+        index: false,
+        follow: true,
       },
     };
   }
@@ -49,8 +62,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const posts = (await getPublishedPosts()).filter(
     (post) => post.category === category.name,
   );
-
-  if (posts.length === 0) notFound();
 
   const canonicalUrl = `https://devicefield.com/category/${category.slug}`;
   const breadcrumbJsonLd = {
@@ -123,11 +134,32 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             </div>
           </header>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {posts.map((post, index) => (
-              <BlogCard key={post.id} post={post} priority={index === 0} />
-            ))}
-          </div>
+          {posts.length > 0 ? (
+            <div className="mt-10 grid gap-6 lg:grid-cols-3">
+              {posts.map((post, index) => (
+                <BlogCard key={post.id} post={post} priority={index === 0} />
+              ))}
+            </div>
+          ) : (
+            <section className="mt-10 rounded-[2rem] border border-zinc-200 bg-white px-6 py-12 sm:px-10">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                Coverage in progress
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-zinc-950 sm:text-4xl">
+                No published guides in this category yet.
+              </h2>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600">
+                This is an active Devicefield coverage area. New articles will
+                appear here after they complete editorial review.
+              </p>
+              <Link
+                href="/blog"
+                className="mt-7 inline-flex min-h-11 items-center justify-center rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+              >
+                Browse published guides
+              </Link>
+            </section>
+          )}
         </div>
       </div>
     </>

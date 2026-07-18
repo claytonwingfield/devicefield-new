@@ -556,7 +556,7 @@ test("sitemap includes every public trust page and RSS", async () => {
   assert.doesNotMatch(sitemap, /samplePosts/);
 });
 
-test("empty categories are not rendered or added to the sitemap", async () => {
+test("empty categories stay hidden from indexes but have an intentional route", async () => {
   const index = await source("app/(default)/blog/page.tsx");
   const category = await source("app/(default)/category/[slug]/page.tsx");
   const sitemap = await source("app/sitemap.ts");
@@ -564,7 +564,10 @@ test("empty categories are not rendered or added to the sitemap", async () => {
     index,
     /return count > 0 \? \[\{ \.\.\.category, count \}\] : \[\]/,
   );
-  assert.match(category, /if \(posts\.length === 0\) notFound\(\)/);
+  assert.match(category, /if \(!category\) notFound\(\)/);
+  assert.doesNotMatch(category, /if \(posts\.length === 0\) notFound\(\)/);
+  assert.match(category, /No published guides in this category yet\./);
+  assert.match(category, /index: false,[\s\S]*follow: true/);
   assert.match(
     sitemap,
     /posts\.some\(\(post\) => post\.category === category\.name\)/,
