@@ -3234,12 +3234,14 @@ export default function AdminDashboard() {
                                   : "border-zinc-200 hover:border-zinc-950 disabled:opacity-60"
                               }`}
                             >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={image.image_url}
-                                alt={image.image_alt}
-                                className="aspect-[2/1] w-full object-cover"
-                              />
+                              <span className="block aspect-video w-full overflow-hidden bg-zinc-950">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={image.image_url}
+                                  alt={image.image_alt}
+                                  className="block h-full w-full max-w-full object-cover"
+                                />
+                              </span>
                               <span className="block p-3">
                                 <span className="flex items-center justify-between gap-2 text-xs font-semibold text-zinc-950">
                                   <span>{image.label}</span>

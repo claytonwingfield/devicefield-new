@@ -316,13 +316,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </header>
 
           {post.cover_image_url && (
-            <div className="my-10 rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-[0_20px_80px_rgba(24,24,27,0.07)]">
-              <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-zinc-950">
+            <div className="my-10 min-w-0 overflow-hidden rounded-[2rem] border border-zinc-200 bg-white p-3 shadow-[0_20px_80px_rgba(24,24,27,0.07)] sm:p-5">
+              <div className="relative aspect-video w-full overflow-hidden rounded-[1.5rem] bg-zinc-950">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={post.cover_image_url}
                   alt={coverImageAlt}
-                  className="h-full w-full object-cover"
+                  className="block h-full w-full max-w-full object-cover"
                 />
               </div>
             </div>

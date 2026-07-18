@@ -153,10 +153,35 @@ test("header search suggests published articles and submits to filtered results"
   assert.match(combobox, /findSearchSuggestions/);
   assert.match(combobox, /event\.key === "ArrowDown"/);
   assert.match(combobox, /event\.key === "Enter" && activeIndex >= 0/);
+  assert.doesNotMatch(combobox, /onBlur=/);
+  assert.match(combobox, /onClick=\{\(\) => \{/);
+  assert.match(combobox, /onNavigate\(\)/);
   for (const filter of ["category", "type", "testing", "sort"]) {
     assert.match(searchPage, new RegExp(`name="${filter}"`));
   }
   assert.match(searchPage, /robots: \{ index: false, follow: true \}/);
+});
+
+test("article covers use the same clipped 16:9 media surface everywhere", async () => {
+  const blogCard = await source("components/blog/blog-card.tsx");
+  const article = await source("app/(default)/blog/[slug]/page.tsx");
+  const preview = await source("app/(preview)/preview/[id]/page.tsx");
+  const admin = await source("app/(default)/admin/page.tsx");
+
+  assert.match(blogCard, /relative aspect-video overflow-hidden/);
+  assert.doesNotMatch(blogCard, /aspect-\[16\/10\]/);
+  assert.match(article, /aspect-video w-full overflow-hidden/);
+  assert.match(article, /block h-full w-full max-w-full object-cover/);
+  assert.match(preview, /block aspect-video w-full max-w-full/);
+  assert.match(admin, /block aspect-video w-full overflow-hidden bg-zinc-950/);
+  assert.doesNotMatch(admin, /aspect-\[2\/1\]/);
+});
+
+test("IndexNow ownership key is hosted as matching UTF-8 root text", async () => {
+  const key = "pb14c73fgh69upxaq53h4rmcutacg41r";
+  const keyFile = await source(`public/${key}.txt`);
+
+  assert.equal(keyFile.trim(), key);
 });
 
 test("search relevance and structured filters share one implementation", async () => {

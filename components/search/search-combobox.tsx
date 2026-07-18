@@ -33,13 +33,7 @@ export default function SearchCombobox({
   };
 
   return (
-    <div
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          setExpanded(false);
-        }
-      }}
-    >
+    <div>
       <form action="/search" method="get" className="flex gap-2">
         <label htmlFor="site-search" className="sr-only">
           Search Devicefield articles
@@ -102,7 +96,7 @@ export default function SearchCombobox({
           id={listboxId}
           role="listbox"
           aria-label="Article suggestions"
-          className="mt-3 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white/90 shadow-[0_20px_50px_rgba(24,24,27,0.12)]"
+          className="relative z-10 mt-3 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white/95 shadow-[0_20px_50px_rgba(24,24,27,0.12)]"
         >
           {suggestions.map((suggestion, index) => (
             <Link

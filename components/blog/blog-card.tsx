@@ -16,13 +16,13 @@ export default function BlogCard({
   return (
     <article className="group grid gap-5 rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-[0_20px_70px_rgba(24,24,27,0.06)] transition duration-300 hover:-translate-y-1 hover:border-zinc-300 hover:shadow-[0_28px_90px_rgba(24,24,27,0.1)]">
       <Link href={`/blog/${post.slug}`} className="block">
-        <div className="relative aspect-[16/10] overflow-hidden rounded-[1.5rem] bg-zinc-950">
+        <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-zinc-950">
           {post.cover_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={post.cover_image_url}
               alt={getPostCoverImageAlt(post)}
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              className="block h-full w-full max-w-full object-cover transition duration-500 group-hover:scale-105"
               loading={priority ? "eager" : "lazy"}
             />
           ) : (
