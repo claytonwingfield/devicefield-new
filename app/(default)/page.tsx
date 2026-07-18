@@ -1,8 +1,19 @@
 import Link from "next/link";
 import BlogCard from "@/components/blog/blog-card";
 import NewsletterForm from "@/components/newsletter-form";
-import { getPublishedPosts } from "@/lib/blog/server";
+import { getAuthorBySlug, getPublishedPosts } from "@/lib/blog/server";
 import { getBlogCategoryByName } from "@/lib/blog/types";
+import {
+  getAuthorUrl,
+  getValidProfileUrls,
+  PRIMARY_AUTHOR_NAME,
+  PRIMARY_AUTHOR_SLUG,
+  SITE_DESCRIPTION,
+  SITE_LOGO_URL,
+  SITE_NAME,
+  SITE_SOCIAL_IMAGE_URL,
+  SITE_URL,
+} from "@/lib/site/identity";
 import {
   defaultSitePages,
   getObjectArray,
@@ -11,6 +22,7 @@ import {
   getStringArray,
   type HomeCategoryEntry,
   type HeroEvaluationItem,
+  type NavigationEntry,
 } from "@/lib/site/pages";
 
 export const revalidate = 300;
@@ -23,14 +35,45 @@ export async function generateMetadata() {
     description: page.meta_description,
     alternates: {
       canonical: "https://devicefield.com",
+      types: {
+        "application/rss+xml": [
+          {
+            url: `${SITE_URL}/feed.xml`,
+            title: "Devicefield RSS Feed",
+          },
+        ],
+      },
+    },
+    openGraph: {
+      title: page.title,
+      description: page.meta_description,
+      url: SITE_URL,
+      siteName: SITE_NAME,
+      type: "website",
+      images: [
+        {
+          url: SITE_SOCIAL_IMAGE_URL,
+          width: 1200,
+          height: 630,
+          alt: "Devicefield business technology publication",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: page.title,
+      description: page.meta_description,
+      images: [SITE_SOCIAL_IMAGE_URL],
     },
   };
 }
 
 export default async function Home() {
-  const [page, publishedPosts] = await Promise.all([
+  const [page, globalPage, publishedPosts, founder] = await Promise.all([
     getSitePage("home"),
+    getSitePage("global"),
     getPublishedPosts(),
+    getAuthorBySlug(PRIMARY_AUTHOR_SLUG),
   ]);
   const featuredPosts = publishedPosts
     .filter((post) => post.featured && Boolean(post.cover_image_url))
@@ -91,24 +134,53 @@ export default async function Home() {
       : [];
   });
 
-  const jsonLd = {
+  const socialProfiles = getObjectArray<NavigationEntry>(
+    globalPage.content,
+    "socialProfiles",
+    [],
+    ["href", "label"],
+  );
+  const sameAs = getValidProfileUrls(
+    socialProfiles.map((profile) => profile.href),
+  );
+  const organizationId = `${SITE_URL}/#organization`;
+  const websiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Devicefield",
-    url: "https://devicefield.com",
+    "@id": `${SITE_URL}/#website`,
+    name: SITE_NAME,
+    url: SITE_URL,
     description: page.meta_description,
-    publisher: {
-      "@type": "Organization",
-      name: "Devicefield",
-      url: "https://devicefield.com",
+    publisher: { "@id": organizationId },
+  };
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": organizationId,
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: {
+      "@type": "ImageObject",
+      url: SITE_LOGO_URL,
+      width: 2048,
+      height: 2048,
     },
+    description: SITE_DESCRIPTION,
+    founder: {
+      "@type": "Person",
+      name: founder?.name ?? PRIMARY_AUTHOR_NAME,
+      url: getAuthorUrl(founder?.slug ?? PRIMARY_AUTHOR_SLUG),
+    },
+    sameAs,
   };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([websiteJsonLd, organizationJsonLd]),
+        }}
       />
 
       <section className="relative isolate overflow-hidden px-4 pb-16 pt-32 sm:px-6 lg:pb-24">
@@ -165,13 +237,13 @@ export default async function Home() {
             <div className="absolute left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[2.25rem] border border-zinc-200 bg-white/80 p-5 shadow-[0_30px_100px_rgba(24,24,27,0.12)] backdrop-blur">
               <div className="rounded-[1.75rem] bg-zinc-950 p-5 text-white">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
                     {getString(
                       page.content,
                       "heroEvaluationLabel",
                       getString(defaults, "heroEvaluationLabel", ""),
                     )}
-                  </p>
+                  </h2>
                   <span className="h-2.5 w-2.5 rounded-full bg-lime-300 shadow-[0_0_28px_rgba(190,242,100,0.95)]" />
                 </div>
                 <div className="mt-8 grid gap-3">
@@ -186,9 +258,9 @@ export default async function Home() {
                           {index + 1}
                         </span>
                         <div>
-                          <h2 className="text-base font-semibold tracking-tight text-white">
+                          <h3 className="text-base font-semibold tracking-tight text-white">
                             {item.title}
-                          </h2>
+                          </h3>
                           <p className="mt-1 text-sm leading-6 text-zinc-300">
                             {item.description}
                           </p>

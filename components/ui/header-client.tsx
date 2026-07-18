@@ -147,7 +147,7 @@ export default function HeaderClient({
         {openPanel === "search" && (
           <div
             role="search"
-            className="absolute left-0 right-0 top-20 rounded-[1.75rem] border border-white/70 bg-white/75 p-4 shadow-[0_24px_80px_rgba(24,24,27,0.16)] backdrop-blur-2xl backdrop-saturate-150 sm:left-auto sm:w-[34rem]"
+            className="absolute left-0 right-0 top-20 z-20 rounded-[1.75rem] border border-white/70 bg-white/75 p-4 shadow-[0_24px_80px_rgba(24,24,27,0.16)] backdrop-blur-2xl backdrop-saturate-150 sm:left-auto sm:w-[34rem]"
           >
             <SearchCombobox
               documents={searchDocuments}

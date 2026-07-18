@@ -147,7 +147,7 @@ export const CODEX_DRAFT_MAX_INLINE_IMAGES = 4;
 export const CODEX_DRAFT_RATE_LIMIT = 12;
 export const CODEX_DRAFT_RATE_WINDOW_MS = 60_000;
 export const CODEX_FEATURED_IMAGE_WIDTH = 1600;
-export const CODEX_FEATURED_IMAGE_HEIGHT = 800;
+export const CODEX_FEATURED_IMAGE_HEIGHT = 900;
 
 const PLACEHOLDER_PATTERN =
   /\b(?:TODO|TBD|TK)\b|needs\s+source|\[citation\s+needed\]/i;

@@ -1,5 +1,6 @@
 import HeaderClient from "./header-client";
 import { getPublishedPosts } from "@/lib/blog/server";
+import { getBlogCategoryBySlug } from "@/lib/blog/types";
 import {
   defaultSitePages,
   getObjectArray,
@@ -25,10 +26,19 @@ export default async function Header() {
     ),
     ["href", "label"],
   );
+  const visibleNavItems = navItems.filter((item) => {
+    const categoryMatch = item.href.match(/^\/category\/([^/?#]+)$/);
+    if (!categoryMatch) return true;
+
+    const category = getBlogCategoryBySlug(categoryMatch[1]);
+    return Boolean(
+      category && posts.some((post) => post.category === category.name),
+    );
+  });
 
   return (
     <HeaderClient
-      navItems={navItems}
+      navItems={visibleNavItems}
       searchDocuments={posts.map((post) => ({
         slug: post.slug,
         title: post.title,

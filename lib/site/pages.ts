@@ -70,6 +70,7 @@ const globalContent = {
   footerNewsletterHeading: "Newsletter",
   footerNewsletterText:
     "Get new buying guides, corrections, and practical business technology notes when they publish.",
+  socialProfiles: [] satisfies NavigationEntry[],
 };
 
 const homeContent = {
@@ -78,7 +79,7 @@ const homeContent = {
   intro:
     "Independent buying guides, compatibility notes, reviews, setup guides, and troubleshooting articles for business devices and systems.",
   primaryCta: "Browse Buying Guides",
-  secondaryCta: "How we test",
+  secondaryCta: "How we evaluate",
   trustStrip: [
     "Hands-on when stated",
     "Specs independently verified",
@@ -383,9 +384,9 @@ export const defaultSitePages: Record<SitePageSlug, SitePage> = {
   },
   home: {
     slug: "home",
-    title: "Devicefield - Tested devices and systems for modern businesses",
+    title: "Devicefield | Business Technology Reviews & Buying Guides",
     meta_description:
-      "Independent buying guides, product reviews, comparisons, setup guides, and troubleshooting articles for business devices and systems.",
+      "Independent reviews, buying guides, comparisons, setup help, and troubleshooting for POS, barcode, printing, networking, and business systems.",
     content: homeContent,
   },
   blog: {

@@ -6,6 +6,20 @@ import {
 } from "@/lib/supabase/auth-cookies";
 
 export async function proxy(request: NextRequest) {
+  const requestedHost =
+    request.headers.get("x-fh-requested-host") ??
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ??
+    request.headers.get("host") ??
+    request.nextUrl.host;
+
+  if (requestedHost.split(":")[0]?.toLowerCase() === "www.devicefield.com") {
+    const canonicalUrl = new URL(
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+      "https://devicefield.com",
+    );
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
   const supabaseKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

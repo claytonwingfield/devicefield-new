@@ -110,7 +110,7 @@ export default async function ArticlePreviewPage({
           <img
             src={post.cover_image_url}
             alt={post.cover_image_alt ?? post.title}
-            className="my-10 aspect-[16/8] w-full rounded-[1.75rem] object-cover"
+            className="my-10 block aspect-video w-full max-w-full rounded-[1.75rem] bg-zinc-950 object-cover"
           />
         )}
 

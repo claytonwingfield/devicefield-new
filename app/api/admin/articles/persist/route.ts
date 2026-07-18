@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { getBlogCategoryByName } from "@/lib/blog/types";
+import { getArticleUrl } from "@/lib/site/identity";
 import { hasAllowedRequestOrigin } from "@/lib/site-origin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -104,6 +105,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const articleSlug = safeSlug(body.article.slug);
+  if (!articleSlug) {
+    return NextResponse.json(
+      { error: "Article slug is invalid." },
+      { status: 400 },
+    );
+  }
+  const article = {
+    ...body.article,
+    slug: articleSlug,
+    canonical_url: getArticleUrl(articleSlug),
+  };
+
   const articleId =
     typeof body.articleId === "string" && body.articleId.length > 0
       ? body.articleId
@@ -138,7 +152,7 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase.rpc("persist_article_workflow", {
     p_article_id: articleId,
-    p_article: body.article,
+    p_article: article,
     p_action: body.action,
     p_scheduled_for: scheduledFor,
   });

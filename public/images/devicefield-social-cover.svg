@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Devicefield business technology publication</title>
+  <desc id="description">Devicefield wordmark and business technology evaluation themes on a lime, cream, and charcoal background.</desc>
+  <defs>
+    <linearGradient id="background" x1="72" y1="40" x2="1118" y2="596" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FCEB"/>
+      <stop offset="0.52" stop-color="#FAFAFA"/>
+      <stop offset="1" stop-color="#FFF7D6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1040 90) rotate(130) scale(380 380)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BEF264" stop-opacity="0.82"/>
+      <stop offset="1" stop-color="#BEF264" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#18181B" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#background)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <circle cx="989" cy="315" r="242" fill="none" stroke="#D4D4D8" stroke-width="2"/>
+  <circle cx="989" cy="315" r="166" fill="none" stroke="#A1A1AA" stroke-width="2" stroke-dasharray="8 12"/>
+
+  <g transform="translate(76 62)">
+    <rect width="82" height="82" rx="24" fill="#18181B"/>
+    <path d="M22 25H53L65 39L60 57L50 65H17L21 50H54L57 40L51 33H20Z" fill="none" stroke="#BEF264" stroke-width="6" stroke-linejoin="round"/>
+    <text x="106" y="65" fill="#18181B" font-family="Arial, Helvetica, sans-serif" font-size="62" font-weight="700" letter-spacing="-2">Devicefield</text>
+  </g>
+
+  <g transform="translate(76 229)">
+    <text fill="#18181B" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700" letter-spacing="-1.5">
+      <tspan x="0" y="0">Business technology,</tspan>
+      <tspan x="0" y="62">evaluated for</tspan>
+      <tspan x="0" y="124">real operations.</tspan>
+    </text>
+    <text fill="#52525B" font-family="Arial, Helvetica, sans-serif" font-size="23">
+      <tspan x="0" y="172">Reviews, buying guides, comparisons,</tspan>
+      <tspan x="0" y="204">setup, and troubleshooting.</tspan>
+    </text>
+  </g>
+
+  <g transform="translate(76 500)" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#18181B">
+    <rect x="0" y="0" width="154" height="48" rx="24" fill="#BEF264"/>
+    <text x="77" y="30" text-anchor="middle">COMPATIBILITY</text>
+    <rect x="166" y="0" width="105" height="48" rx="24" fill="#FFFFFF" stroke="#D4D4D8"/>
+    <text x="218.5" y="30" text-anchor="middle">SETUP</text>
+    <rect x="283" y="0" width="137" height="48" rx="24" fill="#FFFFFF" stroke="#D4D4D8"/>
+    <text x="351.5" y="30" text-anchor="middle">RELIABILITY</text>
+    <rect x="432" y="0" width="101" height="48" rx="24" fill="#18181B"/>
+    <text x="482.5" y="30" text-anchor="middle" fill="#FFFFFF">VALUE</text>
+  </g>
+
+  <g transform="translate(804 152)" filter="url(#shadow)">
+    <rect width="330" height="326" rx="44" fill="#18181B"/>
+    <text x="38" y="55" fill="#BEF264" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="4">HOW WE EVALUATE</text>
+    <circle cx="285" cy="47" r="10" fill="#BEF264"/>
+    <g transform="translate(38 92)" font-family="Arial, Helvetica, sans-serif">
+      <rect width="254" height="54" rx="18" fill="#27272A" stroke="#3F3F46"/>
+      <circle cx="28" cy="27" r="10" fill="#BEF264"/>
+      <text x="50" y="34" fill="#FAFAFA" font-size="20" font-weight="700">Compatibility</text>
+      <rect y="68" width="254" height="54" rx="18" fill="#27272A" stroke="#3F3F46"/>
+      <circle cx="28" cy="95" r="10" fill="#BEF264"/>
+      <text x="50" y="102" fill="#FAFAFA" font-size="20" font-weight="700">Setup</text>
+      <rect y="136" width="254" height="54" rx="18" fill="#27272A" stroke="#3F3F46"/>
+      <circle cx="28" cy="163" r="10" fill="#BEF264"/>
+      <text x="50" y="170" fill="#FAFAFA" font-size="20" font-weight="700">Reliability</text>
+      <rect y="204" width="254" height="54" rx="18" fill="#27272A" stroke="#3F3F46"/>
+      <circle cx="28" cy="231" r="10" fill="#BEF264"/>
+      <text x="50" y="238" fill="#FAFAFA" font-size="20" font-weight="700">Value</text>
+    </g>
+  </g>
+</svg>

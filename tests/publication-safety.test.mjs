@@ -153,10 +153,35 @@ test("header search suggests published articles and submits to filtered results"
   assert.match(combobox, /findSearchSuggestions/);
   assert.match(combobox, /event\.key === "ArrowDown"/);
   assert.match(combobox, /event\.key === "Enter" && activeIndex >= 0/);
+  assert.doesNotMatch(combobox, /onBlur=/);
+  assert.match(combobox, /onClick=\{\(\) => \{/);
+  assert.match(combobox, /onNavigate\(\)/);
   for (const filter of ["category", "type", "testing", "sort"]) {
     assert.match(searchPage, new RegExp(`name="${filter}"`));
   }
   assert.match(searchPage, /robots: \{ index: false, follow: true \}/);
+});
+
+test("article covers use the same clipped 16:9 media surface everywhere", async () => {
+  const blogCard = await source("components/blog/blog-card.tsx");
+  const article = await source("app/(default)/blog/[slug]/page.tsx");
+  const preview = await source("app/(preview)/preview/[id]/page.tsx");
+  const admin = await source("app/(default)/admin/page.tsx");
+
+  assert.match(blogCard, /relative aspect-video overflow-hidden/);
+  assert.doesNotMatch(blogCard, /aspect-\[16\/10\]/);
+  assert.match(article, /aspect-video w-full overflow-hidden/);
+  assert.match(article, /block h-full w-full max-w-full object-cover/);
+  assert.match(preview, /block aspect-video w-full max-w-full/);
+  assert.match(admin, /block aspect-video w-full overflow-hidden bg-zinc-950/);
+  assert.doesNotMatch(admin, /aspect-\[2\/1\]/);
+});
+
+test("IndexNow ownership key is hosted as matching UTF-8 root text", async () => {
+  const key = "pb14c73fgh69upxaq53h4rmcutacg41r";
+  const keyFile = await source(`public/${key}.txt`);
+
+  assert.equal(keyFile.trim(), key);
 });
 
 test("search relevance and structured filters share one implementation", async () => {
@@ -430,10 +455,156 @@ test("Codex article inventory is private and field-restricted", async () => {
 });
 
 test("configured authors resolve before their first article is published", async () => {
-  const authorPage = await source("app/(default)/authors/[slug]/page.tsx");
+  const authorPage = await source("app/(default)/author/[slug]/page.tsx");
+  const legacyAuthorPage = await source(
+    "app/(default)/authors/[slug]/page.tsx",
+  );
 
   assert.match(authorPage, /if \(!author\) notFound\(\)/);
   assert.doesNotMatch(authorPage, /if \(authoredPosts\.length === 0\) notFound\(\)/);
+  assert.match(legacyAuthorPage, /permanentRedirect\(`\/author\/\$\{/);
+});
+
+test("homepage publishes complete website and organization identity schema", async () => {
+  const home = await source("app/(default)/page.tsx");
+  const identity = await source("lib/site/identity.ts");
+
+  assert.match(home, /"@type": "WebSite"/);
+  assert.match(home, /"@type": "Organization"/);
+  assert.match(home, /logo: \{/);
+  assert.match(home, /description: SITE_DESCRIPTION/);
+  assert.match(home, /founder: \{/);
+  assert.match(home, /sameAs/);
+  assert.match(identity, /SITE_NAME = "Devicefield"/);
+  assert.match(identity, /SITE_URL = "https:\/\/devicefield\.com"/);
+});
+
+test("homepage metadata includes branded large-image social previews and RSS discovery", async () => {
+  const home = await source("app/(default)/page.tsx");
+  const layout = await source("app/layout.tsx");
+  const identity = await source("lib/site/identity.ts");
+
+  assert.match(
+    identity,
+    /Devicefield \| Business Technology Reviews & Buying Guides/,
+  );
+  assert.match(identity, /devicefield-social-cover\.png/);
+  assert.match(layout, /card: "summary_large_image"/);
+  assert.match(layout, /"application\/rss\+xml"/);
+  assert.match(layout, /\/feed\.xml/);
+  assert.match(layout, /\/apple-touch-icon\.png/);
+  assert.match(layout, /\/icon-192\.png/);
+  assert.match(home, /SITE_SOCIAL_IMAGE_URL/);
+  assert.match(home, /"application\/rss\+xml"/);
+  assert.match(home, /Devicefield RSS Feed/);
+});
+
+test("homepage evaluation graphic uses a semantic section heading hierarchy", async () => {
+  const home = await source("app/(default)/page.tsx");
+
+  assert.match(home, /<h2 className="text-xs font-semibold uppercase/);
+  assert.match(home, /<h3 className="text-base font-semibold/);
+  assert.doesNotMatch(home, /<h2 className="text-base font-semibold/);
+});
+
+test("header hides dedicated category links without published articles", async () => {
+  const header = await source("components/ui/header.tsx");
+
+  assert.match(header, /item\.href\.match\(\/\^\\\/category\\\//);
+  assert.match(header, /posts\.some\(\(post\) => post\.category === category\.name\)/);
+  assert.match(header, /navItems=\{visibleNavItems\}/);
+});
+
+test("homepage CMS migration synchronizes SEO metadata and evaluation CTA", async () => {
+  const migration = await source(
+    "supabase/migrations/20260718214309_sync_homepage_seo_content.sql",
+  );
+
+  assert.match(
+    migration,
+    /Devicefield \| Business Technology Reviews & Buying Guides/,
+  );
+  assert.match(migration, /Independent reviews, buying guides, comparisons/);
+  assert.match(migration, /How we evaluate/);
+  assert.match(migration, /WHERE slug = 'home'/);
+});
+
+test("articles publish canonical BlogPosting schema and large image metadata", async () => {
+  const article = await source("app/(default)/blog/[slug]/page.tsx");
+  const layout = await source("app/layout.tsx");
+  const types = await source("lib/blog/types.ts");
+
+  assert.match(article, /"@type": "BlogPosting"/);
+  for (const field of [
+    "headline",
+    "description",
+    "image",
+    "datePublished",
+    "dateModified",
+    "author",
+    "publisher",
+    "mainEntityOfPage",
+  ]) {
+    assert.match(article, new RegExp(`${field}:`));
+  }
+  assert.match(article, /logo: \{/);
+  assert.match(article, /getAuthorUrl\(author\.slug\)/);
+  assert.match(layout, /"max-image-preview": "large"/);
+  assert.match(types, /return getArticleUrl\(post\.slug\)/);
+  assert.doesNotMatch(types, /post\.canonical_url\?\.trim\(\)/);
+});
+
+test("author pages expose ProfilePage and Person identity", async () => {
+  const authorPage = await source("app/(default)/author/[slug]/page.tsx");
+  const sitemap = await source("app/sitemap.ts");
+
+  assert.match(authorPage, /"@type": "ProfilePage"/);
+  assert.match(authorPage, /"@type": "Person"/);
+  assert.match(authorPage, /jobTitle/);
+  assert.match(authorPage, /description/);
+  assert.match(authorPage, /knowsAbout/);
+  assert.match(authorPage, /Devicefield articles/);
+  assert.match(authorPage, /sameAs/);
+  assert.match(sitemap, /getAuthorUrl\(author\.slug\)/);
+  assert.doesNotMatch(sitemap, /\/authors\/\$\{author\.slug\}/);
+});
+
+test("filtered blog parameters are noindex and www redirects to the canonical host", async () => {
+  const blogIndex = await source("app/(default)/blog/page.tsx");
+  const nextConfig = await source("next.config.js");
+  const proxy = await source("proxy.ts");
+
+  assert.match(blogIndex, /hasFilterParameters/);
+  assert.match(
+    blogIndex,
+    /robots: hasFilterParameters \? \{ index: false, follow: true \}/,
+  );
+  assert.match(nextConfig, /value: "www\.devicefield\.com"/);
+  assert.match(nextConfig, /destination: "https:\/\/devicefield\.com\/:path\*"/);
+  assert.match(nextConfig, /trailingSlash: false/);
+  assert.match(proxy, /x-fh-requested-host/);
+  assert.match(proxy, /requestedHost\.split\(":"\)/);
+  assert.match(proxy, /"https:\/\/devicefield\.com"/);
+  assert.match(proxy, /request\.nextUrl\.pathname/);
+  assert.match(proxy, /request\.nextUrl\.search/);
+  assert.match(proxy, /NextResponse\.redirect\(canonicalUrl, 308\)/);
+});
+
+test("admin and server persistence derive the canonical URL from the slug", async () => {
+  const admin = await source("app/(default)/admin/page.tsx");
+  const endpoint = await source("app/api/admin/articles/persist/route.ts");
+
+  assert.match(admin, /canonical_url: getArticleUrl\(slug\)/);
+  assert.match(admin, /readOnly/);
+  assert.doesNotMatch(admin, /canonicalUrl: event\.target\.value/);
+  assert.match(endpoint, /canonical_url: getArticleUrl\(articleSlug\)/);
+  assert.match(endpoint, /p_article: article/);
+});
+
+test("scheduled cover images use a large 16:9 format", async () => {
+  const ingest = await source("lib/codex/draft-ingest.ts");
+  assert.match(ingest, /CODEX_FEATURED_IMAGE_WIDTH = 1600/);
+  assert.match(ingest, /CODEX_FEATURED_IMAGE_HEIGHT = 900/);
 });
 
 test("workflow changes trigger on-demand public route revalidation", async () => {
@@ -556,7 +727,7 @@ test("sitemap includes every public trust page and RSS", async () => {
   assert.doesNotMatch(sitemap, /samplePosts/);
 });
 
-test("empty categories are not rendered or added to the sitemap", async () => {
+test("empty categories stay hidden from indexes but have an intentional route", async () => {
   const index = await source("app/(default)/blog/page.tsx");
   const category = await source("app/(default)/category/[slug]/page.tsx");
   const sitemap = await source("app/sitemap.ts");
@@ -564,7 +735,10 @@ test("empty categories are not rendered or added to the sitemap", async () => {
     index,
     /return count > 0 \? \[\{ \.\.\.category, count \}\] : \[\]/,
   );
-  assert.match(category, /if \(posts\.length === 0\) notFound\(\)/);
+  assert.match(category, /if \(!category\) notFound\(\)/);
+  assert.doesNotMatch(category, /if \(posts\.length === 0\) notFound\(\)/);
+  assert.match(category, /No published guides in this category yet\./);
+  assert.match(category, /index: false,[\s\S]*follow: true/);
   assert.match(
     sitemap,
     /posts\.some\(\(post\) => post\.category === category\.name\)/,
