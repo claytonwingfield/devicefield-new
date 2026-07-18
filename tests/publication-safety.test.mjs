@@ -272,9 +272,13 @@ test("Codex ingestion is private and creates only review-gated drafts", async ()
     /GRANT EXECUTE ON FUNCTION public\.create_codex_review_draft\([\s\S]*TO service_role/,
   );
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_URL/);
+  assert.match(helper, /process\.env\.DEVICEFIELD_INGEST_AUTH/);
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_TOKEN/);
   assert.match(helper, /new FormData\(\)/);
   assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);
+  await assert.rejects(() => source("scripts/ingest-codex-draft.mjs"), {
+    code: "ENOENT",
+  });
   assert.match(grants, /GRANT SELECT ON public\.authors TO service_role/);
   assert.match(
     grants,
@@ -317,6 +321,7 @@ test("Codex article inventory is private and field-restricted", async () => {
     assert.doesNotMatch(endpoint, new RegExp(`"${prohibitedField}"`));
   }
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_URL/);
+  assert.match(helper, /process\.env\.DEVICEFIELD_INGEST_AUTH/);
   assert.match(helper, /process\.env\.CODEX_DRAFT_INGEST_TOKEN/);
   assert.match(helper, /\/api\/internal\/codex\/articles/);
   assert.doesNotMatch(helper, /SUPABASE_SECRET_KEY/);

@@ -1,5 +1,6 @@
 const ingestUrl = process.env.CODEX_DRAFT_INGEST_URL;
-const ingestToken = process.env.CODEX_DRAFT_INGEST_TOKEN;
+const ingestToken =
+  process.env.DEVICEFIELD_INGEST_AUTH ?? process.env.CODEX_DRAFT_INGEST_TOKEN;
 
 const ALLOWED_ARTICLE_FIELDS = new Set([
   "id",
@@ -42,11 +43,14 @@ function isSafeInventoryItem(value) {
 async function main() {
   if (!ingestUrl || !ingestToken) {
     throw new Error(
-      "Missing CODEX_DRAFT_INGEST_URL or CODEX_DRAFT_INGEST_TOKEN.",
+      "Missing CODEX_DRAFT_INGEST_URL or Devicefield ingest authorization.",
     );
   }
+
   if (ingestToken.length < 32) {
-    throw new Error("CODEX_DRAFT_INGEST_TOKEN is not configured correctly.");
+    throw new Error(
+      "Devicefield ingest authorization is not configured correctly.",
+    );
   }
 
   const draftEndpoint = new URL(ingestUrl);
@@ -97,7 +101,9 @@ async function main() {
 
 main().catch((error) => {
   console.error(
-    error instanceof Error ? error.message : "Article inventory request failed.",
+    error instanceof Error
+      ? error.message
+      : "Article inventory request failed.",
   );
   process.exitCode = 1;
 });
