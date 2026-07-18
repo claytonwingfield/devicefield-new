@@ -177,6 +177,18 @@ test("article covers use the same clipped 16:9 media surface everywhere", async 
   assert.doesNotMatch(admin, /aspect-\[2\/1\]/);
 });
 
+test("draft previews render products without requiring an affiliate link", async () => {
+  const preview = await source("app/(preview)/preview/[id]/page.tsx");
+  const productCard = await source("components/affiliate/ProductCard.tsx");
+
+  assert.match(preview, /affiliate_links\?:/);
+  assert.match(preview, /approvedAffiliateLink/);
+  assert.match(preview, /href=\{/);
+  assert.doesNotMatch(preview, /product\.affiliate_links\.label/);
+  assert.match(productCard, /href\?: string \| null/);
+  assert.match(productCard, /\{href && \(/);
+});
+
 test("IndexNow ownership key is hosted as matching UTF-8 root text", async () => {
   const key = "pb14c73fgh69upxaq53h4rmcutacg41r";
   const keyFile = await source(`public/${key}.txt`);
