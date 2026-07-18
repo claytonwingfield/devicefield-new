@@ -55,7 +55,7 @@ GRANT SELECT, INSERT ON codex_ingest_results TO service_role;
 SELECT ok(
   has_function_privilege(
     'service_role',
-    'public.create_codex_review_draft(text,text,text,jsonb,jsonb)',
+    'public.create_codex_review_draft(text,text,text,jsonb,jsonb,jsonb)',
     'EXECUTE'
   ),
   'service role can execute review-draft ingestion'
@@ -63,7 +63,7 @@ SELECT ok(
 SELECT ok(
   NOT has_function_privilege(
     'anon',
-    'public.create_codex_review_draft(text,text,text,jsonb,jsonb)',
+    'public.create_codex_review_draft(text,text,text,jsonb,jsonb,jsonb)',
     'EXECUTE'
   ),
   'anonymous clients cannot execute review-draft ingestion'
@@ -71,7 +71,7 @@ SELECT ok(
 SELECT ok(
   NOT has_function_privilege(
     'authenticated',
-    'public.create_codex_review_draft(text,text,text,jsonb,jsonb)',
+    'public.create_codex_review_draft(text,text,text,jsonb,jsonb,jsonb)',
     'EXECUTE'
   ),
   'authenticated clients cannot execute review-draft ingestion'
@@ -133,7 +133,8 @@ FROM public.create_codex_review_draft(
     'display_order', 0,
     'pros', jsonb_build_array('Documented compatibility'),
     'cons', jsonb_build_array('Requires verification')
-  ))
+  )),
+  '[]'::jsonb
 );
 
 RESET ROLE;
@@ -174,7 +175,8 @@ SELECT throws_ok(
   $$
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-duplicate-slug', repeat('c', 64), repeat('d', 64),
-      pg_temp.codex_payload('test-codex-ready-review'), '[]'::jsonb
+      pg_temp.codex_payload('test-codex-ready-review'), '[]'::jsonb,
+      '[]'::jsonb
     )
   $$,
   'P0001',
@@ -186,7 +188,8 @@ SELECT throws_ok(
   $$
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-valid-001', repeat('c', 64), repeat('d', 64),
-      pg_temp.codex_payload('test-codex-duplicate-run'), '[]'::jsonb
+      pg_temp.codex_payload('test-codex-duplicate-run'), '[]'::jsonb,
+      '[]'::jsonb
     )
   $$,
   'P0001',
@@ -209,6 +212,7 @@ SELECT throws_ok(
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-workflow-001', repeat('c', 64), repeat('d', 64),
       pg_temp.codex_payload('test-codex-workflow') || '{"workflow_status":"published"}'::jsonb,
+      '[]'::jsonb,
       '[]'::jsonb
     )
   $$,
@@ -221,7 +225,8 @@ SELECT throws_ok(
   $$
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-tested-001', repeat('c', 64), repeat('d', 64),
-      pg_temp.codex_payload('test-codex-tested', 'tested'), '[]'::jsonb
+      pg_temp.codex_payload('test-codex-tested', 'tested'), '[]'::jsonb,
+      '[]'::jsonb
     )
   $$,
   'P0001',
@@ -238,6 +243,7 @@ SELECT throws_ok(
         '{claims}',
         '[{"claim":"Risk claim","risk":"high","resolved":false}]'::jsonb
       ),
+      '[]'::jsonb,
       '[]'::jsonb
     )
   $$,
@@ -251,6 +257,7 @@ SELECT throws_ok(
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-category-001', repeat('c', 64), repeat('d', 64),
       pg_temp.codex_payload('test-codex-category') || '{"category":"AI Tools"}'::jsonb,
+      '[]'::jsonb,
       '[]'::jsonb
     )
   $$,
@@ -264,7 +271,8 @@ SELECT throws_ok(
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-pending-001', repeat('c', 64), repeat('d', 64),
       pg_temp.codex_payload('test-codex-pending-product'),
-      '[{"affiliate_link_slug":"codex-pending-link","product_name":"Pending"}]'::jsonb
+      '[{"affiliate_link_slug":"codex-pending-link","product_name":"Pending"}]'::jsonb,
+      '[]'::jsonb
     )
   $$,
   'P0001',
@@ -277,7 +285,8 @@ SELECT throws_ok(
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-rejected-001', repeat('c', 64), repeat('d', 64),
       pg_temp.codex_payload('test-codex-rejected-product'),
-      '[{"affiliate_link_slug":"codex-rejected-link","product_name":"Rejected"}]'::jsonb
+      '[{"affiliate_link_slug":"codex-rejected-link","product_name":"Rejected"}]'::jsonb,
+      '[]'::jsonb
     )
   $$,
   'P0001',
@@ -290,7 +299,8 @@ SELECT throws_ok(
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-paused-001', repeat('c', 64), repeat('d', 64),
       pg_temp.codex_payload('test-codex-paused-product'),
-      '[{"affiliate_link_slug":"codex-paused-link","product_name":"Paused"}]'::jsonb
+      '[{"affiliate_link_slug":"codex-paused-link","product_name":"Paused"}]'::jsonb,
+      '[]'::jsonb
     )
   $$,
   'P0001',
@@ -303,7 +313,8 @@ SELECT throws_ok(
     SELECT * FROM public.create_codex_review_draft(
       'codex-run-inactive-001', repeat('c', 64), repeat('d', 64),
       pg_temp.codex_payload('test-codex-inactive-product'),
-      '[{"affiliate_link_slug":"codex-inactive-link","product_name":"Inactive"}]'::jsonb
+      '[{"affiliate_link_slug":"codex-inactive-link","product_name":"Inactive"}]'::jsonb,
+      '[]'::jsonb
     )
   $$,
   'P0001',

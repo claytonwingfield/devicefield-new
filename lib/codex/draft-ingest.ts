@@ -1,6 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
+  AFFILIATE_NETWORKS,
+  AFFILIATE_SUGGESTION_PLACEMENTS,
   ARTICLE_PRODUCT_PLACEMENTS,
+  type AffiliateNetwork,
+  type AffiliateSuggestionPlacement,
   type ArticleProductPlacement,
 } from "../affiliate/types";
 import {
@@ -33,7 +37,7 @@ type CodexOriginalEvidence = {
 };
 
 export type CodexArticleProduct = {
-  affiliate_link_slug: string;
+  affiliate_link_slug: string | null;
   product_name: string;
   award: string | null;
   best_for: string | null;
@@ -43,6 +47,27 @@ export type CodexArticleProduct = {
   cons: string[];
   placement: ArticleProductPlacement;
   display_order: number;
+};
+
+export type CodexAffiliateSuggestion = {
+  program_name: string;
+  network: AffiliateNetwork;
+  program_url: string;
+  product_name: string | null;
+  evidence_url: string;
+  evidence_checked_at: string;
+  rationale: string;
+  target_heading: string;
+  suggested_placement: AffiliateSuggestionPlacement;
+  insertion_note: string;
+  suggested_cta: string | null;
+  display_order: number;
+};
+
+export type CodexBodyImage = {
+  id: string;
+  file_name: string;
+  alt: string;
 };
 
 export type CodexReviewDraftPayload = {
@@ -77,7 +102,9 @@ export type CodexReviewDraftPayload = {
   original_evidence: CodexOriginalEvidence[];
   internal_notes: string | null;
   featured: false;
+  body_images: CodexBodyImage[];
   article_products: CodexArticleProduct[];
+  affiliate_suggestions: CodexAffiliateSuggestion[];
 };
 
 type DraftValidationResult =
@@ -96,8 +123,10 @@ type RateLimitBucket = {
   resetAt: number;
 };
 
-export const CODEX_DRAFT_MAX_BODY_BYTES = 12 * 1024 * 1024;
+export const CODEX_DRAFT_MAX_BODY_BYTES = 24 * 1024 * 1024;
 export const CODEX_DRAFT_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const CODEX_DRAFT_MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
+export const CODEX_DRAFT_MAX_INLINE_IMAGES = 4;
 export const CODEX_DRAFT_RATE_LIMIT = 12;
 export const CODEX_DRAFT_RATE_WINDOW_MS = 60_000;
 export const CODEX_FEATURED_IMAGE_WIDTH = 1600;
@@ -106,6 +135,7 @@ export const CODEX_FEATURED_IMAGE_HEIGHT = 800;
 const PLACEHOLDER_PATTERN =
   /\b(?:TODO|TBD|TK)\b|needs\s+source|\[citation\s+needed\]/i;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const BODY_IMAGE_FILE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*\.(?:png|webp)$/;
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const rateLimitBuckets = new Map<string, RateLimitBucket>();
 
@@ -151,7 +181,9 @@ const ALLOWED_FIELDS = new Set([
   "original_evidence",
   "internal_notes",
   "featured",
+  "body_images",
   "article_products",
+  "affiliate_suggestions",
 ]);
 
 const ALLOWED_PRODUCT_FIELDS = new Set([
@@ -164,6 +196,21 @@ const ALLOWED_PRODUCT_FIELDS = new Set([
   "pros",
   "cons",
   "placement",
+  "display_order",
+]);
+
+const ALLOWED_AFFILIATE_SUGGESTION_FIELDS = new Set([
+  "program_name",
+  "network",
+  "program_url",
+  "product_name",
+  "evidence_url",
+  "evidence_checked_at",
+  "rationale",
+  "target_heading",
+  "suggested_placement",
+  "insertion_note",
+  "suggested_cta",
   "display_order",
 ]);
 
@@ -342,12 +389,12 @@ function articleProducts(value: unknown) {
     if (unknownField) {
       throw new Error(`Article product cannot set ${unknownField}.`);
     }
-    const affiliateLinkSlug = requiredString(
+    const affiliateLinkSlug = optionalString(
       item.affiliate_link_slug,
       "Affiliate link slug",
       160,
     );
-    if (!SLUG_PATTERN.test(affiliateLinkSlug)) {
+    if (affiliateLinkSlug && !SLUG_PATTERN.test(affiliateLinkSlug)) {
       throw new Error("Affiliate link slug is invalid.");
     }
     const placement = item.placement ?? "recommendation";
@@ -373,6 +420,210 @@ function articleProducts(value: unknown) {
       pros: stringArray(item.pros ?? [], "Product pros", 20),
       cons: stringArray(item.cons ?? [], "Product cons", 20),
       placement: placement as ArticleProductPlacement,
+      display_order: displayOrder,
+    };
+  });
+}
+
+function getArticleHeadings(content: string) {
+  return new Set(
+    Array.from(content.matchAll(/^#{2,3}\s+(.+?)\s*$/gm), (match) =>
+      match[1].trim(),
+    ),
+  );
+}
+
+function validateBodyImageAltText(content: string) {
+  const images = Array.from(content.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g));
+  const invalid = images.find((match) => match[1].trim().length < 8);
+  if (invalid) {
+    throw new Error(
+      "Every inline body image must have descriptive alt text of at least 8 characters.",
+    );
+  }
+}
+
+function bodyImages(value: unknown, content: string) {
+  if (!Array.isArray(value) || value.length > CODEX_DRAFT_MAX_INLINE_IMAGES) {
+    throw new Error(
+      `Body images must be an array with at most ${CODEX_DRAFT_MAX_INLINE_IMAGES} items.`,
+    );
+  }
+
+  const seenIds = new Set<string>();
+  const seenFiles = new Set<string>();
+  const images = value.map((item) => {
+    if (!isRecord(item)) throw new Error("Each body image must be an object.");
+    const unknownField = Object.keys(item).find(
+      (field) => !["id", "file_name", "alt"].includes(field),
+    );
+    if (unknownField) throw new Error(`Body image cannot set ${unknownField}.`);
+
+    const id = requiredString(item.id, "Body image ID", 80);
+    if (!SLUG_PATTERN.test(id) || seenIds.has(id)) {
+      throw new Error("Body image IDs must be unique lowercase slugs.");
+    }
+    seenIds.add(id);
+
+    const fileName = requiredString(item.file_name, "Body image file name", 100);
+    if (!BODY_IMAGE_FILE_PATTERN.test(fileName) || seenFiles.has(fileName)) {
+      throw new Error(
+        "Body image file names must be unique lowercase PNG or WebP names.",
+      );
+    }
+    seenFiles.add(fileName);
+
+    const alt = requiredString(item.alt, "Body image alt text", 500);
+    if (alt.length < 8 || /[\]\r\n]/.test(alt)) {
+      throw new Error(
+        "Body image alt text must be descriptive and safe for Markdown.",
+      );
+    }
+
+    const markdown = `![${alt}](devicefield-body-image://${id})`;
+    if (content.split(markdown).length !== 2) {
+      throw new Error(
+        "Each body image must appear exactly once in the article with matching alt text.",
+      );
+    }
+
+    return { id, file_name: fileName, alt };
+  });
+
+  const placeholderIds = Array.from(
+    content.matchAll(/devicefield-body-image:\/\/([a-z0-9-]+)/g),
+    (match) => match[1],
+  );
+  if (
+    placeholderIds.length !== images.length ||
+    placeholderIds.some((id) => !seenIds.has(id))
+  ) {
+    throw new Error(
+      "Article body-image placeholders must match the body_images manifest.",
+    );
+  }
+
+  return images;
+}
+
+function affiliateSuggestions(value: unknown, content: string) {
+  if (!Array.isArray(value) || value.length > 10) {
+    throw new Error(
+      "Affiliate suggestions must be an array with at most 10 items.",
+    );
+  }
+
+  const headings = getArticleHeadings(content);
+  const seen = new Set<string>();
+
+  return value.map((item) => {
+    if (!isRecord(item)) {
+      throw new Error("Each affiliate suggestion must be an object.");
+    }
+    const unknownField = Object.keys(item).find(
+      (field) => !ALLOWED_AFFILIATE_SUGGESTION_FIELDS.has(field),
+    );
+    if (unknownField) {
+      throw new Error(`Affiliate suggestion cannot set ${unknownField}.`);
+    }
+
+    const network = requiredString(
+      item.network,
+      "Affiliate suggestion network",
+      40,
+    );
+    if (!AFFILIATE_NETWORKS.includes(network as AffiliateNetwork)) {
+      throw new Error("Affiliate suggestion network is invalid.");
+    }
+
+    const suggestedPlacement = requiredString(
+      item.suggested_placement,
+      "Affiliate suggestion placement",
+      80,
+    );
+    if (
+      !AFFILIATE_SUGGESTION_PLACEMENTS.includes(
+        suggestedPlacement as AffiliateSuggestionPlacement,
+      )
+    ) {
+      throw new Error("Affiliate suggestion placement is invalid.");
+    }
+
+    const targetHeading = requiredString(
+      item.target_heading,
+      "Affiliate suggestion target heading",
+      500,
+    );
+    if (!headings.has(targetHeading)) {
+      throw new Error(
+        "Affiliate suggestion target heading must exactly match an article H2 or H3.",
+      );
+    }
+
+    const programName = requiredString(
+      item.program_name,
+      "Affiliate suggestion program name",
+      300,
+    );
+    const duplicateKey = `${programName.toLowerCase()}\n${targetHeading.toLowerCase()}`;
+    if (seen.has(duplicateKey)) {
+      throw new Error("Affiliate suggestions cannot repeat a program and heading.");
+    }
+    seen.add(duplicateKey);
+
+    const displayOrder = item.display_order ?? 0;
+    if (
+      typeof displayOrder !== "number" ||
+      !Number.isInteger(displayOrder) ||
+      displayOrder < 0 ||
+      displayOrder > 10_000
+    ) {
+      throw new Error("Affiliate suggestion display order is invalid.");
+    }
+
+    const evidenceCheckedAt = requiredIsoDate(
+      item.evidence_checked_at,
+      "Affiliate suggestion evidence date",
+    );
+    if (new Date(evidenceCheckedAt).getTime() > Date.now() + 86_400_000) {
+      throw new Error("Affiliate suggestion evidence date cannot be in the future.");
+    }
+
+    return {
+      program_name: programName,
+      network: network as AffiliateNetwork,
+      program_url: requiredUrl(
+        item.program_url,
+        "Affiliate suggestion program URL",
+      ),
+      product_name: optionalString(
+        item.product_name,
+        "Affiliate suggestion product name",
+        500,
+      ),
+      evidence_url: requiredUrl(
+        item.evidence_url,
+        "Affiliate suggestion evidence URL",
+      ),
+      evidence_checked_at: evidenceCheckedAt,
+      rationale: requiredString(
+        item.rationale,
+        "Affiliate suggestion rationale",
+        4_000,
+      ),
+      target_heading: targetHeading,
+      suggested_placement:
+        suggestedPlacement as AffiliateSuggestionPlacement,
+      insertion_note: requiredString(
+        item.insertion_note,
+        "Affiliate suggestion insertion note",
+        4_000,
+      ),
+      suggested_cta: optionalString(
+        item.suggested_cta,
+        "Affiliate suggestion CTA",
+        160,
+      ),
       display_order: displayOrder,
     };
   });
@@ -453,13 +704,11 @@ export function validateCodexRunId(value: string | null) {
 
 export function hashCodexDraftSubmission(
   payload: string,
-  image: Uint8Array,
+  images: readonly Uint8Array[],
 ) {
-  return createHash("sha256")
-    .update(payload)
-    .update("\0")
-    .update(image)
-    .digest("hex");
+  const digest = createHash("sha256").update(payload);
+  for (const image of images) digest.update("\0").update(image);
+  return digest.digest("hex");
 }
 
 function matchesBytes(
@@ -632,6 +881,51 @@ export async function validateCodexFeaturedImage(file: ImageLike) {
   };
 }
 
+export async function validateCodexBodyImage(file: ImageLike) {
+  if (file.size <= 0 || file.size > CODEX_DRAFT_MAX_INLINE_IMAGE_BYTES) {
+    return { ok: false as const, error: "Body image size is invalid." };
+  }
+  if (!["image/png", "image/webp"].includes(file.type)) {
+    return { ok: false as const, error: "Body images must be PNG or WebP." };
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes.length !== file.size) {
+    return { ok: false as const, error: "Body image size is invalid." };
+  }
+
+  const dimensions =
+    file.type === "image/png"
+      ? getPngDimensions(bytes)
+      : getWebpDimensions(bytes);
+  if (!dimensions) {
+    return {
+      ok: false as const,
+      error: "Body image content is invalid or does not match its media type.",
+    };
+  }
+  if (
+    dimensions.width < 800 ||
+    dimensions.height < 400 ||
+    dimensions.width > 3_200 ||
+    dimensions.height > 3_200
+  ) {
+    return {
+      ok: false as const,
+      error: "Body images must be between 800 x 400 and 3200 x 3200 pixels.",
+    };
+  }
+
+  return {
+    ok: true as const,
+    bytes,
+    width: dimensions.width,
+    height: dimensions.height,
+    contentType: file.type as "image/png" | "image/webp",
+    extension: file.type === "image/png" ? ("png" as const) : ("webp" as const),
+  };
+}
+
 export function validateCodexDraftPayload(value: unknown): DraftValidationResult {
   if (!isRecord(value)) {
     return { ok: false, error: "Draft payload must be a JSON object." };
@@ -716,6 +1010,9 @@ export function validateCodexDraftPayload(value: unknown): DraftValidationResult
     )
       ? 5
       : 3;
+    const content = requiredString(value.content, "Content", 200_000);
+    validateBodyImageAltText(content);
+    const normalizedBodyImages = bodyImages(value.body_images ?? [], content);
 
     return {
       ok: true,
@@ -723,7 +1020,7 @@ export function validateCodexDraftPayload(value: unknown): DraftValidationResult
         title: requiredString(value.title, "Title", 300),
         slug,
         excerpt: requiredString(value.excerpt, "Excerpt", 1_000),
-        content: requiredString(value.content, "Content", 200_000),
+        content,
         category,
         tags: stringArray(value.tags, "Tags", 30),
         cover_image_alt: requiredString(
@@ -771,7 +1068,12 @@ export function validateCodexDraftPayload(value: unknown): DraftValidationResult
           10_000,
         ),
         featured: false,
+        body_images: normalizedBodyImages,
         article_products: articleProducts(value.article_products),
+        affiliate_suggestions: affiliateSuggestions(
+          value.affiliate_suggestions ?? [],
+          content,
+        ),
       },
     };
   } catch (error) {

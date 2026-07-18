@@ -14,6 +14,12 @@ const ALLOWED_ARTICLE_FIELDS = new Set([
   "tags",
   "updated_at",
 ]);
+const ALLOWED_AFFILIATE_LINK_FIELDS = new Set([
+  "slug",
+  "label",
+  "program_name",
+  "network",
+]);
 
 function isRecord(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -37,6 +43,24 @@ function isSafeInventoryItem(value) {
     Array.isArray(value.tags) &&
     value.tags.every((tag) => typeof tag === "string") &&
     typeof value.updated_at === "string"
+  );
+}
+
+function isSafeAffiliateLink(value) {
+  if (!isRecord(value)) return false;
+  if (
+    Object.keys(value).some(
+      (key) => !ALLOWED_AFFILIATE_LINK_FIELDS.has(key),
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    typeof value.slug === "string" &&
+    typeof value.label === "string" &&
+    typeof value.program_name === "string" &&
+    typeof value.network === "string"
   );
 }
 
@@ -91,12 +115,23 @@ async function main() {
   if (
     !isRecord(result) ||
     !Array.isArray(result.articles) ||
-    !result.articles.every(isSafeInventoryItem)
+    !result.articles.every(isSafeInventoryItem) ||
+    !Array.isArray(result.affiliate_links) ||
+    !result.affiliate_links.every(isSafeAffiliateLink)
   ) {
     throw new Error("Article inventory endpoint returned an invalid response.");
   }
 
-  console.log(JSON.stringify({ articles: result.articles }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        articles: result.articles,
+        affiliate_links: result.affiliate_links,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 main().catch((error) => {

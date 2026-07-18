@@ -127,10 +127,13 @@ export default function MarkdownContent({ content }: { content: string }) {
 
         if (trimmed.startsWith("- ")) {
           return (
-            <ul key={index} className="space-y-3 border-l border-zinc-200 pl-6">
+            <ul
+              key={index}
+              className="relative space-y-3 pl-8 before:absolute before:bottom-3 before:left-2 before:top-3 before:w-px before:bg-zinc-200"
+            >
               {trimmed.split("\n").map((item) => (
                 <li key={item} className="relative pl-1">
-                  <span className="absolute -left-[1.85rem] top-3 h-2 w-2 rounded-full bg-lime-400" />
+                  <span className="absolute -left-7 top-3 h-2 w-2 rounded-full bg-lime-400 ring-4 ring-white" />
                   {renderInline(item.replace(/^- /, ""))}
                 </li>
               ))}

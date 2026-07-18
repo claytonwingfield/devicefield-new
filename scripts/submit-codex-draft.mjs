@@ -42,9 +42,45 @@ async function getRunId(payload, submissionPath, submissionBytes, imageBytes) {
   return `codex-${createHash("sha256")
     .update(submissionBytes)
     .update("\0")
-    .update(imageBytes)
+    .update(Buffer.concat(imageBytes))
     .digest("hex")
     .slice(0, 32)}`;
+}
+
+function getImageType(fileName) {
+  const extension = extname(fileName).toLowerCase();
+  if (extension === ".webp") return "image/webp";
+  if (extension === ".png") return "image/png";
+  return null;
+}
+
+async function getBodyImages(payload, submissionPath) {
+  const manifest = payload.body_images ?? [];
+  if (!Array.isArray(manifest) || manifest.length > 4) {
+    throw new Error("body_images must contain at most four items.");
+  }
+
+  return Promise.all(
+    manifest.map(async (item) => {
+      if (
+        !isRecord(item) ||
+        typeof item.file_name !== "string" ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*\.(?:png|webp)$/.test(item.file_name)
+      ) {
+        throw new Error("Each body image must have a safe PNG or WebP file name.");
+      }
+      const type = getImageType(item.file_name);
+      const path = resolve(dirname(submissionPath), "body-images", item.file_name);
+      const expectedDirectory = resolve(dirname(submissionPath), "body-images");
+      if (dirname(path) !== expectedDirectory || !type) {
+        throw new Error("Body images must be stored in the article body-images folder.");
+      }
+      await access(path);
+      const info = await stat(path);
+      if (!info.isFile()) throw new Error("Body image paths must be files.");
+      return { bytes: await readFile(path), fileName: item.file_name, type };
+    }),
+  );
 }
 
 async function main() {
@@ -84,13 +120,7 @@ async function main() {
     throw new Error("Submission and featured image paths must be files.");
   }
 
-  const extension = extname(imagePath).toLowerCase();
-  const imageType =
-    extension === ".webp"
-      ? "image/webp"
-      : extension === ".png"
-        ? "image/png"
-        : null;
+  const imageType = getImageType(imagePath);
   if (!imageType) throw new Error("Featured image must be a WebP or PNG file.");
 
   const [submissionBytes, imageBytes] = await Promise.all([
@@ -106,12 +136,13 @@ async function main() {
   if (!isRecord(payload)) {
     throw new Error("Submission payload must be a JSON object.");
   }
+  const bodyImages = await getBodyImages(payload, submissionPath);
 
   const runId = await getRunId(
     payload,
     submissionPath,
     submissionBytes,
-    imageBytes,
+    [imageBytes, ...bodyImages.map((image) => image.bytes)],
   );
   const article = { ...payload };
   delete article.run_id;
@@ -122,6 +153,13 @@ async function main() {
     new Blob([imageBytes], { type: imageType }),
     basename(imagePath),
   );
+  for (const bodyImage of bodyImages) {
+    formData.append(
+      "body_image",
+      new Blob([bodyImage.bytes], { type: bodyImage.type }),
+      bodyImage.fileName,
+    );
+  }
 
   let response;
   try {

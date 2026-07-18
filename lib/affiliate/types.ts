@@ -20,6 +20,25 @@ export type AffiliateNetwork = (typeof AFFILIATE_NETWORKS)[number];
 export type AffiliateProgramStatus =
   (typeof AFFILIATE_PROGRAM_STATUSES)[number];
 
+export const AFFILIATE_SUGGESTION_PLACEMENTS = [
+  "before_section",
+  "after_section",
+  "within_section",
+  "comparison_table",
+  "alternatives",
+] as const;
+
+export const AFFILIATE_SUGGESTION_REVIEW_STATUSES = [
+  "pending",
+  "shortlisted",
+  "dismissed",
+] as const;
+
+export type AffiliateSuggestionPlacement =
+  (typeof AFFILIATE_SUGGESTION_PLACEMENTS)[number];
+export type AffiliateSuggestionReviewStatus =
+  (typeof AFFILIATE_SUGGESTION_REVIEW_STATUSES)[number];
+
 export type AffiliateProgram = {
   id: string;
   name: string;
@@ -79,7 +98,7 @@ export type ArticleProductPlacement =
 export type ArticleProduct = {
   id: string;
   article_id: string;
-  affiliate_link_id: string;
+  affiliate_link_id: string | null;
   product_name: string;
   award: string | null;
   best_for: string | null;
@@ -93,6 +112,30 @@ export type ArticleProduct = {
   updated_at: string;
 };
 
-export type ArticleProductWithLink = ArticleProduct & {
+export type ArticleProductWithLink = Omit<
+  ArticleProduct,
+  "affiliate_link_id"
+> & {
+  affiliate_link_id: string;
   affiliate_links: AffiliateLinkWithProgram;
+};
+
+export type ArticleAffiliateSuggestion = {
+  id: string;
+  article_id: string;
+  program_name: string;
+  network: AffiliateNetwork;
+  program_url: string;
+  product_name: string | null;
+  evidence_url: string;
+  evidence_checked_at: string;
+  rationale: string;
+  target_heading: string;
+  suggested_placement: AffiliateSuggestionPlacement;
+  insertion_note: string;
+  suggested_cta: string | null;
+  review_status: AffiliateSuggestionReviewStatus;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
 };
