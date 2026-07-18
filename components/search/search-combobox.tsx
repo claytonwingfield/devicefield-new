@@ -2,11 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  useEffect,
-  useId,
-  useState,
-} from "react";
+import { useId, useState } from "react";
 import {
   findSearchSuggestions,
   type BlogSearchSuggestion,
@@ -26,10 +22,6 @@ export default function SearchCombobox({
   const [expanded, setExpanded] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const suggestions = findSearchSuggestions(documents, query);
-
-  useEffect(() => {
-    setActiveIndex(-1);
-  }, [query]);
 
   const selectSuggestion = (index: number) => {
     const suggestion = suggestions[index];
@@ -68,6 +60,7 @@ export default function SearchCombobox({
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
+            setActiveIndex(-1);
             setExpanded(true);
           }}
           onFocus={() => setExpanded(true)}

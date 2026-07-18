@@ -4,6 +4,10 @@ import {
   SUPABASE_AUTH_COOKIE_ENCODING,
   SUPABASE_AUTH_COOKIE_OPTIONS,
 } from "@/lib/supabase/auth-cookies";
+import {
+  getSameOriginUrl,
+  hasAllowedRequestOrigin,
+} from "@/lib/site-origin";
 
 type SupabaseCookie = {
   name: string;
@@ -25,25 +29,6 @@ function isFormRequest(request: Request) {
     .includes("application/x-www-form-urlencoded");
 }
 
-function getRequestOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin?.startsWith("http")) return origin;
-
-  const forwardedHost =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
-
-  if (forwardedHost && !forwardedHost.startsWith("0.0.0.0")) {
-    return `${forwardedProto}://${forwardedHost}`;
-  }
-
-  return "https://devicefield.com";
-}
-
-function getPublicUrl(request: Request, path: string) {
-  return new URL(path, getRequestOrigin(request));
-}
-
 function withAuthCookies(response: NextResponse, cookiesToSet: SupabaseCookie[]) {
   cookiesToSet.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, {
@@ -60,7 +45,7 @@ function redirectToLogin(
   error: string,
   cookiesToSet: SupabaseCookie[] = [],
 ) {
-  const url = getPublicUrl(request, "/devicefield-editor-login");
+  const url = getSameOriginUrl(request, "/devicefield-editor-login");
   url.searchParams.set("error", error);
   return withAuthCookies(NextResponse.redirect(url, 303), cookiesToSet);
 }
@@ -70,7 +55,7 @@ function redirectToAdminAfterCookies(
   cookiesToSet: SupabaseCookie[],
 ) {
   return withAuthCookies(
-    NextResponse.redirect(getPublicUrl(request, "/admin"), 303),
+    NextResponse.redirect(getSameOriginUrl(request, "/admin"), 303),
     cookiesToSet,
   );
 }
@@ -101,6 +86,13 @@ function createRouteSupabaseClient(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!hasAllowedRequestOrigin(request)) {
+    return NextResponse.json(
+      { error: "Sign-in request rejected." },
+      { status: 403 },
+    );
+  }
+
   const isForm = isFormRequest(request);
   const body = isForm
     ? Object.fromEntries(await request.formData())
