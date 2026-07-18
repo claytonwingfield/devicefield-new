@@ -5,37 +5,37 @@ export const BLOG_CATEGORY_DETAILS = [
     name: "Barcode & Inventory",
     slug: "barcode-inventory",
     description:
-      "Barcode scanners, inventory workflows, SKU labeling, and stock-counting systems for businesses.",
+      "Explore barcode scanners, inventory workflows, SKU labeling, stock counting, compatibility, setup, and troubleshooting for businesses.",
   },
   {
     name: "Receipt & Label Printing",
     slug: "receipt-label-printing",
     description:
-      "Receipt printers, label printers, thermal media, drivers, and replacement planning.",
+      "Explore receipt and label printer guides covering thermal media, drivers, POS compatibility, setup, maintenance, and replacement planning.",
   },
   {
     name: "POS Hardware",
     slug: "pos-hardware",
     description:
-      "POS terminals, tablets, cash drawers, stands, card readers, and retail counter setups.",
+      "Compare POS terminals, tablets, cash drawers, stands, card readers, accessories, and complete retail counter setups for businesses.",
   },
   {
     name: "Networking & Uptime",
     slug: "networking-uptime",
     description:
-      "Business routers, failover, backup power, Wi-Fi coverage, and continuity equipment.",
+      "Plan business routers, internet failover, backup power, Wi-Fi coverage, network recovery, and continuity equipment for reliable operations.",
   },
   {
     name: "Business Software",
     slug: "business-software",
     description:
-      "POS platforms, inventory applications, reporting tools, and connected operating systems.",
+      "Evaluate POS platforms, inventory applications, reporting tools, integrations, and connected operating systems for modern businesses.",
   },
   {
     name: "Troubleshooting",
     slug: "troubleshooting",
     description:
-      "Practical fixes for printer pairing, scanner setup, network drops, and hardware compatibility.",
+      "Find practical fixes for printer pairing, scanner setup, POS connections, network drops, device errors, and hardware compatibility problems.",
   },
 ] as const;
 

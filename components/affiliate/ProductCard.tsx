@@ -17,7 +17,7 @@ export default function ProductCard({
 }: {
   name: string;
   description: string;
-  href: string;
+  href?: string | null;
   ctaLabel?: string;
   imageUrl?: string | null;
   imageAlt?: string;
@@ -88,13 +88,15 @@ export default function ProductCard({
           )}
         </div>
       )}
-      <AffiliateButton
-        href={href}
-        label={ctaLabel}
-        placement={placement}
-        articleId={articleId}
-        className="mt-5"
-      />
+      {href && (
+        <AffiliateButton
+          href={href}
+          label={ctaLabel}
+          placement={placement}
+          articleId={articleId}
+          className="mt-5"
+        />
+      )}
     </article>
   );
 }

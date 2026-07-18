@@ -1,17 +1,16 @@
 import { defaultSitePages, getSitePage, getString } from "@/lib/site/pages";
+import { createPublicPageMetadata } from "@/lib/site/metadata";
 
 export const revalidate = 300;
 
 export async function generateMetadata() {
   const page = await getSitePage("about");
 
-  return {
+  return createPublicPageMetadata({
     title: page.title,
     description: page.meta_description,
-    alternates: {
-      canonical: "https://devicefield.com/about",
-    },
-  };
+    canonicalUrl: "https://devicefield.com/about",
+  });
 }
 
 export default async function AboutPage() {

@@ -414,7 +414,7 @@ export const defaultSitePages: Record<SitePageSlug, SitePage> = {
     slug: "contact",
     title: "Contact Devicefield",
     meta_description:
-      "Contact Devicefield with corrections, questions, product information, or editorial feedback.",
+      "Contact Devicefield to submit corrections, share product information, ask editorial questions, or provide feedback about business technology coverage.",
     content: contactContent,
   },
   "review-methodology": {
@@ -435,21 +435,21 @@ export const defaultSitePages: Record<SitePageSlug, SitePage> = {
     slug: "affiliate-disclosure",
     title: "Affiliate Disclosure - Devicefield",
     meta_description:
-      "Learn how affiliate links support Devicefield and how commercial relationships are disclosed.",
+      "Learn how Devicefield identifies affiliate links, earns commissions, protects editorial independence, and discloses commercial relationships.",
     content: affiliateDisclosureContent,
   },
   terms: {
     slug: "terms",
     title: "Terms of Use - Devicefield",
     meta_description:
-      "Read the terms that apply when using Devicefield business technology articles and website features.",
+      "Review the terms governing Devicefield articles, website features, intellectual property, external links, disclaimers, and acceptable use.",
     content: termsContent,
   },
   privacy: {
     slug: "privacy",
     title: "Privacy Policy - Devicefield",
     meta_description:
-      "Learn how Devicefield collects, uses, and protects newsletter, analytics, and website data.",
+      "Learn how Devicefield collects, uses, protects, and retains newsletter, analytics, affiliate referral, and website usage information.",
     content: privacyContent,
   },
 };

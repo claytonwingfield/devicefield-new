@@ -5,7 +5,10 @@ import MarkdownContent from "@/components/blog/markdown-content";
 import AffiliateDisclosure from "@/components/affiliate/AffiliateDisclosure";
 import ProductCard from "@/components/affiliate/ProductCard";
 import { getAffiliateHref } from "@/lib/affiliate/server";
-import type { ArticleProductWithLink } from "@/lib/affiliate/types";
+import type {
+  AffiliateLinkWithProgram,
+  ArticleProduct,
+} from "@/lib/affiliate/types";
 import {
   formatPostDate,
   formatWorkflowStatus,
@@ -20,6 +23,13 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+type PreviewArticleProduct = ArticleProduct & {
+  affiliate_links?:
+    | AffiliateLinkWithProgram
+    | AffiliateLinkWithProgram[]
+    | null;
+};
 
 export default async function ArticlePreviewPage({
   params,
@@ -59,7 +69,7 @@ export default async function ArticlePreviewPage({
       .select("*")
       .in("id", [post.author_id, post.reviewer_id].filter(Boolean) as string[]),
   ]);
-  const products = (productsData ?? []) as unknown as ArticleProductWithLink[];
+  const products = (productsData ?? []) as unknown as PreviewArticleProduct[];
   const people = (peopleData ?? []) as Author[];
   const author = people.find((person) => person.id === post.author_id);
   const reviewer = people.find((person) => person.id === post.reviewer_id);
@@ -158,23 +168,44 @@ export default async function ArticlePreviewPage({
               Structured recommendations
             </h2>
             <div className="mt-5 grid gap-5">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  name={product.product_name}
-                  description={
-                    product.verdict ?? "Recommendation details pending."
-                  }
-                  href={getAffiliateHref(product.affiliate_links)}
-                  ctaLabel={product.affiliate_links.label}
-                  bestFor={product.best_for}
-                  avoidIf={product.avoid_if}
-                  pros={product.pros}
-                  cons={product.cons}
-                  articleId={post.id}
-                  placement={`preview-${product.placement}`}
-                />
-              ))}
+              {products.map((product) => {
+                const affiliateLink = Array.isArray(product.affiliate_links)
+                  ? (product.affiliate_links[0] ?? null)
+                  : (product.affiliate_links ?? null);
+                const approvedAffiliateLink =
+                  affiliateLink?.active &&
+                  affiliateLink.affiliate_programs?.status === "approved"
+                    ? affiliateLink
+                    : null;
+
+                return (
+                  <ProductCard
+                    key={product.id}
+                    name={product.product_name}
+                    description={
+                      product.verdict ?? "Recommendation details pending."
+                    }
+                    href={
+                      approvedAffiliateLink
+                        ? getAffiliateHref(approvedAffiliateLink)
+                        : null
+                    }
+                    ctaLabel={
+                      approvedAffiliateLink?.label ?? "View current pricing"
+                    }
+                    meta={
+                      product.award ??
+                      (approvedAffiliateLink ? null : "Affiliate link pending")
+                    }
+                    bestFor={product.best_for}
+                    avoidIf={product.avoid_if}
+                    pros={product.pros}
+                    cons={product.cons}
+                    articleId={post.id}
+                    placement={`preview-${product.placement}`}
+                  />
+                );
+              })}
             </div>
           </section>
         )}
