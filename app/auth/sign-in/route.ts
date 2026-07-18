@@ -1,5 +1,9 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  SUPABASE_AUTH_COOKIE_ENCODING,
+  SUPABASE_AUTH_COOKIE_OPTIONS,
+} from "@/lib/supabase/auth-cookies";
 
 type SupabaseCookie = {
   name: string;
@@ -81,6 +85,8 @@ function createRouteSupabaseClient(request: NextRequest) {
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
+    cookieEncoding: SUPABASE_AUTH_COOKIE_ENCODING,
     cookies: {
       getAll() {
         return request.cookies.getAll();

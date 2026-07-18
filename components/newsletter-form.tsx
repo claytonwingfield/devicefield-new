@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
+import Link from "next/link";
 import LoadingAnimation from "@/components/loading-animation";
-import { createClient } from "@/lib/supabase/client";
 
 export default function NewsletterForm() {
+  const emailId = useId();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   const [message, setMessage] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -14,32 +17,60 @@ export default function NewsletterForm() {
     setStatus("loading");
     setMessage(null);
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const supabase = createClient();
-    const { error } = await supabase.from("newsletter_subscribers").insert({
-      email: normalizedEmail,
-      source: typeof window === "undefined" ? "site" : window.location.pathname,
-    });
+    const form = event.currentTarget;
+    const honeypot = new FormData(form).get("company");
 
-    if (error && error.code !== "23505") {
+    let response: Response;
+    try {
+      response = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          company: typeof honeypot === "string" ? honeypot : "",
+          source: window.location.pathname,
+        }),
+      });
+    } catch {
       setStatus("error");
       setMessage("Could not subscribe right now. Try again in a minute.");
       return;
     }
 
+    const result = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
+    if (!response.ok) {
+      setStatus("error");
+      setMessage(
+        result?.message ??
+          "Could not subscribe right now. Try again in a minute.",
+      );
+      return;
+    }
+
     setEmail("");
     setStatus("success");
-    setMessage("You're on the list.");
+    setMessage(
+      result?.message ?? "Check your inbox to confirm your subscription.",
+    );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="relative space-y-3">
+      <label
+        className="absolute left-[-10000px] top-auto h-px w-px overflow-hidden"
+        aria-hidden="true"
+      >
+        Company
+        <input name="company" type="text" tabIndex={-1} autoComplete="off" />
+      </label>
       <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
-        <label className="sr-only" htmlFor="newsletter-email">
+        <label className="sr-only" htmlFor={emailId}>
           Email address
         </label>
         <input
-          id="newsletter-email"
+          id={emailId}
           type="email"
           required
           value={email}
@@ -52,7 +83,11 @@ export default function NewsletterForm() {
           disabled={status === "loading"}
           className="inline-flex items-center justify-center rounded-full bg-lime-300 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-lime-200 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {status === "loading" ? <LoadingAnimation className="h-5 w-5" /> : "Subscribe"}
+          {status === "loading" ? (
+            <LoadingAnimation className="h-5 w-5" />
+          ) : (
+            "Subscribe"
+          )}
         </button>
       </div>
 
@@ -65,6 +100,17 @@ export default function NewsletterForm() {
           {message}
         </p>
       )}
+      <p className="text-xs leading-5 text-zinc-400">
+        By subscribing, you agree to receive Devicefield emails. Unsubscribe at
+        any time. See our{" "}
+        <Link
+          href="/privacy"
+          className="text-zinc-200 underline underline-offset-2 hover:text-white"
+        >
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </form>
   );
 }

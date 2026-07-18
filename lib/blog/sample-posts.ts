@@ -2,16 +2,59 @@ import type { BlogPost } from "./types";
 
 const now = new Date("2026-07-16T12:00:00.000Z").toISOString();
 
+const editorialDefaults: Pick<
+  BlogPost,
+  | "article_type"
+  | "testing_status"
+  | "workflow_status"
+  | "author_id"
+  | "reviewer_id"
+  | "reviewed_at"
+  | "last_verified_at"
+  | "next_review_at"
+  | "sources"
+  | "claims"
+  | "quick_verdict"
+  | "compatibility_notes"
+  | "limitations"
+  | "testing_method"
+  | "original_evidence"
+  | "approved_at"
+  | "scheduled_for"
+  | "last_reviewed_at"
+  | "internal_notes"
+> = {
+  article_type: "buying_guide",
+  testing_status: "researched",
+  workflow_status: "published",
+  author_id: null,
+  reviewer_id: null,
+  reviewed_at: null,
+  last_verified_at: null,
+  next_review_at: null,
+  sources: [],
+  claims: [],
+  quick_verdict: {},
+  compatibility_notes: null,
+  limitations: null,
+  testing_method: null,
+  original_evidence: [],
+  approved_at: now,
+  scheduled_for: null,
+  last_reviewed_at: null,
+  internal_notes: null,
+};
+
 export const samplePosts: BlogPost[] = [
   {
     id: "starter-operations-stack",
-    title: "The 2026 small-business operations stack: devices, apps, and systems that actually compound",
+    title:
+      "The 2026 small-business operations stack: devices, apps, and systems that actually compound",
     slug: "small-business-operations-stack-2026",
     excerpt:
       "A practical framework for choosing the devices, software, and workflows that reduce busywork instead of adding more tools to manage.",
-    category: "Business Systems",
+    category: "Business Software",
     tags: ["operations", "workflow", "buying guide"],
-    affiliate_programs: ["HubSpot", "Shopify", "Beehiiv"],
     cover_image_url: null,
     cover_image_alt: "Small business operations stack planning board",
     focus_keyword: "small-business operations stack",
@@ -20,6 +63,7 @@ export const samplePosts: BlogPost[] = [
       "Compare the 2026 small-business operations stack for devices, apps, and workflows that reduce busywork. See what to prioritize first.",
     canonical_url: null,
     faq_items: [],
+    ...editorialDefaults,
     status: "published",
     featured: true,
     published_at: now,
@@ -43,57 +87,9 @@ If the business sells services, start with CRM, scheduling, proposal templates, 
 
 The right recommendation depends on the operating model. Devicefield reviews should make that tradeoff explicit: who the tool is best for, where it breaks down, and what to use instead.
 
-## The ranking lens
+## The evaluation lens
 
-Every review should score the product on implementation speed, total cost, switching risk, security posture, integrations, and the measurable business outcome. That keeps affiliate content useful instead of thin.`,
-  },
-  {
-    id: "starter-affiliate-review-template",
-    title: "How we test business tools before recommending them",
-    slug: "how-we-test-business-tools",
-    excerpt:
-      "The Devicefield review methodology for affiliate articles: hands-on testing, buyer-intent search coverage, and transparent tradeoffs.",
-    category: "Buying Guides",
-    tags: ["reviews", "methodology", "affiliate disclosure"],
-    affiliate_programs: ["Semrush", "SurferSEO", "Frase"],
-    cover_image_url: null,
-    cover_image_alt: "Devicefield business tool testing methodology",
-    focus_keyword: "business tool reviews",
-    seo_title: "Business Tool Reviews: How Devicefield Tests",
-    meta_description:
-      "Learn how Devicefield tests business tool reviews with buyer-intent SEO, implementation notes, and clear tradeoffs before recommending products.",
-    canonical_url: null,
-    faq_items: [
-      {
-        question: "Does affiliate compensation affect Devicefield reviews?",
-        answer:
-          "No. Affiliate compensation can support the site, but recommendations should be based on product fit, testing notes, pricing context, and tradeoffs.",
-      },
-    ],
-    status: "published",
-    featured: true,
-    published_at: now,
-    created_at: now,
-    updated_at: now,
-    content: `## Our review standard
-
-Devicefield exists to help businesses choose devices and systems with less guesswork. Some links may be affiliate links, but a commission cannot buy a recommendation.
-
-Each review should answer the questions a serious buyer asks before switching:
-
-- What business problem does this solve?
-- How long does setup realistically take?
-- What does it cost after the introductory plan?
-- Which teams should avoid it?
-- What alternatives are stronger for different use cases?
-
-## Why this matters for SEO
-
-Search engines reward content that demonstrates experience and helps readers complete a task. For affiliate content, that means original observations, screenshots or implementation notes, comparison tables, FAQs, and clear next steps.
-
-## The recommended article structure
-
-Use a consistent structure: verdict, best-for/worst-for, setup notes, pricing context, alternatives, final recommendation, and FAQ. This makes publishing faster while keeping each article complete.`,
+Every guide should consider implementation speed, total cost, switching risk, security posture, integrations, and the measurable business outcome.`,
   },
   {
     id: "starter-secure-remote-work",
@@ -101,9 +97,8 @@ Use a consistent structure: verdict, best-for/worst-for, setup notes, pricing co
     slug: "remote-work-security-checklist-lean-teams",
     excerpt:
       "A lightweight security baseline for businesses choosing laptops, VPNs, password managers, backups, and access policies.",
-    category: "Security",
+    category: "Networking & Uptime",
     tags: ["security", "remote work", "devices"],
-    affiliate_programs: ["NordVPN", "Adobe Creative Cloud"],
     cover_image_url: null,
     cover_image_alt: "Remote-work security checklist for lean teams",
     focus_keyword: "remote-work security checklist",
@@ -112,6 +107,7 @@ Use a consistent structure: verdict, best-for/worst-for, setup notes, pricing co
       "Use this remote-work security checklist to choose laptops, VPNs, password managers, backups, and access policies for lean teams.",
     canonical_url: null,
     faq_items: [],
+    ...editorialDefaults,
     status: "published",
     featured: false,
     published_at: now,

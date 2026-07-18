@@ -1,11 +1,15 @@
 import Link from "next/link";
 import BlogCard from "@/components/blog/blog-card";
-import { getFeaturedPosts, getPublishedPosts } from "@/lib/blog/server";
+import NewsletterForm from "@/components/newsletter-form";
+import { getPublishedPosts } from "@/lib/blog/server";
+import { getBlogCategoryByName } from "@/lib/blog/types";
 import {
   defaultSitePages,
   getObjectArray,
   getSitePage,
   getString,
+  getStringArray,
+  type HomeCategoryEntry,
   type HeroEvaluationItem,
 } from "@/lib/site/pages";
 
@@ -24,11 +28,14 @@ export async function generateMetadata() {
 }
 
 export default async function Home() {
-  const [page, featuredPosts, latestPosts] = await Promise.all([
+  const [page, publishedPosts] = await Promise.all([
     getSitePage("home"),
-    getFeaturedPosts(3),
-    getPublishedPosts(6),
+    getPublishedPosts(),
   ]);
+  const featuredPosts = publishedPosts
+    .filter((post) => post.featured && Boolean(post.cover_image_url))
+    .slice(0, 3);
+  const latestPosts = publishedPosts.slice(0, 6);
   const defaults = defaultSitePages.home.content;
   const heroEvaluation = getObjectArray(
     page.content,
@@ -41,6 +48,48 @@ export default async function Home() {
     ),
     ["title", "description"],
   );
+  const trustStrip = getStringArray(
+    page.content,
+    "trustStrip",
+    getStringArray(defaults, "trustStrip", []),
+  );
+  const heroSteps = getStringArray(
+    page.content,
+    "heroSteps",
+    getStringArray(defaults, "heroSteps", []),
+  );
+  const evaluationFactors = getObjectArray(
+    page.content,
+    "evaluationFactors",
+    getObjectArray<HeroEvaluationItem>(
+      defaults,
+      "evaluationFactors",
+      [],
+      ["title", "description"],
+    ),
+    ["title", "description"],
+  );
+  const categoryEntries = getObjectArray(
+    page.content,
+    "categoryEntries",
+    getObjectArray<HomeCategoryEntry>(
+      defaults,
+      "categoryEntries",
+      [],
+      ["title", "description"],
+    ),
+    ["title", "description"],
+  );
+  const visibleCategoryEntries = categoryEntries.flatMap((category) => {
+    const details = getBlogCategoryByName(category.title);
+    const hasPublishedPosts = publishedPosts.some(
+      (post) => post.category === category.title,
+    );
+
+    return details && hasPublishedPosts
+      ? [{ ...category, slug: details.slug }]
+      : [];
+  });
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -70,10 +119,18 @@ export default async function Home() {
           <div className="space-y-8">
             <div className="space-y-6">
               <h1 className="max-w-4xl text-5xl font-semibold tracking-[-0.06em] text-zinc-950 sm:text-7xl lg:text-8xl">
-                {getString(page.content, "heading", getString(defaults, "heading", ""))}
+                {getString(
+                  page.content,
+                  "heading",
+                  getString(defaults, "heading", ""),
+                )}
               </h1>
               <p className="max-w-2xl text-xl leading-8 text-zinc-600">
-                {getString(page.content, "intro", getString(defaults, "intro", ""))}
+                {getString(
+                  page.content,
+                  "intro",
+                  getString(defaults, "intro", ""),
+                )}
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -81,13 +138,21 @@ export default async function Home() {
                 href="/blog"
                 className="rounded-full bg-zinc-950 px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-zinc-800"
               >
-                {getString(page.content, "primaryCta", getString(defaults, "primaryCta", ""))}
+                {getString(
+                  page.content,
+                  "primaryCta",
+                  getString(defaults, "primaryCta", ""),
+                )}
               </Link>
               <Link
-                href="/blog/how-we-test-business-tools"
+                href="/review-methodology"
                 className="rounded-full border border-zinc-300 bg-white px-6 py-3 text-center text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
               >
-                {getString(page.content, "secondaryCta", getString(defaults, "secondaryCta", ""))}
+                {getString(
+                  page.content,
+                  "secondaryCta",
+                  getString(defaults, "secondaryCta", ""),
+                )}
               </Link>
             </div>
           </div>
@@ -101,7 +166,11 @@ export default async function Home() {
               <div className="rounded-[1.75rem] bg-zinc-950 p-5 text-white">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
-                    How we evaluate
+                    {getString(
+                      page.content,
+                      "heroEvaluationLabel",
+                      getString(defaults, "heroEvaluationLabel", ""),
+                    )}
                   </p>
                   <span className="h-2.5 w-2.5 rounded-full bg-lime-300 shadow-[0_0_28px_rgba(190,242,100,0.95)]" />
                 </div>
@@ -131,7 +200,7 @@ export default async function Home() {
               </div>
 
               <div className="mt-4 grid grid-cols-3 gap-3">
-                {["Research", "Verify", "Explain"].map((step, index) => (
+                {heroSteps.map((step, index) => (
                   <div
                     key={step}
                     className="hero-float rounded-2xl border border-zinc-200 bg-white p-4 text-center text-sm font-semibold text-zinc-700 shadow-sm"
@@ -146,57 +215,148 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-              {getString(page.content, "featuredEyebrow", getString(defaults, "featuredEyebrow", ""))}
-            </p>
-            <h2 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950">
-              {getString(page.content, "featuredHeading", getString(defaults, "featuredHeading", ""))}
-            </h2>
-          </div>
-          <Link href="/blog" className="text-sm font-semibold text-zinc-950 underline decoration-lime-400 decoration-2 underline-offset-4">
-            View all articles
-          </Link>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {featuredPosts.map((post, index) => (
-            <BlogCard key={post.id} post={post} priority={index === 0} />
+      <section className="border-y border-zinc-200 bg-white px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 sm:justify-between">
+          {trustStrip.map((item) => (
+            <span
+              key={item}
+              className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600"
+            >
+              {item}
+            </span>
           ))}
         </div>
       </section>
+
+      {visibleCategoryEntries.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <div className="mb-8 grid gap-6 lg:grid-cols-[0.75fr_1fr] lg:items-end">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                {getString(
+                  page.content,
+                  "categoryEyebrow",
+                  getString(defaults, "categoryEyebrow", ""),
+                )}
+              </p>
+              <h2 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950">
+                {getString(
+                  page.content,
+                  "categoryHeading",
+                  getString(defaults, "categoryHeading", ""),
+                )}
+              </h2>
+            </div>
+            <p className="text-lg leading-8 text-zinc-600">
+              {getString(
+                page.content,
+                "categoryIntro",
+                getString(defaults, "categoryIntro", ""),
+              )}
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {visibleCategoryEntries.map((category, index) => (
+              <Link
+                key={category.title}
+                href={`/category/${category.slug}`}
+                className="group relative overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-zinc-950 hover:shadow-[0_24px_80px_rgba(24,24,27,0.08)]"
+              >
+                <div className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-lime-300 text-sm font-semibold text-zinc-950 transition group-hover:scale-110">
+                  {index + 1}
+                </div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  Category
+                </p>
+                <h3 className="mt-4 max-w-[13rem] text-2xl font-semibold tracking-tight text-zinc-950">
+                  {category.title}
+                </h3>
+                <p className="mt-4 text-sm leading-6 text-zinc-600">
+                  {category.description}
+                </p>
+                <span className="mt-6 inline-flex text-sm font-semibold text-zinc-950 underline decoration-lime-400 decoration-2 underline-offset-4">
+                  Browse articles
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {featuredPosts.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                {getString(
+                  page.content,
+                  "featuredEyebrow",
+                  getString(defaults, "featuredEyebrow", ""),
+                )}
+              </p>
+              <h2 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950">
+                {getString(
+                  page.content,
+                  "featuredHeading",
+                  getString(defaults, "featuredHeading", ""),
+                )}
+              </h2>
+            </div>
+            <Link
+              href="/blog"
+              className="text-sm font-semibold text-zinc-950 underline decoration-lime-400 decoration-2 underline-offset-4"
+            >
+              View all articles
+            </Link>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {featuredPosts.map((post, index) => (
+              <BlogCard key={post.id} post={post} priority={index === 0} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="border-y border-zinc-200 bg-zinc-950 px-4 py-16 text-white sm:px-6">
         <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-300">
-              Evaluation system
+              {getString(
+                page.content,
+                "evaluationEyebrow",
+                getString(defaults, "evaluationEyebrow", ""),
+              )}
             </p>
             <h2 className="mt-3 text-4xl font-semibold tracking-tight">
-              Built for operators who need the right tool, not another tab to manage.
+              {getString(
+                page.content,
+                "evaluationHeading",
+                getString(defaults, "evaluationHeading", ""),
+              )}
             </h2>
             <p className="mt-5 max-w-xl text-lg leading-8 text-zinc-300">
-              Every guide is shaped around setup effort, long-term cost,
-              security posture, switching risk, and the workflows a team
-              actually has to run.
+              {getString(
+                page.content,
+                "evaluationIntro",
+                getString(defaults, "evaluationIntro", ""),
+              )}
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              ["Setup time", "How quickly a team can get value."],
-              ["Total cost", "What the tool costs after the intro offer."],
-              ["Security fit", "Access, data, recovery, and admin controls."],
-              ["Workflow impact", "Whether it removes work or adds another system."],
-            ].map(([title, description]) => (
+            {evaluationFactors.map(({ title, description }) => (
               <div
                 key={title}
                 className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-5 transition hover:border-lime-300/60 hover:bg-white/[0.09]"
               >
-                <h3 className="text-xl font-semibold tracking-tight">{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-zinc-300">{description}</p>
+                <h3 className="text-xl font-semibold tracking-tight">
+                  {title}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-zinc-300">
+                  {description}
+                </p>
               </div>
             ))}
           </div>
@@ -206,34 +366,86 @@ export default async function Home() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-            {getString(page.content, "latestEyebrow", getString(defaults, "latestEyebrow", ""))}
+            {getString(
+              page.content,
+              "latestEyebrow",
+              getString(defaults, "latestEyebrow", ""),
+            )}
           </p>
           <h2 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950">
-            {getString(page.content, "latestHeading", getString(defaults, "latestHeading", ""))}
+            {getString(
+              page.content,
+              "latestHeading",
+              getString(defaults, "latestHeading", ""),
+            )}
           </h2>
         </div>
-        <div className="grid gap-5 md:grid-cols-2">
-          {latestPosts.map((post) => (
-            <Link
-              key={post.id}
-              href={`/blog/${post.slug}`}
-              className="group rounded-[1.5rem] border border-zinc-200 bg-white p-6 transition hover:border-zinc-950"
-            >
-              <p className="text-sm font-semibold text-lime-700">{post.category}</p>
-              <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-950 group-hover:text-lime-700">
-                {post.title}
-              </h3>
-              <p className="mt-3 line-clamp-2 text-zinc-600">{post.excerpt}</p>
-            </Link>
-          ))}
-        </div>
+        {latestPosts.length > 0 ? (
+          <div className="grid gap-5 md:grid-cols-2">
+            {latestPosts.map((post) => (
+              <Link
+                key={post.id}
+                href={`/blog/${post.slug}`}
+                className="group rounded-[1.5rem] border border-zinc-200 bg-white p-6 transition hover:border-zinc-950"
+              >
+                <p className="text-sm font-semibold text-lime-700">
+                  {post.category}
+                </p>
+                <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-950 group-hover:text-lime-700">
+                  {post.title}
+                </h3>
+                <p className="mt-3 line-clamp-2 text-zinc-600">
+                  {post.excerpt}
+                </p>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-[1.5rem] border border-dashed border-zinc-300 bg-white p-8">
+            <h3 className="text-2xl font-semibold tracking-tight text-zinc-950">
+              New guides are in editorial review.
+            </h3>
+            <p className="mt-3 max-w-2xl leading-7 text-zinc-600">
+              Devicefield publishes articles only after their evidence, testing
+              label, and recommendations are reviewed.
+            </p>
+          </div>
+        )}
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-        <p className="border-t border-zinc-200 pt-5 text-sm leading-6 text-zinc-500">
-          {getString(page.content, "disclosureEyebrow", getString(defaults, "disclosureEyebrow", ""))}:{" "}
-          {getString(page.content, "disclosureText", getString(defaults, "disclosureText", ""))}
-        </p>
+      <section className="px-4 py-16 sm:px-6">
+        <div className="mx-auto grid max-w-6xl gap-8 overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 p-6 text-white shadow-[0_30px_100px_rgba(24,24,27,0.16)] sm:p-8 lg:grid-cols-[1fr_0.85fr] lg:items-center">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-300">
+              {getString(
+                page.content,
+                "newsletterEyebrow",
+                getString(defaults, "newsletterEyebrow", ""),
+              )}
+            </p>
+            <h2 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+              {getString(
+                page.content,
+                "newsletterHeading",
+                getString(defaults, "newsletterHeading", ""),
+              )}
+            </h2>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-zinc-300">
+              {getString(
+                page.content,
+                "newsletterIntro",
+                getString(defaults, "newsletterIntro", ""),
+              )}
+            </p>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-5">
+            <NewsletterForm />
+            <p className="mt-4 text-xs leading-5 text-zinc-400">
+              No spam. New guides, corrections, and practical buying notes only.
+            </p>
+          </div>
+        </div>
       </section>
     </>
   );

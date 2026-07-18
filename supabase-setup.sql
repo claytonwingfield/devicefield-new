@@ -301,20 +301,17 @@ VALUES
       'heading', 'Tested devices and systems for modern businesses.',
       'intro', 'Independent buying guides, compatibility notes, reviews, setup guides, and troubleshooting articles for business devices and systems.',
       'primaryCta', 'Browse Buying Guides',
-      'secondaryCta', 'How we test',
-      'coverageLabel', 'Coverage map',
+      'secondaryCta', 'How we evaluate',
       'focusAreas', jsonb_build_array(
-        'Business devices',
-        'SaaS systems',
-        'AI workflows',
-        'Security tools',
-        'Web infrastructure',
-        'Operations stack'
+        'Barcode & Inventory',
+        'Receipt & Label Printing',
+        'POS Hardware',
+        'Networking & Uptime',
+        'Business Software',
+        'Troubleshooting'
       ),
       'featuredEyebrow', 'Featured',
       'featuredHeading', 'Practical buying guides',
-      'affiliateEyebrow', 'Research library',
-      'affiliateHeading', 'Built around buyer-intent research, not random link lists.',
       'latestEyebrow', 'Latest',
       'latestHeading', 'New from Devicefield',
       'disclosureEyebrow', 'Disclosure',
@@ -365,41 +362,5 @@ VALUES
   )
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO public.blog_posts (
-  title,
-  slug,
-  excerpt,
-  content,
-  category,
-  tags,
-  affiliate_programs,
-  status,
-  featured,
-  published_at
-)
-VALUES
-  (
-    'How we test business tools before recommending them',
-    'how-we-test-business-tools',
-    'The Devicefield review methodology for affiliate articles: hands-on testing, buyer-intent search coverage, and transparent tradeoffs.',
-    '## Our review standard
-
-Devicefield exists to help businesses choose devices and systems with less guesswork. Some links may be affiliate links, but a commission cannot buy a recommendation.
-
-- What business problem does this solve?
-- How long does setup realistically take?
-- What does it cost after the introductory plan?
-- Which teams should avoid it?
-- What alternatives are stronger for different use cases?
-
-## Why this matters for SEO
-
-Search engines reward content that demonstrates experience and helps readers complete a task. For affiliate content, that means original observations, screenshots or implementation notes, comparison tables, FAQs, and clear next steps.',
-    'Buying Guides',
-    ARRAY['reviews', 'methodology', 'affiliate disclosure'],
-    ARRAY['Semrush', 'SurferSEO', 'Frase'],
-    'published',
-    true,
-    NOW()
-  )
-ON CONFLICT (slug) DO NOTHING;
+-- Production content is created through the authenticated editor. This setup
+-- script intentionally does not seed public demo articles.

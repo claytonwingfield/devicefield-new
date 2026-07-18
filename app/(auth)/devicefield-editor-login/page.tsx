@@ -1,4 +1,10 @@
 import LoginForm from "./login-form";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Devicefield editor login",
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 type DevicefieldEditorLoginPageProps = {
   searchParams: Promise<{

@@ -8,18 +8,26 @@ import { createClient } from "@/lib/supabase/client";
 import {
   AFFILIATE_NETWORKS,
   AFFILIATE_PROGRAM_STATUSES,
+  ARTICLE_PRODUCT_PLACEMENTS,
   type AffiliateClickEvent,
   type AffiliateLink,
   type AffiliateNetwork,
   type AffiliateProgram,
   type AffiliateProgramStatus,
+  type ArticleProduct,
+  type ArticleProductPlacement,
 } from "@/lib/affiliate/types";
 import {
-  AFFILIATE_PROGRAMS,
+  ARTICLE_TYPES,
+  TESTING_STATUSES,
   BLOG_CATEGORIES,
+  formatWorkflowStatus,
   slugify,
+  type ArticleType,
+  type ArticleWorkflowStatus,
+  type Author,
   type BlogPost,
-  type BlogPostStatus,
+  type TestingStatus,
 } from "@/lib/blog/types";
 import {
   defaultSitePages,
@@ -37,14 +45,40 @@ type BlogPostForm = {
   content: string;
   category: string;
   tagsInput: string;
-  affiliateProgramsInput: string;
   coverImageUrl: string;
   coverImageAlt: string;
   canonicalUrl: string;
   faqInput: string;
-  status: BlogPostStatus;
+  articleType: ArticleType;
+  testingStatus: TestingStatus | "";
+  workflowStatus: ArticleWorkflowStatus;
+  authorId: string;
+  reviewerId: string;
+  reviewedAt: string;
+  lastReviewedAt: string;
+  lastVerifiedAt: string;
+  nextReviewAt: string;
+  sourcesInput: string;
+  claimsInput: string;
+  quickVerdict: string;
+  bestFor: string;
+  avoidIf: string;
+  compatibilityNotes: string;
+  limitations: string;
+  testingMethod: string;
+  originalEvidenceInput: string;
+  scheduledFor: string;
+  internalNotes: string;
   featured: boolean;
-  publishedAt: string;
+};
+
+type AuthorForm = {
+  name: string;
+  slug: string;
+  jobTitle: string;
+  bio: string;
+  avatarUrl: string;
+  websiteUrl: string;
 };
 
 type SitePageForm = {
@@ -76,26 +110,45 @@ type AffiliateLinkForm = {
   disclosureRequired: boolean;
 };
 
-type AdminSection = "articles" | "pages" | "newsletter" | "affiliates";
+type ArticleProductForm = {
+  affiliateLinkId: string;
+  productName: string;
+  award: string;
+  bestFor: string;
+  avoidIf: string;
+  verdict: string;
+  prosInput: string;
+  consInput: string;
+  placement: ArticleProductPlacement;
+  displayOrder: string;
+};
+
+type AdminSection =
+  | "articles"
+  | "pages"
+  | "people"
+  | "newsletter"
+  | "affiliates";
 
 type NewsletterSubscriber = {
   id: string;
   email: string;
   source: string | null;
-  status: "subscribed" | "unsubscribed";
+  status: "pending" | "subscribed" | "unsubscribed";
   created_at: string;
+  confirmed_at: string | null;
+  provider_synced_at: string | null;
 };
 
 type AdminAffiliateClick = AffiliateClickEvent & {
-  affiliate_links?: (Pick<
-    AffiliateLink,
-    "id" | "label" | "slug" | "program_id"
-  > & {
-    affiliate_programs?: Pick<
-      AffiliateProgram,
-      "id" | "name" | "network" | "status"
-    > | null;
-  }) | null;
+  affiliate_links?:
+    | (Pick<AffiliateLink, "id" | "label" | "slug" | "program_id"> & {
+        affiliate_programs?: Pick<
+          AffiliateProgram,
+          "id" | "name" | "network" | "status"
+        > | null;
+      })
+    | null;
   blog_posts?: Pick<BlogPost, "id" | "title" | "slug"> | null;
 };
 
@@ -108,14 +161,18 @@ type AffiliateLinkSummary = Pick<
   AffiliateLink,
   "id" | "label" | "slug" | "program_id"
 > & {
-  affiliate_programs?: AffiliateProgramSummary | AffiliateProgramSummary[] | null;
+  affiliate_programs?:
+    | AffiliateProgramSummary
+    | AffiliateProgramSummary[]
+    | null;
 };
 
 type AdminAffiliateClickRaw = AffiliateClickEvent & {
   affiliate_links?: AffiliateLinkSummary | AffiliateLinkSummary[] | null;
-  blog_posts?: Pick<BlogPost, "id" | "title" | "slug"> | Array<
-    Pick<BlogPost, "id" | "title" | "slug">
-  > | null;
+  blog_posts?:
+    | Pick<BlogPost, "id" | "title" | "slug">
+    | Array<Pick<BlogPost, "id" | "title" | "slug">>
+    | null;
 };
 
 type MetricRow = {
@@ -133,14 +190,40 @@ const emptyForm: BlogPostForm = {
   content: "",
   category: BLOG_CATEGORIES[0],
   tagsInput: "",
-  affiliateProgramsInput: "",
   coverImageUrl: "",
   coverImageAlt: "",
   canonicalUrl: "",
   faqInput: "",
-  status: "draft",
+  articleType: "buying_guide",
+  testingStatus: "",
+  workflowStatus: "draft",
+  authorId: "",
+  reviewerId: "",
+  reviewedAt: "",
+  lastReviewedAt: "",
+  lastVerifiedAt: "",
+  nextReviewAt: "",
+  sourcesInput: "[]",
+  claimsInput: "[]",
+  quickVerdict: "",
+  bestFor: "",
+  avoidIf: "",
+  compatibilityNotes: "",
+  limitations: "",
+  testingMethod: "",
+  originalEvidenceInput: "[]",
+  scheduledFor: "",
+  internalNotes: "",
   featured: false,
-  publishedAt: "",
+};
+
+const emptyAuthorForm: AuthorForm = {
+  name: "",
+  slug: "",
+  jobTitle: "",
+  bio: "",
+  avatarUrl: "",
+  websiteUrl: "",
 };
 
 const sitePageSlugs = Object.keys(defaultSitePages) as SitePageSlug[];
@@ -175,6 +258,18 @@ const emptyAffiliateLinkForm: AffiliateLinkForm = {
   useRedirect: true,
   active: true,
   disclosureRequired: true,
+};
+const emptyArticleProductForm: ArticleProductForm = {
+  affiliateLinkId: "",
+  productName: "",
+  award: "",
+  bestFor: "",
+  avoidIf: "",
+  verdict: "",
+  prosInput: "",
+  consInput: "",
+  placement: "recommendation",
+  displayOrder: "0",
 };
 const ARTICLE_IMAGE_BUCKET = "article-images";
 const MAX_ARTICLE_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -223,7 +318,11 @@ function includesKeyword(value: string, keyword: string) {
   return normalizeText(value).includes(normalizedKeyword);
 }
 
-function keywordWithinFirstWords(value: string, keyword: string, limit: number) {
+function keywordWithinFirstWords(
+  value: string,
+  keyword: string,
+  limit: number,
+) {
   const firstWords = value.trim().split(/\s+/).slice(0, limit).join(" ");
   return includesKeyword(firstWords, keyword);
 }
@@ -238,7 +337,9 @@ function countH2Headings(value: string) {
 
 function getMarkdownLinks(value: string) {
   return Array.from(
-    value.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)]+|\/[^)]+)\)(\{sponsored\})?/g),
+    value.matchAll(
+      /\[([^\]]+)\]\((https?:\/\/[^)]+|\/[^)]+)\)(\{sponsored\})?/g,
+    ),
   ).map((match) => ({
     label: match[1],
     href: match[2],
@@ -280,6 +381,63 @@ function hasCallToAction(value: string) {
   return /\b(read|compare|learn|choose|get|see|try|find|discover|start)\b/i.test(
     value,
   );
+}
+
+function getTestingStatus(value: string) {
+  const statuses = new Set(["tested", "researched", "mixed"]);
+  return (
+    splitList(value).find((tag) => statuses.has(normalizeText(tag))) ?? null
+  );
+}
+
+function setTestingStatus(value: string, status: string) {
+  const statuses = new Set(["tested", "researched", "mixed"]);
+  const tags = splitList(value).filter(
+    (tag) => !statuses.has(normalizeText(tag)),
+  );
+  return status ? [status, ...tags].join(", ") : tags.join(", ");
+}
+
+function getReviewerName(value: string) {
+  return (
+    value.match(/^(?:#{2,3}\s+)?reviewed by\s*:\s*(.+)$/im)?.[1]?.trim() ?? ""
+  );
+}
+
+function setReviewerName(value: string, reviewer: string) {
+  const pattern = /^(?:#{2,3}\s+)?reviewed by\s*:\s*.*$/im;
+  const attribution = reviewer.trim() ? `Reviewed by: ${reviewer}` : "";
+
+  if (pattern.test(value)) {
+    return value
+      .replace(pattern, attribution)
+      .replace(/\n{3,}/g, "\n\n")
+      .trimStart();
+  }
+
+  return attribution ? `${attribution}\n\n${value}` : value;
+}
+
+function countUnresolvedClaims(value: string) {
+  return (
+    value.match(
+      /\b(?:todo|tbd|tk|needs? source|verify this)\b|\[citation needed\]/gi,
+    ) ?? []
+  ).length;
+}
+
+function getCommercialVerificationDate(value: string) {
+  const match = value.match(/last verified:\s*(\d{4}-\d{2}-\d{2})/i);
+  if (!match) return null;
+
+  const date = new Date(`${match[1]}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isWithinDays(value: Date | null, days: number) {
+  if (!value) return false;
+  const age = Date.now() - value.getTime();
+  return age >= 0 && age <= days * 24 * 60 * 60 * 1000;
 }
 
 function toDatetimeLocal(value: string | null) {
@@ -331,6 +489,21 @@ function safeParseJson(value: string) {
   }
 }
 
+function safeParseArray(value: string) {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function toIsoOrNull(value: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function getPreviewString(
   content: Record<string, unknown> | null,
   key: string,
@@ -340,15 +513,40 @@ function getPreviewString(
   return typeof value === "string" ? value : fallback;
 }
 
-function getPreviewList(
+function getPreviewSections(content: Record<string, unknown> | null) {
+  const sections = content?.sections;
+  if (!Array.isArray(sections)) return [];
+  return sections.filter(
+    (section): section is { title: string; body: string } =>
+      Boolean(
+        section &&
+        typeof section === "object" &&
+        typeof (section as { title?: unknown }).title === "string" &&
+        typeof (section as { body?: unknown }).body === "string",
+      ),
+  );
+}
+
+function getPreviewCategoryEntries(
   content: Record<string, unknown> | null,
-  key: string,
-  fallback: string[],
+  fallback: unknown,
 ) {
-  const value = content?.[key];
-  return Array.isArray(value) && value.every((item) => typeof item === "string")
+  const value = content?.categoryEntries;
+  const entries = Array.isArray(value)
     ? value
-    : fallback;
+    : Array.isArray(fallback)
+      ? fallback
+      : [];
+
+  return entries.filter(
+    (entry): entry is { title: string; description: string } =>
+      Boolean(
+        entry &&
+        typeof entry === "object" &&
+        typeof (entry as { title?: unknown }).title === "string" &&
+        typeof (entry as { description?: unknown }).description === "string",
+      ),
+  );
 }
 
 function formatSubscriberDate(value: string) {
@@ -372,9 +570,7 @@ function buildSubscribersCsv(subscribers: NewsletterSubscriber[]) {
 
   return rows
     .map((row) =>
-      row
-        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-        .join(","),
+      row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","),
     )
     .join("\n");
 }
@@ -399,7 +595,7 @@ function getMetricRows(labels: string[]) {
 }
 
 function firstRelated<T>(value: T | T[] | null | undefined) {
-  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 }
 
 function normalizeAffiliateClicks(rows: AdminAffiliateClickRaw[]) {
@@ -438,9 +634,7 @@ function MetricList({
         {rows.map((row) => (
           <div key={row.label} className="rounded-2xl bg-zinc-100 p-4">
             <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-semibold text-zinc-800">
-                {row.label}
-              </p>
+              <p className="text-sm font-semibold text-zinc-800">{row.label}</p>
               <p className="text-xl font-semibold text-zinc-950">{row.value}</p>
             </div>
           </div>
@@ -455,30 +649,74 @@ function MetricList({
   );
 }
 
+function WorkflowButton({
+  label,
+  disabled,
+  onClick,
+  tone = "default",
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+        tone === "danger"
+          ? "border border-red-200 bg-red-50 text-red-700"
+          : "bg-zinc-950 text-white"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function AdminDashboard() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [authors, setAuthors] = useState<Author[]>([]);
   const [pages, setPages] = useState<SitePage[]>(defaultPages);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
-  const [affiliatePrograms, setAffiliatePrograms] = useState<AffiliateProgram[]>([]);
+  const [affiliatePrograms, setAffiliatePrograms] = useState<
+    AffiliateProgram[]
+  >([]);
   const [affiliateLinks, setAffiliateLinks] = useState<AffiliateLink[]>([]);
-  const [affiliateClicks, setAffiliateClicks] = useState<AdminAffiliateClick[]>([]);
+  const [affiliateClicks, setAffiliateClicks] = useState<AdminAffiliateClick[]>(
+    [],
+  );
+  const [articleProducts, setArticleProducts] = useState<ArticleProduct[]>([]);
   const [activeSection, setActiveSection] = useState<AdminSection>("articles");
   const [formData, setFormData] = useState<BlogPostForm>(emptyForm);
-  const [pageFormData, setPageFormData] =
-    useState<SitePageForm>(emptyPageForm);
+  const [pageFormData, setPageFormData] = useState<SitePageForm>(emptyPageForm);
   const [affiliateProgramForm, setAffiliateProgramForm] =
     useState<AffiliateProgramForm>(emptyAffiliateProgramForm);
-  const [affiliateLinkForm, setAffiliateLinkForm] =
-    useState<AffiliateLinkForm>(emptyAffiliateLinkForm);
+  const [affiliateLinkForm, setAffiliateLinkForm] = useState<AffiliateLinkForm>(
+    emptyAffiliateLinkForm,
+  );
+  const [articleProductForm, setArticleProductForm] =
+    useState<ArticleProductForm>(emptyArticleProductForm);
+  const [authorForm, setAuthorForm] = useState<AuthorForm>(emptyAuthorForm);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingAffiliateProgramId, setEditingAffiliateProgramId] =
-    useState<string | null>(null);
-  const [editingAffiliateLinkId, setEditingAffiliateLinkId] =
-    useState<string | null>(null);
+  const [editingAffiliateProgramId, setEditingAffiliateProgramId] = useState<
+    string | null
+  >(null);
+  const [editingAffiliateLinkId, setEditingAffiliateLinkId] = useState<
+    string | null
+  >(null);
+  const [editingArticleProductId, setEditingArticleProductId] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pageSaving, setPageSaving] = useState(false);
   const [affiliateSaving, setAffiliateSaving] = useState(false);
+  const [articleProductSaving, setArticleProductSaving] = useState(false);
+  const [authorSaving, setAuthorSaving] = useState(false);
+  const [workflowSaving, setWorkflowSaving] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
   const [bodyImageUploading, setBodyImageUploading] = useState(false);
   const [bodyImageAlt, setBodyImageAlt] = useState("");
@@ -504,7 +742,8 @@ export default function AdminDashboard() {
       getMetricRows(
         affiliateClicks.map(
           (click) =>
-            click.affiliate_links?.affiliate_programs?.name ?? "Unknown program",
+            click.affiliate_links?.affiliate_programs?.name ??
+            "Unknown program",
         ),
       ),
     [affiliateClicks],
@@ -523,6 +762,13 @@ export default function AdminDashboard() {
       ),
     [affiliateLinks],
   );
+  const currentArticleProducts = useMemo(
+    () =>
+      articleProducts
+        .filter((product) => product.article_id === editingId)
+        .sort((left, right) => left.display_order - right.display_order),
+    [articleProducts, editingId],
+  );
   const activePageDefaults = defaultSitePages[pageFormData.slug].content;
   const excerptCharacters = formData.excerpt.length;
   const seoTitle = formData.seoTitle.trim() || formData.title.trim();
@@ -536,96 +782,153 @@ export default function AdminDashboard() {
     (link) => link.href.startsWith("http") && !link.sponsored,
   );
   const bodyImages = getMarkdownImages(formData.content);
-  const seoChecks = useMemo(
-    () => [
-      {
-        label: "Focus keyword is set.",
-        passed: formData.focusKeyword.trim().length > 0,
-        points: 10,
-      },
-      {
-        label: "SEO title contains keyword in the first 3 words.",
-        passed: keywordWithinFirstWords(seoTitle, formData.focusKeyword, 3),
-        points: 10,
-      },
-      {
-        label: "SEO title is 35-70 characters.",
-        passed: seoTitle.length >= 35 && seoTitle.length <= 70,
-        points: 10,
-      },
-      {
-        label: "Meta description is 120-160 characters.",
-        passed: metaDescription.length >= 120 && metaDescription.length <= 160,
-        points: 10,
-      },
-      {
-        label: "Meta description includes keyword and CTA language.",
-        passed:
-          includesKeyword(metaDescription, formData.focusKeyword) &&
-          hasCallToAction(metaDescription),
-        points: 10,
-      },
-      {
-        label: "Slug is clean, short, and keyword-aligned.",
-        passed:
-          formData.slug.length > 0 &&
-          formData.slug.length <= 60 &&
-          includesKeyword(formData.slug.replaceAll("-", " "), formData.focusKeyword),
-        points: 10,
-      },
-      {
-        label: "Featured image alt text includes keyword.",
-        passed:
-          !formData.coverImageUrl.trim() ||
-          includesKeyword(formData.coverImageAlt, formData.focusKeyword),
-        points: 10,
-      },
-      {
-        label: "Article body is 1,000+ words.",
-        passed: wordCount >= 1000,
-        points: 10,
-      },
-      {
-        label: "Article has 3+ H2 sections.",
-        passed: h2Count >= 3,
-        points: 10,
-      },
-      {
-        label: "Article has 3+ internal links.",
-        passed: internalLinks.length >= 3,
-        points: 5,
-      },
-      {
-        label: "Article has 2+ authoritative dofollow external links.",
-        passed: dofollowExternalLinks.length >= 2,
-        points: 5,
-      },
-      {
-        label: "Body images include descriptive alt text.",
-        passed:
-          bodyImages.length === 0 ||
-          bodyImages.every((image) => image.alt.trim().length >= 8),
-        points: 5,
-      },
-    ],
-    [
-      bodyImages,
-      dofollowExternalLinks.length,
-      formData.coverImageAlt,
-      formData.coverImageUrl,
-      formData.focusKeyword,
-      formData.slug,
-      h2Count,
-      internalLinks.length,
-      metaDescription,
-      seoTitle,
-      wordCount,
-    ],
+  const testingStatus = formData.testingStatus || null;
+  const parsedSources = safeParseArray(formData.sourcesInput);
+  const parsedClaims = safeParseArray(formData.claimsInput);
+  const parsedEvidence = safeParseArray(formData.originalEvidenceInput);
+  const unresolvedTextClaims = countUnresolvedClaims(formData.content);
+  const unresolvedStructuredClaims = (parsedClaims ?? []).filter((claim) => {
+    if (!claim || typeof claim !== "object") return true;
+    const row = claim as { risk?: unknown; resolved?: unknown };
+    return row.risk === "high" && row.resolved !== true;
+  }).length;
+  const unresolvedClaimCount =
+    unresolvedTextClaims + unresolvedStructuredClaims;
+  const hasReviewer = formData.reviewerId.length > 0;
+  const hasSources = (parsedSources?.length ?? 0) > 0;
+  const hasNumericalClaims =
+    /(?:[$£€]\s?\d|\b\d+(?:\.\d+)?(?:%|\s?(?:hours?|days?|users?|devices?|times?|x))\b)/i.test(
+      formData.content,
+    );
+  const hasAffiliateReferences =
+    currentArticleProducts.length > 0 || links.some((link) => link.sponsored);
+  const hasCommercialClaims =
+    hasAffiliateReferences ||
+    /\b(?:price|pricing|cost|discount|deal|subscription|per month|per year)\b/i.test(
+      formData.content,
+    );
+  const commercialVerificationDate = formData.lastVerifiedAt
+    ? new Date(formData.lastVerifiedAt)
+    : null;
+  const requiresSelectionCriteria = /\bbest\b/i.test(
+    `${formData.title} ${seoTitle}`,
   );
-  const estimatedSeoScore = seoChecks.reduce(
-    (score, check) => score + (check.passed ? check.points : 0),
-    0,
-  );
+  const hasSelectionCriteria =
+    formData.testingMethod.trim().length > 0 ||
+    /^##\s+(?:how we chose|selection criteria|what we evaluated|how we evaluated)\b/im.test(
+      formData.content,
+    );
+  const claimsHandsOnTesting =
+    testingStatus !== null && normalizeText(testingStatus) !== "researched";
+  const hasOriginalEvidence =
+    (parsedEvidence?.length ?? 0) > 0 || bodyImages.length > 0;
+  const requiredChecks = [
+    {
+      label: "Important factual claims have sources.",
+      passed: hasSources,
+      detail: `${parsedSources?.length ?? 0} structured sources added.`,
+    },
+    {
+      label: "All numerical claims have sources.",
+      passed: !hasNumericalClaims || hasSources,
+      detail: hasNumericalClaims
+        ? "Numerical claims were detected; verify each against a structured source."
+        : "No obvious numerical claims were detected.",
+    },
+    {
+      label: "Commercial claims were recently verified.",
+      passed:
+        !hasCommercialClaims || isWithinDays(commercialVerificationDate, 180),
+      detail: hasCommercialClaims
+        ? "Set Last verified after rechecking current pricing, availability, and terms."
+        : "No obvious commercial claims were detected.",
+    },
+    {
+      label: "Testing status is selected.",
+      passed: testingStatus !== null,
+      detail: "Choose Tested, Researched, or Mixed.",
+    },
+    {
+      label: "Reviewer is assigned.",
+      passed: hasReviewer,
+      detail: "Select an author profile as reviewer.",
+    },
+    {
+      label: "Affiliate disclosure is present when required.",
+      passed: true,
+      detail: hasAffiliateReferences
+        ? "The article template will show the disclosure automatically."
+        : "No structured or sponsored affiliate links currently require it.",
+    },
+    {
+      label: "Unresolved high-risk claims are zero.",
+      passed: unresolvedClaimCount === 0,
+      detail: `${unresolvedClaimCount} unresolved high-risk or placeholder claims found.`,
+    },
+    {
+      label: "Original evidence supports hands-on testing claims.",
+      passed: !claimsHandsOnTesting || hasOriginalEvidence,
+      detail: claimsHandsOnTesting
+        ? "Add original evidence records or article images with testing notes."
+        : "Researched articles do not need to imply hands-on evidence.",
+    },
+    {
+      label: "‘Best’ recommendations explain selection criteria.",
+      passed: !requiresSelectionCriteria || hasSelectionCriteria,
+      detail: requiresSelectionCriteria
+        ? "Document the selection criteria in Testing method or the article body."
+        : "The title does not make a ‘best’ claim.",
+    },
+  ];
+  const recommendedChecks = [
+    {
+      label: "SEO title and description are concise.",
+      passed:
+        seoTitle.length >= 35 &&
+        seoTitle.length <= 70 &&
+        metaDescription.length >= 120 &&
+        metaDescription.length <= 160,
+      detail: `${seoTitle.length}/70 title characters; ${metaDescription.length}/160 description characters.`,
+    },
+    {
+      label: "Slug is short and descriptive.",
+      passed: formData.slug.length > 0 && formData.slug.length <= 60,
+      detail: `${formData.slug.length}/60 characters.`,
+    },
+    {
+      label: "Article has useful structure and internal links.",
+      passed: h2Count >= 2 && internalLinks.length > 0,
+      detail: `${h2Count} H2 sections; ${internalLinks.length} internal links.`,
+    },
+    {
+      label: "Images use descriptive alt text.",
+      passed:
+        (!formData.coverImageUrl.trim() ||
+          formData.coverImageAlt.trim().length >= 8) &&
+        bodyImages.every((image) => image.alt.trim().length >= 8),
+      detail: `${bodyImages.length} body images found.`,
+    },
+  ];
+  const humanJudgmentChecks = [
+    {
+      label: "The recommendation matches the stated business use case.",
+      passed: formData.quickVerdict.trim().length > 0,
+      detail:
+        "Review fit, tradeoffs, alternatives, and the quick verdict manually.",
+    },
+    {
+      label: "Compatibility and limitations are explicit.",
+      passed:
+        formData.compatibilityNotes.trim().length > 0 &&
+        formData.limitations.trim().length > 0,
+      detail: "Confirm important dependencies and what could not be verified.",
+    },
+    {
+      label: "Sources are current and authoritative.",
+      passed: hasSources,
+      detail: "A human reviewer must verify source quality and recency.",
+    },
+  ];
 
   useEffect(() => {
     const supabase = createClient();
@@ -645,10 +948,25 @@ export default function AdminDashboard() {
       }
     };
 
+    const fetchAuthors = async () => {
+      const { data, error } = await supabase
+        .from("authors")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) {
+        setErrorMessage(`Unable to load author profiles. ${error.message}`);
+      } else {
+        setAuthors((data ?? []) as Author[]);
+      }
+    };
+
     const fetchSubscribers = async () => {
       const { data, error } = await supabase
         .from("newsletter_subscribers")
-        .select("id,email,source,status,created_at")
+        .select(
+          "id,email,source,status,created_at,confirmed_at,provider_synced_at",
+        )
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -685,44 +1003,63 @@ export default function AdminDashboard() {
     };
 
     const fetchAffiliateData = async () => {
-      const [programsResult, linksResult, clicksResult] = await Promise.all([
-        supabase
-          .from("affiliate_programs")
-          .select("*")
-          .order("name", { ascending: true }),
-        supabase
-          .from("affiliate_links")
-          .select("*")
-          .order("updated_at", { ascending: false }),
-        supabase
-          .from("affiliate_click_events")
-          .select(
-            "id,affiliate_link_id,article_id,cta_placement,referrer,user_agent_hash,country,created_at,affiliate_links(id,label,slug,program_id,affiliate_programs(id,name,network,status)),blog_posts(id,title,slug)",
-          )
-          .order("created_at", { ascending: false })
-          .limit(500),
-      ]);
+      const [programsResult, linksResult, clicksResult, productsResult] =
+        await Promise.all([
+          supabase
+            .from("affiliate_programs")
+            .select("*")
+            .order("name", { ascending: true }),
+          supabase
+            .from("affiliate_links")
+            .select("*")
+            .order("updated_at", { ascending: false }),
+          supabase
+            .from("affiliate_click_events")
+            .select(
+              "id,affiliate_link_id,article_id,cta_placement,referrer,user_agent_hash,country,created_at,affiliate_links(id,label,slug,program_id,affiliate_programs(id,name,network,status)),blog_posts(id,title,slug)",
+            )
+            .order("created_at", { ascending: false })
+            .limit(500),
+          supabase
+            .from("article_products")
+            .select("*")
+            .order("display_order", { ascending: true }),
+        ]);
 
       if (programsResult.error) {
-        setErrorMessage(`Unable to load affiliate programs. ${programsResult.error.message}`);
+        setErrorMessage(
+          `Unable to load affiliate programs. ${programsResult.error.message}`,
+        );
       } else {
         setAffiliatePrograms((programsResult.data ?? []) as AffiliateProgram[]);
       }
 
       if (linksResult.error) {
-        setErrorMessage(`Unable to load affiliate links. ${linksResult.error.message}`);
+        setErrorMessage(
+          `Unable to load affiliate links. ${linksResult.error.message}`,
+        );
       } else {
         setAffiliateLinks((linksResult.data ?? []) as AffiliateLink[]);
       }
 
       if (clicksResult.error) {
-        setErrorMessage(`Unable to load affiliate clicks. ${clicksResult.error.message}`);
+        setErrorMessage(
+          `Unable to load affiliate clicks. ${clicksResult.error.message}`,
+        );
       } else {
         setAffiliateClicks(
           normalizeAffiliateClicks(
             (clicksResult.data ?? []) as unknown as AdminAffiliateClickRaw[],
           ),
         );
+      }
+
+      if (productsResult.error) {
+        setErrorMessage(
+          `Unable to load article products. Run the latest Supabase migration first. ${productsResult.error.message}`,
+        );
+      } else {
+        setArticleProducts((productsResult.data ?? []) as ArticleProduct[]);
       }
     };
 
@@ -750,6 +1087,7 @@ export default function AdminDashboard() {
       setLoading(true);
       await Promise.all([
         fetchPosts(),
+        fetchAuthors(),
         fetchPages(),
         fetchSubscribers(),
         fetchAffiliateData(),
@@ -773,6 +1111,19 @@ export default function AdminDashboard() {
     }
 
     setPosts((data ?? []) as BlogPost[]);
+  };
+
+  const refreshAuthors = async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("authors")
+      .select("*")
+      .order("name", { ascending: true });
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+    setAuthors((data ?? []) as Author[]);
   };
 
   const refreshPages = async () => {
@@ -803,7 +1154,9 @@ export default function AdminDashboard() {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("newsletter_subscribers")
-      .select("id,email,source,status,created_at")
+      .select(
+        "id,email,source,status,created_at,confirmed_at,provider_synced_at",
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -816,23 +1169,28 @@ export default function AdminDashboard() {
 
   const refreshAffiliateData = async () => {
     const supabase = createClient();
-    const [programsResult, linksResult, clicksResult] = await Promise.all([
-      supabase
-        .from("affiliate_programs")
-        .select("*")
-        .order("name", { ascending: true }),
-      supabase
-        .from("affiliate_links")
-        .select("*")
-        .order("updated_at", { ascending: false }),
-      supabase
-        .from("affiliate_click_events")
-        .select(
-          "id,affiliate_link_id,article_id,cta_placement,referrer,user_agent_hash,country,created_at,affiliate_links(id,label,slug,program_id,affiliate_programs(id,name,network,status)),blog_posts(id,title,slug)",
-        )
-        .order("created_at", { ascending: false })
-        .limit(500),
-    ]);
+    const [programsResult, linksResult, clicksResult, productsResult] =
+      await Promise.all([
+        supabase
+          .from("affiliate_programs")
+          .select("*")
+          .order("name", { ascending: true }),
+        supabase
+          .from("affiliate_links")
+          .select("*")
+          .order("updated_at", { ascending: false }),
+        supabase
+          .from("affiliate_click_events")
+          .select(
+            "id,affiliate_link_id,article_id,cta_placement,referrer,user_agent_hash,country,created_at,affiliate_links(id,label,slug,program_id,affiliate_programs(id,name,network,status)),blog_posts(id,title,slug)",
+          )
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("article_products")
+          .select("*")
+          .order("display_order", { ascending: true }),
+      ]);
 
     if (programsResult.error) {
       setErrorMessage(programsResult.error.message);
@@ -855,11 +1213,19 @@ export default function AdminDashboard() {
         ),
       );
     }
+
+    if (productsResult.error) {
+      setErrorMessage(productsResult.error.message);
+    } else {
+      setArticleProducts((productsResult.data ?? []) as ArticleProduct[]);
+    }
   };
 
   const resetForm = (clearMessages = true) => {
     setEditingId(null);
     setFormData(emptyForm);
+    setEditingArticleProductId(null);
+    setArticleProductForm(emptyArticleProductForm);
     if (clearMessages) {
       setErrorMessage(null);
       setSuccessMessage(null);
@@ -867,7 +1233,8 @@ export default function AdminDashboard() {
   };
 
   const handlePageEdit = (slug: SitePageSlug) => {
-    const page = pages.find((current) => current.slug === slug) ?? defaultSitePages[slug];
+    const page =
+      pages.find((current) => current.slug === slug) ?? defaultSitePages[slug];
     setPageFormData(toSitePageForm(page));
     setActiveSection("pages");
     setErrorMessage(null);
@@ -943,7 +1310,11 @@ export default function AdminDashboard() {
       }));
       setSuccessMessage("Cover image uploaded and attached to the article.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to upload cover image.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to upload cover image.",
+      );
     } finally {
       setCoverUploading(false);
     }
@@ -962,7 +1333,8 @@ export default function AdminDashboard() {
 
     try {
       const publicUrl = await uploadArticleImage(file, "body");
-      const alt = bodyImageAlt.trim() || getDefaultImageAlt(file) || "Article image";
+      const alt =
+        bodyImageAlt.trim() || getDefaultImageAlt(file) || "Article image";
       const markdown = `![${alt}](${publicUrl})`;
       setFormData((current) => ({
         ...current,
@@ -971,7 +1343,11 @@ export default function AdminDashboard() {
       setBodyImageAlt("");
       setSuccessMessage("Image uploaded and inserted into the article body.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to upload article image.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to upload article image.",
+      );
     } finally {
       setBodyImageUploading(false);
     }
@@ -989,26 +1365,50 @@ export default function AdminDashboard() {
       content: post.content,
       category: post.category,
       tagsInput: post.tags.join(", "),
-      affiliateProgramsInput: post.affiliate_programs.join(", "),
       coverImageUrl: post.cover_image_url ?? "",
       coverImageAlt: post.cover_image_alt ?? post.title,
       canonicalUrl: post.canonical_url ?? "",
       faqInput: formatFaqInput(post.faq_items),
-      status: post.status,
+      articleType: post.article_type,
+      testingStatus: post.testing_status ?? "",
+      workflowStatus: post.workflow_status,
+      authorId: post.author_id ?? "",
+      reviewerId: post.reviewer_id ?? "",
+      reviewedAt: toDatetimeLocal(post.reviewed_at),
+      lastReviewedAt: toDatetimeLocal(post.last_reviewed_at),
+      lastVerifiedAt: toDatetimeLocal(post.last_verified_at),
+      nextReviewAt: toDatetimeLocal(post.next_review_at),
+      sourcesInput: JSON.stringify(post.sources ?? [], null, 2),
+      claimsInput: JSON.stringify(post.claims ?? [], null, 2),
+      quickVerdict: post.quick_verdict?.verdict ?? "",
+      bestFor: post.quick_verdict?.best_for ?? "",
+      avoidIf: post.quick_verdict?.avoid_if ?? "",
+      compatibilityNotes: post.compatibility_notes ?? "",
+      limitations: post.limitations ?? "",
+      testingMethod: post.testing_method ?? "",
+      originalEvidenceInput: JSON.stringify(
+        post.original_evidence ?? [],
+        null,
+        2,
+      ),
+      scheduledFor: toDatetimeLocal(post.scheduled_for),
+      internalNotes: post.internal_notes ?? "",
       featured: post.featured,
-      publishedAt: toDatetimeLocal(post.published_at),
     });
     setActiveSection("articles");
+    setEditingArticleProductId(null);
+    setArticleProductForm({
+      ...emptyArticleProductForm,
+      affiliateLinkId: affiliateLinks.find((link) => link.active)?.id ?? "",
+    });
     setErrorMessage(null);
     setSuccessMessage(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const persistArticle = async () => {
     setSaving(true);
     setErrorMessage(null);
-    setSuccessMessage(null);
 
     const supabase = createClient();
     const {
@@ -1018,53 +1418,151 @@ export default function AdminDashboard() {
     if (!user) {
       setSaving(false);
       router.push("/devicefield-editor-login");
-      return;
+      return null;
+    }
+
+    const sources = safeParseArray(formData.sourcesInput);
+    const claims = safeParseArray(formData.claimsInput);
+    const originalEvidence = safeParseArray(formData.originalEvidenceInput);
+    if (!sources || !claims || !originalEvidence) {
+      setErrorMessage(
+        "Sources, claims, and original evidence must each be valid JSON arrays.",
+      );
+      setSaving(false);
+      return null;
     }
 
     const slug = slugify(formData.slug || formData.title);
-    const publishedAt =
-      formData.status === "published"
-        ? new Date(formData.publishedAt || Date.now()).toISOString()
-        : formData.publishedAt
-          ? new Date(formData.publishedAt).toISOString()
-          : null;
-
     const payload = {
       title: formData.title.trim(),
       slug,
       excerpt: formData.excerpt.trim(),
       focus_keyword: formData.focusKeyword.trim() || null,
       seo_title: formData.seoTitle.trim() || formData.title.trim(),
-      meta_description: formData.metaDescription.trim() || formData.excerpt.trim(),
+      meta_description:
+        formData.metaDescription.trim() || formData.excerpt.trim(),
       content: formData.content.trim(),
       category: formData.category,
       tags: splitList(formData.tagsInput),
-      affiliate_programs: splitList(formData.affiliateProgramsInput),
       cover_image_url: formData.coverImageUrl.trim() || null,
       cover_image_alt: formData.coverImageAlt.trim() || null,
       canonical_url: formData.canonicalUrl.trim() || null,
       faq_items: parseFaqInput(formData.faqInput),
-      status: formData.status,
+      article_type: formData.articleType,
+      testing_status: formData.testingStatus || null,
+      author_id: formData.authorId || null,
+      reviewer_id: formData.reviewerId || null,
+      reviewed_at: toIsoOrNull(formData.reviewedAt),
+      last_reviewed_at: toIsoOrNull(formData.lastReviewedAt),
+      last_verified_at: toIsoOrNull(formData.lastVerifiedAt),
+      next_review_at: toIsoOrNull(formData.nextReviewAt),
+      sources,
+      claims,
+      quick_verdict: {
+        verdict: formData.quickVerdict.trim() || undefined,
+        best_for: formData.bestFor.trim() || undefined,
+        avoid_if: formData.avoidIf.trim() || undefined,
+      },
+      compatibility_notes: formData.compatibilityNotes.trim() || null,
+      limitations: formData.limitations.trim() || null,
+      testing_method: formData.testingMethod.trim() || null,
+      original_evidence: originalEvidence,
+      internal_notes: formData.internalNotes.trim() || null,
       featured: formData.featured,
-      published_at: publishedAt,
     };
 
-    const result = editingId
-      ? await supabase.from("blog_posts").update(payload).eq("id", editingId)
-      : await supabase.from("blog_posts").insert({
-          ...payload,
-          created_by: user.id,
-        });
+    if (editingId) {
+      const result = await supabase
+        .from("blog_posts")
+        .update(payload)
+        .eq("id", editingId);
+      if (result.error) {
+        setErrorMessage(result.error.message);
+        setSaving(false);
+        return null;
+      }
+      setSaving(false);
+      return editingId;
+    }
+
+    const result = await supabase
+      .from("blog_posts")
+      .insert({
+        ...payload,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
 
     if (result.error) {
       setErrorMessage(result.error.message);
-    } else {
-      setSuccessMessage(editingId ? "Article updated." : "Article created.");
-      resetForm(false);
-      await refreshPosts();
+      setSaving(false);
+      return null;
     }
 
+    const articleId = result.data.id as string;
+    setEditingId(articleId);
     setSaving(false);
+    return articleId;
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await handleWorkflowAction("save_draft");
+  };
+
+  const handleWorkflowAction = async (
+    action:
+      | "save_draft"
+      | "mark_ready"
+      | "approve"
+      | "schedule"
+      | "publish"
+      | "archive",
+  ) => {
+    setWorkflowSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    const articleId = await persistArticle();
+    if (!articleId) {
+      setWorkflowSaving(false);
+      return;
+    }
+
+    const supabase = createClient();
+    const scheduledFor =
+      action === "schedule" ? toIsoOrNull(formData.scheduledFor) : null;
+    if (action === "schedule" && !scheduledFor) {
+      setErrorMessage("Choose a valid future schedule date and time.");
+      setWorkflowSaving(false);
+      return;
+    }
+
+    const { data, error } = await supabase.rpc("transition_article_workflow", {
+      p_article_id: articleId,
+      p_action: action,
+      p_scheduled_for: scheduledFor,
+    });
+    if (error) {
+      setErrorMessage(error.message);
+      setWorkflowSaving(false);
+      return;
+    }
+
+    const workflowStatus = Array.isArray(data)
+      ? data[0]?.workflow_status
+      : data?.workflow_status;
+    if (workflowStatus) {
+      setFormData((current) => ({
+        ...current,
+        workflowStatus: workflowStatus as ArticleWorkflowStatus,
+      }));
+    }
+    setSuccessMessage(
+      `Workflow updated: ${formatWorkflowStatus((workflowStatus ?? formData.workflowStatus) as ArticleWorkflowStatus)}.`,
+    );
+    await refreshPosts();
+    setWorkflowSaving(false);
   };
 
   const handlePageSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -1121,6 +1619,33 @@ export default function AdminDashboard() {
     }
 
     setPageSaving(false);
+  };
+
+  const handleAuthorSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setAuthorSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    const supabase = createClient();
+    const { error } = await supabase.from("authors").insert({
+      name: authorForm.name.trim(),
+      slug: slugify(authorForm.slug || authorForm.name),
+      job_title: authorForm.jobTitle.trim() || null,
+      bio: authorForm.bio.trim() || null,
+      avatar_url: authorForm.avatarUrl.trim() || null,
+      website_url: authorForm.websiteUrl.trim() || null,
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      setAuthorForm(emptyAuthorForm);
+      setSuccessMessage("Author profile created.");
+      await refreshAuthors();
+    }
+    setAuthorSaving(false);
   };
 
   const resetAffiliateProgramForm = (clearMessages = true) => {
@@ -1273,6 +1798,120 @@ export default function AdminDashboard() {
     setAffiliateSaving(false);
   };
 
+  const resetArticleProductForm = (clearMessages = true) => {
+    setEditingArticleProductId(null);
+    setArticleProductForm({
+      ...emptyArticleProductForm,
+      affiliateLinkId: affiliateLinks.find((link) => link.active)?.id ?? "",
+    });
+    if (clearMessages) {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+    }
+  };
+
+  const handleArticleProductEdit = (product: ArticleProduct) => {
+    setEditingArticleProductId(product.id);
+    setArticleProductForm({
+      affiliateLinkId: product.affiliate_link_id,
+      productName: product.product_name,
+      award: product.award ?? "",
+      bestFor: product.best_for ?? "",
+      avoidIf: product.avoid_if ?? "",
+      verdict: product.verdict ?? "",
+      prosInput: product.pros.join(", "),
+      consInput: product.cons.join(", "),
+      placement: product.placement,
+      displayOrder: String(product.display_order),
+    });
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  };
+
+  const handleArticleProductSave = async () => {
+    if (!editingId) {
+      setErrorMessage(
+        "Save the article before adding product recommendations.",
+      );
+      return;
+    }
+
+    if (
+      !articleProductForm.affiliateLinkId ||
+      !articleProductForm.productName.trim()
+    ) {
+      setErrorMessage("Choose an affiliate link and enter a product name.");
+      return;
+    }
+
+    setArticleProductSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const payload = {
+      article_id: editingId,
+      affiliate_link_id: articleProductForm.affiliateLinkId,
+      product_name: articleProductForm.productName.trim(),
+      award: articleProductForm.award.trim() || null,
+      best_for: articleProductForm.bestFor.trim() || null,
+      avoid_if: articleProductForm.avoidIf.trim() || null,
+      verdict: articleProductForm.verdict.trim() || null,
+      pros: splitList(articleProductForm.prosInput),
+      cons: splitList(articleProductForm.consInput),
+      placement: articleProductForm.placement,
+      display_order: Math.max(
+        0,
+        Number.parseInt(articleProductForm.displayOrder, 10) || 0,
+      ),
+    };
+
+    const supabase = createClient();
+    const result = editingArticleProductId
+      ? await supabase
+          .from("article_products")
+          .update(payload)
+          .eq("id", editingArticleProductId)
+      : await supabase.from("article_products").insert(payload);
+
+    if (result.error) {
+      setErrorMessage(result.error.message);
+    } else {
+      setSuccessMessage(
+        editingArticleProductId
+          ? "Article product updated."
+          : "Article product added.",
+      );
+      resetArticleProductForm(false);
+      await refreshAffiliateData();
+    }
+
+    setArticleProductSaving(false);
+  };
+
+  const handleArticleProductDelete = async (product: ArticleProduct) => {
+    if (!window.confirm(`Remove ${product.product_name} from this article?`)) {
+      return;
+    }
+
+    setArticleProductSaving(true);
+    setErrorMessage(null);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("article_products")
+      .delete()
+      .eq("id", product.id);
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      setSuccessMessage("Article product removed.");
+      resetArticleProductForm(false);
+      await refreshAffiliateData();
+    }
+
+    setArticleProductSaving(false);
+  };
+
   const exportSubscribers = () => {
     const subscribed = subscribers.filter(
       (subscriber) => subscriber.status === "subscribed",
@@ -1323,7 +1962,9 @@ export default function AdminDashboard() {
         </header>
 
         <div className="mb-8 flex flex-wrap gap-2 rounded-full border border-zinc-200 bg-white p-1 shadow-sm">
-          {(["articles", "pages", "newsletter", "affiliates"] as const).map((section) => (
+          {(
+            ["articles", "pages", "people", "newsletter", "affiliates"] as const
+          ).map((section) => (
             <button
               key={section}
               type="button"
@@ -1357,412 +1998,764 @@ export default function AdminDashboard() {
               onSubmit={handleSubmit}
               className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm"
             >
-            <div className="mb-6 flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
-                  {editingId ? "Edit article" : "New article"}
-                </h2>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Use Markdown for headings, lists, bold text, and links.
-                </p>
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
+                    {editingId ? "Edit article" : "New article"}
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Use Markdown for headings, lists, bold text, and links.
+                  </p>
+                </div>
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={() => resetForm()}
+                    className="text-sm font-semibold text-red-600 hover:text-red-700"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={() => resetForm()}
-                  className="text-sm font-semibold text-red-600 hover:text-red-700"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
 
-            <div className="space-y-5">
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                  Title
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(event) => handleTitleChange(event.target.value)}
-                  className="form-input w-full rounded-2xl border-zinc-200"
-                  placeholder="Best secure laptops for remote teams in 2026"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                  Slug
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={formData.slug}
-                  onChange={(event) =>
-                    setFormData((current) => ({
-                      ...current,
-                      slug: slugify(event.target.value),
-                    }))
-                  }
-                  className="form-input w-full rounded-2xl border-zinc-200"
-                />
-              </label>
-
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-5">
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                    Focus keyword
+                    Title
                   </span>
                   <input
                     type="text"
-                    value={formData.focusKeyword}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        focusKeyword: event.target.value,
-                      }))
-                    }
+                    required
+                    value={formData.title}
+                    onChange={(event) => handleTitleChange(event.target.value)}
                     className="form-input w-full rounded-2xl border-zinc-200"
-                    placeholder="jasper ai review"
+                    placeholder="Best secure laptops for remote teams in 2026"
                   />
                 </label>
 
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                    Canonical URL
+                    Slug
                   </span>
                   <input
-                    type="url"
-                    value={formData.canonicalUrl}
+                    type="text"
+                    required
+                    value={formData.slug}
                     onChange={(event) =>
                       setFormData((current) => ({
                         ...current,
-                        canonicalUrl: event.target.value,
+                        slug: slugify(event.target.value),
                       }))
                     }
                     className="form-input w-full rounded-2xl border-zinc-200"
-                    placeholder={`https://devicefield.com/blog/${formData.slug || "slug"}`}
                   />
                 </label>
-              </div>
 
-              <label className="block">
-                <span className="mb-2 flex justify-between text-sm font-semibold text-zinc-800">
-                  <span>SEO title</span>
-                  <span className={seoTitle.length > 70 ? "text-red-600" : "text-zinc-400"}>
-                    {seoTitle.length}/70
-                  </span>
-                </span>
-                <input
-                  type="text"
-                  value={formData.seoTitle}
-                  onChange={(event) =>
-                    setFormData((current) => ({
-                      ...current,
-                      seoTitle: event.target.value,
-                    }))
-                  }
-                  className="form-input w-full rounded-2xl border-zinc-200"
-                  placeholder="Keyword-first title for Google search results"
-                />
-              </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Focus keyword
+                    </span>
+                    <input
+                      type="text"
+                      value={formData.focusKeyword}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          focusKeyword: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                      placeholder="jasper ai review"
+                    />
+                  </label>
 
-              <label className="block">
-                <span className="mb-2 flex justify-between text-sm font-semibold text-zinc-800">
-                  <span>Article excerpt</span>
-                  <span className={excerptCharacters > 165 ? "text-red-600" : "text-zinc-400"}>
-                    {excerptCharacters}/165
-                  </span>
-                </span>
-                <textarea
-                  required
-                  value={formData.excerpt}
-                  onChange={(event) =>
-                    setFormData((current) => ({
-                      ...current,
-                      excerpt: event.target.value,
-                    }))
-                  }
-                  rows={3}
-                  className="form-textarea w-full rounded-2xl border-zinc-200"
-                  placeholder="Short SERP-ready summary of the article."
-                />
-              </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Canonical URL
+                    </span>
+                    <input
+                      type="url"
+                      value={formData.canonicalUrl}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          canonicalUrl: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                      placeholder={`https://devicefield.com/blog/${formData.slug || "slug"}`}
+                    />
+                  </label>
+                </div>
 
-              <label className="block">
-                <span className="mb-2 flex justify-between text-sm font-semibold text-zinc-800">
-                  <span>Meta description</span>
-                  <span className={metaDescription.length > 160 ? "text-red-600" : "text-zinc-400"}>
-                    {metaDescription.length}/160
-                  </span>
-                </span>
-                <textarea
-                  value={formData.metaDescription}
-                  onChange={(event) =>
-                    setFormData((current) => ({
-                      ...current,
-                      metaDescription: event.target.value,
-                    }))
-                  }
-                  rows={3}
-                  className="form-textarea w-full rounded-2xl border-zinc-200"
-                  placeholder="120-160 characters with keyword and a clear CTA."
-                />
-              </label>
-
-              <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                    Category
+                  <span className="mb-2 flex justify-between text-sm font-semibold text-zinc-800">
+                    <span>SEO title</span>
+                    <span
+                      className={
+                        seoTitle.length > 70 ? "text-red-600" : "text-zinc-400"
+                      }
+                    >
+                      {seoTitle.length}/70
+                    </span>
                   </span>
-                  <select
-                    value={formData.category}
+                  <input
+                    type="text"
+                    value={formData.seoTitle}
                     onChange={(event) =>
                       setFormData((current) => ({
                         ...current,
-                        category: event.target.value,
+                        seoTitle: event.target.value,
                       }))
                     }
-                    className="form-select w-full rounded-2xl border-zinc-200"
-                  >
-                    {BLOG_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
+                    className="form-input w-full rounded-2xl border-zinc-200"
+                    placeholder="Keyword-first title for Google search results"
+                  />
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                    Status
+                  <span className="mb-2 flex justify-between text-sm font-semibold text-zinc-800">
+                    <span>Article excerpt</span>
+                    <span
+                      className={
+                        excerptCharacters > 165
+                          ? "text-red-600"
+                          : "text-zinc-400"
+                      }
+                    >
+                      {excerptCharacters}/165
+                    </span>
                   </span>
-                  <select
-                    value={formData.status}
+                  <textarea
+                    required
+                    value={formData.excerpt}
                     onChange={(event) =>
                       setFormData((current) => ({
                         ...current,
-                        status: event.target.value as BlogPostStatus,
+                        excerpt: event.target.value,
                       }))
                     }
-                    className="form-select w-full rounded-2xl border-zinc-200"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                    <option value="archived">Archived</option>
-                  </select>
+                    rows={3}
+                    className="form-textarea w-full rounded-2xl border-zinc-200"
+                    placeholder="Short SERP-ready summary of the article."
+                  />
                 </label>
-              </div>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                  Article body
-                </span>
-                <div className="mb-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-                  <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                    <label className="block">
-                      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                        Body image alt text
+                <label className="block">
+                  <span className="mb-2 flex justify-between text-sm font-semibold text-zinc-800">
+                    <span>Meta description</span>
+                    <span
+                      className={
+                        metaDescription.length > 160
+                          ? "text-red-600"
+                          : "text-zinc-400"
+                      }
+                    >
+                      {metaDescription.length}/160
+                    </span>
+                  </span>
+                  <textarea
+                    value={formData.metaDescription}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        metaDescription: event.target.value,
+                      }))
+                    }
+                    rows={3}
+                    className="form-textarea w-full rounded-2xl border-zinc-200"
+                    placeholder="120-160 characters with keyword and a clear CTA."
+                  />
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Category
+                    </span>
+                    <select
+                      value={formData.category}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          category: event.target.value,
+                        }))
+                      }
+                      className="form-select w-full rounded-2xl border-zinc-200"
+                    >
+                      {BLOG_CATEGORIES.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Article type
+                    </span>
+                    <select
+                      value={formData.articleType}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          articleType: event.target.value as ArticleType,
+                        }))
+                      }
+                      className="form-select w-full rounded-2xl border-zinc-200"
+                    >
+                      {ARTICLE_TYPES.map((articleType) => (
+                        <option key={articleType} value={articleType}>
+                          {formatOptionLabel(articleType)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Testing status
+                    </span>
+                    <select
+                      value={formData.testingStatus}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          testingStatus: event.target.value as
+                            | TestingStatus
+                            | "",
+                        }))
+                      }
+                      className="form-select w-full rounded-2xl border-zinc-200"
+                    >
+                      <option value="">Select status</option>
+                      {TESTING_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {formatOptionLabel(status)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                    <p className="text-sm font-semibold text-zinc-800">
+                      Workflow
+                    </p>
+                    <p className="mt-2 text-sm text-zinc-600">
+                      {formatWorkflowStatus(formData.workflowStatus)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(["authorId", "reviewerId"] as const).map((field) => (
+                    <label key={field} className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        {field === "authorId" ? "Author" : "Reviewed by"}
                       </span>
-                      <input
-                        type="text"
-                        value={bodyImageAlt}
-                        onChange={(event) => setBodyImageAlt(event.target.value)}
-                        className="form-input w-full rounded-2xl border-zinc-200"
-                        placeholder="Descriptive image alt text"
+                      <select
+                        value={formData[field]}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            [field]: event.target.value,
+                          }))
+                        }
+                        className="form-select w-full rounded-2xl border-zinc-200"
+                      >
+                        <option value="">Select profile</option>
+                        {authors.map((author) => (
+                          <option key={author.id} value={author.id}>
+                            {author.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                    Article body
+                  </span>
+                  <div className="mb-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                          Body image alt text
+                        </span>
+                        <input
+                          type="text"
+                          value={bodyImageAlt}
+                          onChange={(event) =>
+                            setBodyImageAlt(event.target.value)
+                          }
+                          className="form-input w-full rounded-2xl border-zinc-200"
+                          placeholder="Descriptive image alt text"
+                        />
+                      </label>
+                      <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800">
+                        {bodyImageUploading
+                          ? "Uploading..."
+                          : "Upload body image"}
+                        <input
+                          type="file"
+                          accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+                          onChange={handleBodyImageUpload}
+                          disabled={bodyImageUploading}
+                          className="sr-only"
+                        />
+                      </label>
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-zinc-500">
+                      Uploads to Supabase Storage and inserts a Markdown image
+                      at the bottom of the article body. Move the inserted line
+                      where you want the image to appear.
+                    </p>
+                  </div>
+                  <textarea
+                    required
+                    value={formData.content}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        content: event.target.value,
+                      }))
+                    }
+                    rows={16}
+                    className="form-textarea w-full rounded-2xl border-zinc-200 font-mono text-sm leading-6"
+                    placeholder={
+                      "## Verdict\n\nWrite the review, comparison, or buying guide here.\n\nUse the body image uploader above to insert Supabase-hosted images.\nUse [affiliate link](https://...){sponsored} for paid links."
+                    }
+                  />
+                </label>
+
+                <details
+                  open
+                  className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5"
+                >
+                  <summary className="cursor-pointer font-semibold text-zinc-950">
+                    Verdict and trust fields
+                  </summary>
+                  <div className="mt-5 space-y-4">
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Quick verdict
+                      </span>
+                      <textarea
+                        rows={3}
+                        value={formData.quickVerdict}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            quickVerdict: event.target.value,
+                          }))
+                        }
+                        className="form-textarea w-full rounded-2xl border-zinc-200"
                       />
                     </label>
-                    <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800">
-                      {bodyImageUploading ? "Uploading..." : "Upload body image"}
-                      <input
-                        type="file"
-                        accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
-                        onChange={handleBodyImageUpload}
-                        disabled={bodyImageUploading}
-                        className="sr-only"
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                          Best for
+                        </span>
+                        <textarea
+                          rows={3}
+                          value={formData.bestFor}
+                          onChange={(event) =>
+                            setFormData((current) => ({
+                              ...current,
+                              bestFor: event.target.value,
+                            }))
+                          }
+                          className="form-textarea w-full rounded-2xl border-zinc-200"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                          Avoid if
+                        </span>
+                        <textarea
+                          rows={3}
+                          value={formData.avoidIf}
+                          onChange={(event) =>
+                            setFormData((current) => ({
+                              ...current,
+                              avoidIf: event.target.value,
+                            }))
+                          }
+                          className="form-textarea w-full rounded-2xl border-zinc-200"
+                        />
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Compatibility notes
+                      </span>
+                      <textarea
+                        rows={4}
+                        value={formData.compatibilityNotes}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            compatibilityNotes: event.target.value,
+                          }))
+                        }
+                        className="form-textarea w-full rounded-2xl border-zinc-200"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Testing methodology / selection criteria
+                      </span>
+                      <textarea
+                        rows={4}
+                        value={formData.testingMethod}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            testingMethod: event.target.value,
+                          }))
+                        }
+                        className="form-textarea w-full rounded-2xl border-zinc-200"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Known limitations
+                      </span>
+                      <textarea
+                        rows={4}
+                        value={formData.limitations}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            limitations: event.target.value,
+                          }))
+                        }
+                        className="form-textarea w-full rounded-2xl border-zinc-200"
                       />
                     </label>
                   </div>
-                  <p className="mt-3 text-xs leading-5 text-zinc-500">
-                    Uploads to Supabase Storage and inserts a Markdown image at
-                    the bottom of the article body. Move the inserted line where
-                    you want the image to appear.
-                  </p>
-                </div>
-                <textarea
-                  required
-                  value={formData.content}
-                  onChange={(event) =>
-                    setFormData((current) => ({
-                      ...current,
-                      content: event.target.value,
-                    }))
-                  }
-                  rows={16}
-                  className="form-textarea w-full rounded-2xl border-zinc-200 font-mono text-sm leading-6"
-                  placeholder={
-                    "## Verdict\n\nWrite the review, comparison, or buying guide here.\n\nUse the body image uploader above to insert Supabase-hosted images.\nUse [affiliate link](https://...){sponsored} for paid links."
-                  }
-                />
-              </label>
+                </details>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                  FAQ items
-                </span>
-                <textarea
-                  value={formData.faqInput}
-                  onChange={(event) =>
-                    setFormData((current) => ({
-                      ...current,
-                      faqInput: event.target.value,
-                    }))
-                  }
-                  rows={4}
-                  className="form-textarea w-full rounded-2xl border-zinc-200 font-mono text-sm leading-6"
-                  placeholder={"Question one? | Answer one.\nQuestion two? | Answer two."}
-                />
-              </label>
+                <details className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5">
+                  <summary className="cursor-pointer font-semibold text-zinc-950">
+                    Sources, claims, and evidence JSON
+                  </summary>
+                  <div className="mt-5 space-y-4">
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Sources JSON array
+                      </span>
+                      <textarea
+                        rows={6}
+                        value={formData.sourcesInput}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            sourcesInput: event.target.value,
+                          }))
+                        }
+                        className="form-textarea w-full rounded-2xl border-zinc-200 font-mono text-xs"
+                        placeholder={
+                          '[{"title":"Vendor documentation","url":"https://...","note":"Compatibility requirements"}]'
+                        }
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Claims JSON array
+                      </span>
+                      <textarea
+                        rows={6}
+                        value={formData.claimsInput}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            claimsInput: event.target.value,
+                          }))
+                        }
+                        className="form-textarea w-full rounded-2xl border-zinc-200 font-mono text-xs"
+                        placeholder={
+                          '[{"claim":"Supports USB connectivity","source_url":"https://...","risk":"medium","resolved":true}]'
+                        }
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        Original evidence JSON array
+                      </span>
+                      <textarea
+                        rows={6}
+                        value={formData.originalEvidenceInput}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            originalEvidenceInput: event.target.value,
+                          }))
+                        }
+                        className="form-textarea w-full rounded-2xl border-zinc-200 font-mono text-xs"
+                        placeholder={
+                          '[{"label":"Setup screenshot","url":"https://...","note":"Captured during testing"}]'
+                        }
+                      />
+                    </label>
+                  </div>
+                </details>
 
-              <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                    Tags
+                    FAQ items
                   </span>
-                  <input
-                    type="text"
-                    value={formData.tagsInput}
+                  <textarea
+                    value={formData.faqInput}
                     onChange={(event) =>
                       setFormData((current) => ({
                         ...current,
-                        tagsInput: event.target.value,
+                        faqInput: event.target.value,
                       }))
                     }
-                    className="form-input w-full rounded-2xl border-zinc-200"
-                    placeholder="security, laptops, remote work"
+                    rows={4}
+                    className="form-textarea w-full rounded-2xl border-zinc-200 font-mono text-sm leading-6"
+                    placeholder={
+                      "Question one? | Answer one.\nQuestion two? | Answer two."
+                    }
                   />
                 </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                    Cover image URL
-                  </span>
-                  <input
-                    type="url"
-                    value={formData.coverImageUrl}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        coverImageUrl: event.target.value,
-                      }))
-                    }
-                    className="form-input w-full rounded-2xl border-zinc-200"
-                    placeholder="https://..."
-                  />
-                  <label className="mt-3 inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950">
-                    {coverUploading ? "Uploading..." : "Upload / replace cover"}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Tags
+                    </span>
                     <input
-                      type="file"
-                      accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
-                      onChange={handleCoverImageUpload}
-                      disabled={coverUploading}
-                      className="sr-only"
+                      type="text"
+                      value={formData.tagsInput}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          tagsInput: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                      placeholder="security, laptops, remote work"
                     />
                   </label>
-                  <p className="mt-2 text-xs leading-5 text-zinc-500">
-                    Uploads to Supabase Storage and replaces the cover image URL.
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Cover image URL
+                    </span>
+                    <input
+                      type="url"
+                      value={formData.coverImageUrl}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          coverImageUrl: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                      placeholder="https://..."
+                    />
+                    <label className="mt-3 inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950">
+                      {coverUploading
+                        ? "Uploading..."
+                        : "Upload / replace cover"}
+                      <input
+                        type="file"
+                        accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+                        onChange={handleCoverImageUpload}
+                        disabled={coverUploading}
+                        className="sr-only"
+                      />
+                    </label>
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">
+                      Uploads to Supabase Storage and replaces the cover image
+                      URL.
+                    </p>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Cover image alt
+                    </span>
+                    <input
+                      type="text"
+                      value={formData.coverImageAlt}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          coverImageAlt: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                      placeholder="Keyword-rich description of the featured image"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Schedule for
+                    </span>
+                    <input
+                      type="datetime-local"
+                      value={formData.scheduledFor}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          scheduledFor: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                    />
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-2xl border border-zinc-200 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.featured}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          featured: event.target.checked,
+                        }))
+                      }
+                      className="rounded border-zinc-300 text-zinc-950"
+                    />
+                    <span className="text-sm font-semibold text-zinc-800">
+                      Feature on homepage
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(
+                    [
+                      ["reviewedAt", "Reviewed at"],
+                      ["lastReviewedAt", "Last reviewed at"],
+                      ["lastVerifiedAt", "Commercial details verified"],
+                      ["nextReviewAt", "Next review due"],
+                    ] as const
+                  ).map(([field, label]) => (
+                    <label key={field} className="block">
+                      <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                        {label}
+                      </span>
+                      <input
+                        type="datetime-local"
+                        value={formData[field]}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            [field]: event.target.value,
+                          }))
+                        }
+                        className="form-input w-full rounded-2xl border-zinc-200"
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                    Internal notes
+                  </span>
+                  <textarea
+                    rows={4}
+                    value={formData.internalNotes}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        internalNotes: event.target.value,
+                      }))
+                    }
+                    className="form-textarea w-full rounded-2xl border-zinc-200"
+                  />
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Never shown publicly.
                   </p>
                 </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                    Cover image alt
-                  </span>
-                  <input
-                    type="text"
-                    value={formData.coverImageAlt}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        coverImageAlt: event.target.value,
-                      }))
-                    }
-                    className="form-input w-full rounded-2xl border-zinc-200"
-                    placeholder="Keyword-rich description of the featured image"
-                  />
-                </label>
+                <div className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-4">
+                  <p className="text-sm font-semibold text-zinc-950">
+                    Editorial workflow
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    Actions are enforced by Supabase, not only by these buttons.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="submit"
+                      disabled={saving || workflowSaving}
+                      className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+                    >
+                      {saving ? "Saving..." : "Save draft"}
+                    </button>
+                    {editingId && (
+                      <Link
+                        href={`/preview/${editingId}`}
+                        target="_blank"
+                        className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-950"
+                      >
+                        Preview
+                      </Link>
+                    )}
+                    <WorkflowButton
+                      label="Mark ready for review"
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        formData.workflowStatus !== "draft"
+                      }
+                      onClick={() => void handleWorkflowAction("mark_ready")}
+                    />
+                    <WorkflowButton
+                      label="Approve article"
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        !["ready_for_review", "scheduled"].includes(
+                          formData.workflowStatus,
+                        )
+                      }
+                      onClick={() => void handleWorkflowAction("approve")}
+                    />
+                    <WorkflowButton
+                      label="Schedule publication"
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        formData.workflowStatus !== "approved"
+                      }
+                      onClick={() => void handleWorkflowAction("schedule")}
+                    />
+                    <WorkflowButton
+                      label="Publish now"
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        formData.workflowStatus !== "approved"
+                      }
+                      onClick={() => void handleWorkflowAction("publish")}
+                    />
+                    <WorkflowButton
+                      label="Archive article"
+                      disabled={
+                        saving ||
+                        workflowSaving ||
+                        formData.workflowStatus === "archived"
+                      }
+                      onClick={() => void handleWorkflowAction("archive")}
+                      tone="danger"
+                    />
+                  </div>
+                </div>
               </div>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                  Affiliate programs mentioned
-                </span>
-                <input
-                  type="text"
-                  value={formData.affiliateProgramsInput}
-                  onChange={(event) =>
-                    setFormData((current) => ({
-                      ...current,
-                      affiliateProgramsInput: event.target.value,
-                    }))
-                  }
-                  className="form-input w-full rounded-2xl border-zinc-200"
-                  placeholder="Semrush, WP Engine, Shopify"
-                  list="affiliate-programs"
-                />
-                <datalist id="affiliate-programs">
-                  {AFFILIATE_PROGRAMS.map((program) => (
-                    <option key={program} value={program} />
-                  ))}
-                </datalist>
-              </label>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-zinc-800">
-                    Publish date
-                  </span>
-                  <input
-                    type="datetime-local"
-                    value={formData.publishedAt}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        publishedAt: event.target.value,
-                      }))
-                    }
-                    className="form-input w-full rounded-2xl border-zinc-200"
-                  />
-                </label>
-
-                <label className="flex items-center gap-3 rounded-2xl border border-zinc-200 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.featured}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        featured: event.target.checked,
-                      }))
-                    }
-                    className="rounded border-zinc-300 text-zinc-950"
-                  />
-                  <span className="text-sm font-semibold text-zinc-800">
-                    Feature on homepage
-                  </span>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? "Saving..." : editingId ? "Update article" : "Create article"}
-              </button>
-            </div>
             </form>
           )}
 
@@ -1779,8 +2772,9 @@ export default function AdminDashboard() {
                   Edit page content
                 </h2>
                 <p className="mt-2 text-sm text-zinc-500">
-                  These fields control homepage, blog index, terms page, and
-                  SEO metadata. Keep the JSON keys intact.
+                  These CMS records control the shared navigation/footer,
+                  homepage, blog and search indexes, and every publication trust
+                  page. Keep the JSON keys intact.
                 </p>
               </div>
 
@@ -1869,6 +2863,159 @@ export default function AdminDashboard() {
             </form>
           )}
 
+          {activeSection === "people" && (
+            <section className="grid gap-6 lg:col-span-2 lg:grid-cols-[0.9fr_1.1fr]">
+              <form
+                onSubmit={handleAuthorSubmit}
+                className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm"
+              >
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                  Author profiles
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                  Add an author or reviewer
+                </h2>
+                <div className="mt-5 space-y-4">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Name
+                    </span>
+                    <input
+                      required
+                      value={authorForm.name}
+                      onChange={(event) =>
+                        setAuthorForm((current) => ({
+                          ...current,
+                          name: event.target.value,
+                          slug: current.slug || slugify(event.target.value),
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Slug
+                    </span>
+                    <input
+                      required
+                      value={authorForm.slug}
+                      onChange={(event) =>
+                        setAuthorForm((current) => ({
+                          ...current,
+                          slug: slugify(event.target.value),
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Job title
+                    </span>
+                    <input
+                      value={authorForm.jobTitle}
+                      onChange={(event) =>
+                        setAuthorForm((current) => ({
+                          ...current,
+                          jobTitle: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Bio
+                    </span>
+                    <textarea
+                      required
+                      rows={5}
+                      value={authorForm.bio}
+                      onChange={(event) =>
+                        setAuthorForm((current) => ({
+                          ...current,
+                          bio: event.target.value,
+                        }))
+                      }
+                      className="form-textarea w-full rounded-2xl border-zinc-200"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Avatar URL
+                    </span>
+                    <input
+                      type="url"
+                      value={authorForm.avatarUrl}
+                      onChange={(event) =>
+                        setAuthorForm((current) => ({
+                          ...current,
+                          avatarUrl: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-zinc-800">
+                      Website URL
+                    </span>
+                    <input
+                      type="url"
+                      value={authorForm.websiteUrl}
+                      onChange={(event) =>
+                        setAuthorForm((current) => ({
+                          ...current,
+                          websiteUrl: event.target.value,
+                        }))
+                      }
+                      className="form-input w-full rounded-2xl border-zinc-200"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={authorSaving}
+                    className="w-full rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {authorSaving ? "Saving..." : "Create profile"}
+                  </button>
+                </div>
+              </form>
+              <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
+                <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
+                  Authors and reviewers
+                </h2>
+                <div className="mt-5 space-y-3">
+                  {authors.map((author) => (
+                    <article
+                      key={author.id}
+                      className="rounded-2xl border border-zinc-200 p-4"
+                    >
+                      <h3 className="font-semibold text-zinc-950">
+                        {author.name}
+                      </h3>
+                      <p className="mt-1 text-sm text-zinc-500">
+                        {author.job_title ?? "No title set"}
+                      </p>
+                      {author.bio && (
+                        <p className="mt-3 text-sm leading-6 text-zinc-600">
+                          {author.bio}
+                        </p>
+                      )}
+                    </article>
+                  ))}
+                  {authors.length === 0 && (
+                    <p className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-600">
+                      Create the first real author profile before assigning
+                      article bylines.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
           {activeSection === "newsletter" && (
             <section className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
@@ -1880,8 +3027,8 @@ export default function AdminDashboard() {
                     Subscriber list
                   </h2>
                   <p className="mt-2 text-sm text-zinc-500">
-                    These emails are collected from the footer form and stored
-                    in Supabase.
+                    Subscriptions require email confirmation before they are
+                    synchronized to the sending provider.
                   </p>
                 </div>
                 <button
@@ -1894,12 +3041,26 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="mt-6 grid gap-3 sm:grid-cols-4">
                 <div className="rounded-2xl bg-zinc-100 p-4">
                   <p className="text-3xl font-semibold tracking-tight text-zinc-950">
-                    {subscribers.filter((item) => item.status === "subscribed").length}
+                    {
+                      subscribers.filter((item) => item.status === "subscribed")
+                        .length
+                    }
                   </p>
                   <p className="mt-1 text-sm text-zinc-500">Subscribed</p>
+                </div>
+                <div className="rounded-2xl bg-zinc-100 p-4">
+                  <p className="text-3xl font-semibold tracking-tight text-zinc-950">
+                    {
+                      subscribers.filter((item) => item.status === "pending")
+                        .length
+                    }
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Pending confirmation
+                  </p>
                 </div>
                 <div className="rounded-2xl bg-zinc-100 p-4">
                   <p className="text-3xl font-semibold tracking-tight text-zinc-950">
@@ -1931,6 +3092,13 @@ export default function AdminDashboard() {
                           {subscriber.source ?? "site"} ·{" "}
                           {formatSubscriberDate(subscriber.created_at)}
                         </p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          {subscriber.provider_synced_at
+                            ? "Provider synchronized"
+                            : subscriber.status === "subscribed"
+                              ? "Provider sync pending"
+                              : "Not sent to provider"}
+                        </p>
                       </div>
                       <span className="w-fit rounded-full bg-lime-300 px-2 py-1 text-xs font-semibold text-zinc-950">
                         {subscriber.status}
@@ -1941,8 +3109,8 @@ export default function AdminDashboard() {
 
                 {subscribers.length === 0 && (
                   <p className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-600">
-                    No subscribers yet. The footer newsletter form will fill
-                    this list after the Supabase migration is applied.
+                    No subscription records yet. New requests appear here as
+                    pending until the reader confirms by email.
                   </p>
                 )}
               </div>
@@ -1989,15 +3157,23 @@ export default function AdminDashboard() {
                   </div>
                   <div className="rounded-2xl bg-white/10 p-4">
                     <p className="text-3xl font-semibold tracking-tight">
-                      {affiliatePrograms.filter((program) => program.status === "approved").length}
+                      {
+                        affiliatePrograms.filter(
+                          (program) => program.status === "approved",
+                        ).length
+                      }
                     </p>
-                    <p className="mt-1 text-sm text-zinc-300">Approved programs</p>
+                    <p className="mt-1 text-sm text-zinc-300">
+                      Approved programs
+                    </p>
                   </div>
                   <div className="rounded-2xl bg-white/10 p-4">
                     <p className="text-3xl font-semibold tracking-tight">
                       {inactiveOrBrokenLinks.length}
                     </p>
-                    <p className="mt-1 text-sm text-zinc-300">Inactive or broken</p>
+                    <p className="mt-1 text-sm text-zinc-300">
+                      Inactive or broken
+                    </p>
                   </div>
                 </div>
               </div>
@@ -2013,7 +3189,9 @@ export default function AdminDashboard() {
                         Programs
                       </p>
                       <h3 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
-                        {editingAffiliateProgramId ? "Edit program" : "Add program"}
+                        {editingAffiliateProgramId
+                          ? "Edit program"
+                          : "Add program"}
                       </h3>
                     </div>
                     {editingAffiliateProgramId && (
@@ -2043,7 +3221,7 @@ export default function AdminDashboard() {
                           }))
                         }
                         className="form-input w-full rounded-2xl border-zinc-200"
-                        placeholder="Impact, Amazon, Shopify, Zebra"
+                        placeholder="Amazon Associates, B&H Photo, Newegg"
                       />
                     </label>
 
@@ -2079,7 +3257,8 @@ export default function AdminDashboard() {
                           onChange={(event) =>
                             setAffiliateProgramForm((current) => ({
                               ...current,
-                              status: event.target.value as AffiliateProgramStatus,
+                              status: event.target
+                                .value as AffiliateProgramStatus,
                             }))
                           }
                           className="form-select w-full rounded-2xl border-zinc-200"
@@ -2245,7 +3424,11 @@ export default function AdminDashboard() {
                       </span>
                       <select
                         required
-                        value={affiliateLinkForm.programId || affiliatePrograms[0]?.id || ""}
+                        value={
+                          affiliateLinkForm.programId ||
+                          affiliatePrograms[0]?.id ||
+                          ""
+                        }
                         onChange={(event) =>
                           setAffiliateLinkForm((current) => ({
                             ...current,
@@ -2385,7 +3568,9 @@ export default function AdminDashboard() {
 
                     <button
                       type="submit"
-                      disabled={affiliateSaving || affiliatePrograms.length === 0}
+                      disabled={
+                        affiliateSaving || affiliatePrograms.length === 0
+                      }
                       className="w-full rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {affiliateSaving
@@ -2415,9 +3600,9 @@ export default function AdminDashboard() {
                   emptyLabel="No placement click data yet."
                 />
                 <MetricList
-                  title="Top converting pages"
+                  title="Top clicked pages"
                   rows={clicksByArticle}
-                  emptyLabel="No click proxy data yet."
+                  emptyLabel="No page click data yet."
                 />
               </div>
 
@@ -2551,7 +3736,9 @@ export default function AdminDashboard() {
                           onClick={() => handleAffiliateLinkEdit(link)}
                           className="block w-full rounded-2xl border border-red-100 bg-red-50 p-4 text-left text-sm text-red-700 transition hover:border-red-300"
                         >
-                          <span className="block font-semibold">{link.label}</span>
+                          <span className="block font-semibold">
+                            {link.label}
+                          </span>
                           <span className="mt-1 block break-all font-mono text-xs">
                             {link.destination_url || "Missing destination URL"}
                           </span>
@@ -2583,7 +3770,7 @@ export default function AdminDashboard() {
                     </h2>
                   </div>
                   <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    {formData.status}
+                    {formatWorkflowStatus(formData.workflowStatus)}
                   </span>
                 </div>
 
@@ -2610,7 +3797,8 @@ export default function AdminDashboard() {
                       {seoTitle || "Article title preview"}
                     </h3>
                     <p className="mt-3 line-clamp-3 text-zinc-600">
-                      {metaDescription || "The article meta description will appear here."}
+                      {metaDescription ||
+                        "The article meta description will appear here."}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {splitList(formData.tagsInput)
@@ -2641,7 +3829,11 @@ export default function AdminDashboard() {
                         {getPreviewString(
                           pagePreviewContent,
                           "eyebrow",
-                          getPreviewString(activePageDefaults, "eyebrow", "Page"),
+                          getPreviewString(
+                            activePageDefaults,
+                            "eyebrow",
+                            "Page",
+                          ),
                         )}
                       </p>
                       <h2 className="mt-3 text-3xl font-semibold tracking-tight">
@@ -2670,22 +3862,53 @@ export default function AdminDashboard() {
                     <div className="p-5">
                       {pageFormData.slug === "home" && (
                         <div className="grid grid-cols-2 gap-2">
-                          {getPreviewList(
+                          {getPreviewCategoryEntries(
                             pagePreviewContent,
-                            "focusAreas",
-                            getPreviewList(activePageDefaults, "focusAreas", []),
-                          ).map((area) => (
+                            activePageDefaults.categoryEntries,
+                          ).map((entry) => (
                             <span
-                              key={area}
+                              key={entry.title}
                               className="rounded-2xl bg-white px-3 py-4 text-sm font-semibold text-zinc-800"
                             >
-                              {area}
+                              {entry.title}
                             </span>
                           ))}
                         </div>
                       )}
 
-                      {pageFormData.slug === "blog" && (
+                      {pageFormData.slug === "global" && (
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                            Navigation and footer
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {(Array.isArray(pagePreviewContent?.navItems)
+                              ? pagePreviewContent.navItems
+                              : Array.isArray(activePageDefaults.navItems)
+                                ? activePageDefaults.navItems
+                                : []
+                            ).map((item, index) => {
+                              const label =
+                                item &&
+                                typeof item === "object" &&
+                                "label" in item
+                                  ? String(item.label)
+                                  : `Link ${index + 1}`;
+                              return (
+                                <span
+                                  key={`${label}-${index}`}
+                                  className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-zinc-800"
+                                >
+                                  {label}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {(pageFormData.slug === "blog" ||
+                        pageFormData.slug === "search") && (
                         <div className="space-y-3">
                           {BLOG_CATEGORIES.slice(0, 4).map((category) => (
                             <div
@@ -2703,17 +3926,56 @@ export default function AdminDashboard() {
                         </div>
                       )}
 
-                      {pageFormData.slug === "terms" && (
+                      {pageFormData.slug === "about" && (
                         <div className="space-y-3">
-                          <div className="rounded-2xl bg-white p-4">
-                            <p className="font-semibold text-zinc-950">
-                              Affiliate disclosure
-                            </p>
-                            <p className="mt-2 line-clamp-2 text-sm text-zinc-600">
-                              Terms sections render as policy cards on the public
-                              page.
-                            </p>
-                          </div>
+                          {[
+                            "missionHeading",
+                            "standardsHeading",
+                            "independenceHeading",
+                          ].map((key) => (
+                            <div key={key} className="rounded-2xl bg-white p-4">
+                              <p className="font-semibold text-zinc-950">
+                                {getPreviewString(
+                                  pagePreviewContent,
+                                  key,
+                                  getPreviewString(
+                                    activePageDefaults,
+                                    key,
+                                    "About section",
+                                  ),
+                                )}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {(
+                        [
+                          "contact",
+                          "review-methodology",
+                          "editorial-policy",
+                          "affiliate-disclosure",
+                          "terms",
+                          "privacy",
+                        ] as SitePageSlug[]
+                      ).includes(pageFormData.slug) && (
+                        <div className="space-y-3">
+                          {getPreviewSections(pagePreviewContent)
+                            .slice(0, 3)
+                            .map((section) => (
+                              <div
+                                key={section.title}
+                                className="rounded-2xl bg-white p-4"
+                              >
+                                <p className="font-semibold text-zinc-950">
+                                  {section.title}
+                                </p>
+                                <p className="mt-2 line-clamp-2 text-sm text-zinc-600">
+                                  {section.body}
+                                </p>
+                              </div>
+                            ))}
                         </div>
                       )}
                     </div>
@@ -2737,7 +3999,9 @@ export default function AdminDashboard() {
                         }`}
                       >
                         <span className="block text-xs font-semibold uppercase tracking-[0.18em] opacity-60">
-                          /{page.slug === "home" ? "" : page.slug}
+                          {page.slug === "global"
+                            ? "Shared UI"
+                            : `/${page.slug === "home" ? "" : page.slug}`}
                         </span>
                         <span className="mt-1 block font-semibold">
                           {page.title}
@@ -2752,16 +4016,15 @@ export default function AdminDashboard() {
             {activeSection === "newsletter" && (
               <div className="rounded-[2rem] border border-zinc-200 bg-zinc-950 p-6 text-white shadow-sm">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-300">
-                  Free workflow
+                  Delivery workflow
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                  Send manually at first
+                  Double opt-in with provider sync
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-zinc-300">
-                  Export the CSV, import contacts into Google Contacts or a
-                  Workspace group, then send low-volume updates from
-                  contact@devicefield.com. Upgrade to a sender platform later
-                  when the list is large enough to justify it.
+                  Resend sends confirmation messages from the configured
+                  Devicefield address. Only confirmed contacts are synchronized,
+                  and unsubscribe requests update both Supabase and Resend.
                 </p>
               </div>
             )}
@@ -2769,27 +4032,62 @@ export default function AdminDashboard() {
             {activeSection === "articles" && (
               <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-                  SEO readiness
+                  Publish readiness
                 </p>
-                <div className="mt-4 h-3 overflow-hidden rounded-full bg-zinc-100">
-                  <div
-                    className="h-full rounded-full bg-lime-400 transition-all"
-                    style={{ width: `${estimatedSeoScore}%` }}
-                  />
-                </div>
-                <p className="mt-3 text-sm font-semibold text-zinc-700">
-                  {estimatedSeoScore}/100
+                <p className="mt-3 text-sm leading-6 text-zinc-600">
+                  These are editorial warnings, not a ranking score. Resolve
+                  required items and use judgment for the rest.
                 </p>
-                <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-                  {seoChecks.map((check) => (
-                    <li
-                      key={check.label}
-                      className={check.passed ? "text-zinc-700" : "text-red-600"}
-                    >
-                      {check.passed ? "Pass" : "Fix"}: {check.label}
-                    </li>
+                <div className="mt-5 space-y-5">
+                  {[
+                    {
+                      title: "Required before publishing",
+                      checks: requiredChecks,
+                      missingLabel: "Missing",
+                      readyLabel: "Ready",
+                    },
+                    {
+                      title: "Recommended",
+                      checks: recommendedChecks,
+                      missingLabel: "Consider",
+                      readyLabel: "Met",
+                    },
+                    {
+                      title: "Needs human judgment",
+                      checks: humanJudgmentChecks,
+                      missingLabel: "Review",
+                      readyLabel: "Signal found",
+                    },
+                  ].map((group) => (
+                    <section key={group.title}>
+                      <h3 className="text-sm font-semibold text-zinc-950">
+                        {group.title}
+                      </h3>
+                      <ul className="mt-3 space-y-3">
+                        {group.checks.map((check) => (
+                          <li
+                            key={check.label}
+                            className={`rounded-2xl border p-3 text-sm ${
+                              check.passed
+                                ? "border-zinc-200 bg-zinc-50 text-zinc-700"
+                                : "border-amber-200 bg-amber-50 text-amber-900"
+                            }`}
+                          >
+                            <p className="font-semibold">
+                              {check.passed
+                                ? group.readyLabel
+                                : group.missingLabel}
+                              : {check.label}
+                            </p>
+                            <p className="mt-1 text-xs leading-5 opacity-75">
+                              {check.detail}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
                   ))}
-                </ul>
+                </div>
                 <div className="mt-5 rounded-2xl bg-zinc-100 p-4 text-sm leading-6 text-zinc-600">
                   <p>Words: {wordCount}</p>
                   <p>H2 sections: {h2Count}</p>
@@ -2802,16 +4100,310 @@ export default function AdminDashboard() {
 
             {activeSection === "articles" && (
               <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                  Structured recommendations
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                  Article products
+                </h2>
+
+                {!editingId ? (
+                  <p className="mt-4 rounded-2xl bg-zinc-100 p-4 text-sm leading-6 text-zinc-600">
+                    Create or edit an article first, then connect products to
+                    real affiliate links here.
+                  </p>
+                ) : (
+                  <div className="mt-5 space-y-5">
+                    <div className="space-y-3">
+                      {currentArticleProducts.map((product) => {
+                        const affiliateLink = affiliateLinks.find(
+                          (link) => link.id === product.affiliate_link_id,
+                        );
+                        return (
+                          <article
+                            key={product.id}
+                            className="rounded-2xl border border-zinc-200 p-4"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                                  {product.placement} / {product.display_order}
+                                </p>
+                                <h3 className="mt-1 font-semibold text-zinc-950">
+                                  {product.product_name}
+                                </h3>
+                                <p className="mt-1 text-xs text-zinc-500">
+                                  {affiliateLink?.label ??
+                                    "Missing affiliate link"}
+                                </p>
+                              </div>
+                              {product.award && (
+                                <span className="rounded-full bg-lime-200 px-2 py-1 text-xs font-semibold text-zinc-950">
+                                  {product.award}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleArticleProductEdit(product)
+                                }
+                                className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-semibold text-zinc-700"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleArticleProductDelete(product)
+                                }
+                                disabled={articleProductSaving}
+                                className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 disabled:opacity-50"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })}
+                      {currentArticleProducts.length === 0 && (
+                        <p className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-600">
+                          No structured products are connected to this article.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 border-t border-zinc-200 pt-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="font-semibold text-zinc-950">
+                          {editingArticleProductId
+                            ? "Edit product"
+                            : "Add product"}
+                        </h3>
+                        {editingArticleProductId && (
+                          <button
+                            type="button"
+                            onClick={() => resetArticleProductForm()}
+                            className="text-xs font-semibold text-red-700"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                          Affiliate link
+                        </span>
+                        <select
+                          value={articleProductForm.affiliateLinkId}
+                          onChange={(event) =>
+                            setArticleProductForm((current) => ({
+                              ...current,
+                              affiliateLinkId: event.target.value,
+                            }))
+                          }
+                          className="form-select w-full rounded-2xl border-zinc-200 text-sm"
+                        >
+                          <option value="">Select a link</option>
+                          {affiliateLinks
+                            .filter(
+                              (link) =>
+                                link.active ||
+                                link.id === articleProductForm.affiliateLinkId,
+                            )
+                            .map((link) => {
+                              const program = affiliatePrograms.find(
+                                (item) => item.id === link.program_id,
+                              );
+                              return (
+                                <option key={link.id} value={link.id}>
+                                  {link.label} / {program?.name ?? link.slug}
+                                </option>
+                              );
+                            })}
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                          Product name
+                        </span>
+                        <input
+                          type="text"
+                          value={articleProductForm.productName}
+                          onChange={(event) =>
+                            setArticleProductForm((current) => ({
+                              ...current,
+                              productName: event.target.value,
+                            }))
+                          }
+                          className="form-input w-full rounded-2xl border-zinc-200 text-sm"
+                        />
+                      </label>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                            Placement
+                          </span>
+                          <select
+                            value={articleProductForm.placement}
+                            onChange={(event) =>
+                              setArticleProductForm((current) => ({
+                                ...current,
+                                placement: event.target
+                                  .value as ArticleProductPlacement,
+                              }))
+                            }
+                            className="form-select w-full rounded-2xl border-zinc-200 text-sm"
+                          >
+                            {ARTICLE_PRODUCT_PLACEMENTS.map((placement) => (
+                              <option key={placement} value={placement}>
+                                {placement}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                            Display order
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={articleProductForm.displayOrder}
+                            onChange={(event) =>
+                              setArticleProductForm((current) => ({
+                                ...current,
+                                displayOrder: event.target.value,
+                              }))
+                            }
+                            className="form-input w-full rounded-2xl border-zinc-200 text-sm"
+                          />
+                        </label>
+                      </div>
+
+                      {(
+                        [
+                          ["award", "Award", "Best overall"],
+                          [
+                            "bestFor",
+                            "Best for",
+                            "Teams needing offline reliability",
+                          ],
+                          [
+                            "avoidIf",
+                            "Avoid if",
+                            "You need native iPad support",
+                          ],
+                        ] as const
+                      ).map(([field, label, placeholder]) => (
+                        <label key={field} className="block">
+                          <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                            {label}
+                          </span>
+                          <input
+                            type="text"
+                            value={articleProductForm[field]}
+                            onChange={(event) =>
+                              setArticleProductForm((current) => ({
+                                ...current,
+                                [field]: event.target.value,
+                              }))
+                            }
+                            placeholder={placeholder}
+                            className="form-input w-full rounded-2xl border-zinc-200 text-sm"
+                          />
+                        </label>
+                      ))}
+
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                          Verdict
+                        </span>
+                        <textarea
+                          rows={3}
+                          value={articleProductForm.verdict}
+                          onChange={(event) =>
+                            setArticleProductForm((current) => ({
+                              ...current,
+                              verdict: event.target.value,
+                            }))
+                          }
+                          className="form-textarea w-full rounded-2xl border-zinc-200 text-sm"
+                        />
+                      </label>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                            Pros, comma-separated
+                          </span>
+                          <textarea
+                            rows={3}
+                            value={articleProductForm.prosInput}
+                            onChange={(event) =>
+                              setArticleProductForm((current) => ({
+                                ...current,
+                                prosInput: event.target.value,
+                              }))
+                            }
+                            className="form-textarea w-full rounded-2xl border-zinc-200 text-sm"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                            Cons, comma-separated
+                          </span>
+                          <textarea
+                            rows={3}
+                            value={articleProductForm.consInput}
+                            onChange={(event) =>
+                              setArticleProductForm((current) => ({
+                                ...current,
+                                consInput: event.target.value,
+                              }))
+                            }
+                            className="form-textarea w-full rounded-2xl border-zinc-200 text-sm"
+                          />
+                        </label>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleArticleProductSave()}
+                        disabled={articleProductSaving}
+                        className="w-full rounded-full bg-zinc-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        {articleProductSaving
+                          ? "Saving..."
+                          : editingArticleProductId
+                            ? "Update product"
+                            : "Add product"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeSection === "articles" && (
+              <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
                 <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
                   Articles
                 </h2>
                 <div className="mt-5 space-y-3">
                   {posts.map((post) => (
-                    <article key={post.id} className="rounded-2xl border border-zinc-200 p-4">
+                    <article
+                      key={post.id}
+                      className="rounded-2xl border border-zinc-200 p-4"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                            {post.status}
+                            {formatWorkflowStatus(post.workflow_status)}
                           </p>
                           <h3 className="mt-1 font-semibold leading-6 text-zinc-950">
                             {post.title}
@@ -2831,7 +4423,7 @@ export default function AdminDashboard() {
                         >
                           Edit
                         </button>
-                        {post.status === "published" && (
+                        {post.workflow_status === "published" && (
                           <Link
                             href={`/blog/${post.slug}`}
                             className="rounded-full border border-zinc-300 px-3 py-1 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950"

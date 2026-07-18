@@ -1,4 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr'
+import {
+  SUPABASE_AUTH_COOKIE_ENCODING,
+  SUPABASE_AUTH_COOKIE_OPTIONS,
+} from './auth-cookies'
 
 function getSupabaseBrowserKey() {
   return (
@@ -17,6 +21,10 @@ export function createClient() {
 
   return createBrowserClient(
     supabaseUrl ?? 'https://placeholder.supabase.co',
-    supabaseKey ?? 'placeholder-publishable-key'
+    supabaseKey ?? 'placeholder-publishable-key',
+    {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
+      cookieEncoding: SUPABASE_AUTH_COOKIE_ENCODING,
+    }
   )
 }

@@ -2,10 +2,13 @@ import AffiliateButton from "./AffiliateButton";
 
 export type ComparisonTableRow = {
   product: string;
+  award?: string | null;
   bestFor: string;
+  avoidIf?: string | null;
   notes: string;
   href: string;
   ctaLabel?: string;
+  placement?: string;
 };
 
 export default function ComparisonTable({
@@ -34,14 +37,26 @@ export default function ComparisonTable({
               <tr key={row.product}>
                 <td className="px-5 py-4 font-semibold text-zinc-950">
                   {row.product}
+                  {row.award && (
+                    <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.14em] text-lime-700">
+                      {row.award}
+                    </span>
+                  )}
                 </td>
                 <td className="px-5 py-4 text-zinc-600">{row.bestFor}</td>
-                <td className="px-5 py-4 text-zinc-600">{row.notes}</td>
+                <td className="px-5 py-4 text-zinc-600">
+                  {row.notes}
+                  {row.avoidIf && (
+                    <span className="mt-2 block text-xs text-amber-800">
+                      Avoid if: {row.avoidIf}
+                    </span>
+                  )}
+                </td>
                 <td className="px-5 py-4">
                   <AffiliateButton
                     href={row.href}
                     label={row.ctaLabel ?? "Check price"}
-                    placement={placement}
+                    placement={row.placement ?? placement}
                     articleId={articleId}
                   />
                 </td>
@@ -53,4 +68,3 @@ export default function ComparisonTable({
     </div>
   );
 }
-
