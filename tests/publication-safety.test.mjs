@@ -402,6 +402,40 @@ test("admin displays and saves private social drafts per article", async () => {
   assert.match(admin, /SOCIAL_PLATFORM_LIMITS/);
 });
 
+test("admin article library prioritizes review work and gates the editor", async () => {
+  const admin = await source("app/(default)/admin/page.tsx");
+
+  assert.match(admin, /activeSection === "articles" && !articleEditorOpen/);
+  assert.match(admin, /Create post/);
+  assert.match(admin, /grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3/);
+  assert.ok(admin.indexOf("Ready for review") < admin.indexOf("Published articles"));
+  assert.match(
+    admin,
+    /activeSection === "articles" && articleEditorOpen && \(\s*<form/,
+  );
+  assert.match(
+    admin,
+    /<details className="hidden[^\"]*md:block[^\"]*">[\s\S]*Publish readiness/,
+  );
+  const readinessDetailsStart = admin.indexOf(
+    '<details className="hidden rounded-[1.5rem]',
+  );
+  const readinessOpeningTag = admin.slice(
+    readinessDetailsStart,
+    admin.indexOf(">", readinessDetailsStart) + 1,
+  );
+  assert.doesNotMatch(readinessOpeningTag, /\sopen(?:=|\s|>)/);
+});
+
+test("admin page navigation stays scrollable and preview follows the save action", async () => {
+  const admin = await source("app/(default)/admin/page.tsx");
+
+  assert.match(admin, /activeSection === "pages" \? "order-first xl:order-none"/);
+  assert.match(admin, /xl:sticky xl:top-28/);
+  assert.match(admin, /max-h-\[calc\(100vh-13rem\)\][^\"]*overflow-y-auto/);
+  assert.match(admin, /Update page[\s\S]*<PageLivePreview/);
+});
+
 test("cover and inline image alt text have separate validation paths", async () => {
   const admin = await source("app/(default)/admin/page.tsx");
   const article = await source("app/(default)/blog/[slug]/page.tsx");

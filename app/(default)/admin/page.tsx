@@ -830,6 +830,257 @@ function WorkflowButton({
   );
 }
 
+function ArticleAdminCard({
+  post,
+  onEdit,
+  emphasis = "default",
+}: {
+  post: BlogPost;
+  onEdit: () => void;
+  emphasis?: "default" | "review";
+}) {
+  return (
+    <article
+      className={`group flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${
+        emphasis === "review"
+          ? "border-lime-300 ring-1 ring-lime-300/40"
+          : "border-zinc-200 hover:border-zinc-400"
+      }`}
+    >
+      <div className="relative aspect-video overflow-hidden bg-zinc-950">
+        {post.cover_image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.cover_image_url}
+            alt={post.cover_image_alt ?? post.title}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex h-full items-end bg-[radial-gradient(circle_at_20%_20%,rgba(190,242,100,0.65),transparent_34%),linear-gradient(135deg,#18181b,#3f3f46)] p-5 text-white">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em]">
+              Devicefield
+            </span>
+          </div>
+        )}
+        <span
+          className={`absolute left-3 top-3 rounded-full px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] backdrop-blur ${
+            emphasis === "review"
+              ? "bg-lime-300 text-zinc-950"
+              : "bg-white/90 text-zinc-700"
+          }`}
+        >
+          {formatWorkflowStatus(post.workflow_status)}
+        </span>
+        {post.featured && (
+          <span className="absolute right-3 top-3 rounded-full bg-zinc-950/85 px-3 py-1 text-[0.68rem] font-semibold text-lime-300 backdrop-blur">
+            Featured
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lime-700">
+          {post.category}
+        </p>
+        <h3 className="mt-2 text-xl font-semibold leading-7 tracking-tight text-zinc-950">
+          {post.title}
+        </h3>
+        <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-600">
+          {post.excerpt}
+        </p>
+        <p className="mt-4 text-xs text-zinc-400">
+          Updated {new Date(post.updated_at).toLocaleDateString()}
+        </p>
+        <div className="mt-auto flex flex-wrap gap-2 pt-5">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+          >
+            {emphasis === "review" ? "Review article" : "Edit article"}
+          </button>
+          {post.workflow_status === "published" && (
+            <Link
+              href={`/blog/${post.slug}`}
+              className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950"
+            >
+              View live
+            </Link>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PageLivePreview({
+  pageFormData,
+  previewContent,
+  defaults,
+}: {
+  pageFormData: SitePageForm;
+  previewContent: Record<string, unknown> | null;
+  defaults: Record<string, unknown>;
+}) {
+  return (
+    <section className="mt-8 border-t border-zinc-200 pt-8">
+      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+            Live preview
+          </p>
+          <h3 className="mt-2 text-xl font-semibold tracking-tight text-zinc-950">
+            Current page content
+          </h3>
+        </div>
+        <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+          {pageFormData.slug === "global"
+            ? "Shared UI"
+            : `/${pageFormData.slug === "home" ? "" : pageFormData.slug}`}
+        </span>
+      </div>
+
+      <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-zinc-50">
+        <div className="bg-zinc-950 p-5 text-white sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">
+            {getPreviewString(
+              previewContent,
+              "eyebrow",
+              getPreviewString(defaults, "eyebrow", "Page"),
+            )}
+          </p>
+          <h4 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+            {getPreviewString(
+              previewContent,
+              "heading",
+              getPreviewString(defaults, "heading", pageFormData.title),
+            )}
+          </h4>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
+            {getPreviewString(
+              previewContent,
+              "intro",
+              getPreviewString(
+                defaults,
+                "intro",
+                pageFormData.metaDescription,
+              ),
+            )}
+          </p>
+        </div>
+
+        <div className="p-5 sm:p-6">
+          {pageFormData.slug === "home" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {getPreviewCategoryEntries(
+                previewContent,
+                defaults.categoryEntries,
+              ).map((entry) => (
+                <span
+                  key={entry.title}
+                  className="rounded-2xl bg-white px-4 py-4 text-sm font-semibold text-zinc-800 shadow-sm"
+                >
+                  {entry.title}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {pageFormData.slug === "global" && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                Navigation and footer
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(Array.isArray(previewContent?.navItems)
+                  ? previewContent.navItems
+                  : Array.isArray(defaults.navItems)
+                    ? defaults.navItems
+                    : []
+                ).map((item, index) => {
+                  const label =
+                    item && typeof item === "object" && "label" in item
+                      ? String(item.label)
+                      : `Link ${index + 1}`;
+                  return (
+                    <span
+                      key={`${label}-${index}`}
+                      className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-zinc-800 shadow-sm"
+                    >
+                      {label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(pageFormData.slug === "blog" ||
+            pageFormData.slug === "search") && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {BLOG_CATEGORIES.slice(0, 4).map((category) => (
+                <div key={category} className="rounded-2xl bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                    Category
+                  </p>
+                  <p className="mt-1 font-semibold text-zinc-950">{category}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pageFormData.slug === "about" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {["missionHeading", "standardsHeading", "independenceHeading"].map(
+                (key) => (
+                  <div key={key} className="rounded-2xl bg-white p-4 shadow-sm">
+                    <p className="font-semibold text-zinc-950">
+                      {getPreviewString(
+                        previewContent,
+                        key,
+                        getPreviewString(defaults, key, "About section"),
+                      )}
+                    </p>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+
+          {(
+            [
+              "contact",
+              "review-methodology",
+              "editorial-policy",
+              "affiliate-disclosure",
+              "terms",
+              "privacy",
+            ] as SitePageSlug[]
+          ).includes(pageFormData.slug) && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {getPreviewSections(previewContent)
+                .slice(0, 4)
+                .map((section) => (
+                  <div
+                    key={section.title}
+                    className="rounded-2xl bg-white p-4 shadow-sm"
+                  >
+                    <p className="font-semibold text-zinc-950">
+                      {section.title}
+                    </p>
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-600">
+                      {section.body}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function AdminDashboard() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [authors, setAuthors] = useState<Author[]>([]);
@@ -863,6 +1114,7 @@ export default function AdminDashboard() {
     useState<ArticleProductForm>(emptyArticleProductForm);
   const [authorForm, setAuthorForm] = useState<AuthorForm>(emptyAuthorForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCreatingArticle, setIsCreatingArticle] = useState(false);
   const [editingAffiliateProgramId, setEditingAffiliateProgramId] = useState<
     string | null
   >(null);
@@ -971,9 +1223,25 @@ export default function AdminDashboard() {
       ),
     [articleAffiliateSuggestions],
   );
-  const reviewPosts = posts.filter(
-    (post) => post.workflow_status === "ready_for_review",
+  const reviewPosts = useMemo(
+    () =>
+      posts.filter((post) => post.workflow_status === "ready_for_review"),
+    [posts],
   );
+  const publishedPosts = useMemo(
+    () => posts.filter((post) => post.workflow_status === "published"),
+    [posts],
+  );
+  const otherPosts = useMemo(
+    () =>
+      posts.filter(
+        (post) =>
+          post.workflow_status !== "ready_for_review" &&
+          post.workflow_status !== "published",
+      ),
+    [posts],
+  );
+  const articleEditorOpen = editingId !== null || isCreatingArticle;
   const activePageDefaults = defaultSitePages[pageFormData.slug].content;
   const excerptCharacters = formData.excerpt.length;
   const seoTitle = formData.seoTitle.trim() || formData.title.trim();
@@ -1499,6 +1767,7 @@ export default function AdminDashboard() {
 
   const resetForm = (clearMessages = true) => {
     setEditingId(null);
+    setIsCreatingArticle(false);
     setFormData(emptyForm);
     setSocialDrafts({ ...emptySocialDrafts });
     setEditingArticleProductId(null);
@@ -1798,6 +2067,7 @@ export default function AdminDashboard() {
 
   const handleEdit = (post: BlogPost) => {
     setEditingId(post.id);
+    setIsCreatingArticle(false);
     setFormData({
       title: post.title,
       slug: post.slug,
@@ -1847,6 +2117,13 @@ export default function AdminDashboard() {
     });
     setErrorMessage(null);
     setSuccessMessage(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCreateArticle = () => {
+    resetForm();
+    setIsCreatingArticle(true);
+    setActiveSection("articles");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1998,6 +2275,7 @@ export default function AdminDashboard() {
       }
 
       setEditingId(result.article.id);
+      setIsCreatingArticle(false);
       return result.article;
     } catch {
       setErrorMessage("Unable to reach the article publishing service.");
@@ -2518,7 +2796,7 @@ export default function AdminDashboard() {
         <div
           role="tablist"
           aria-label="Admin sections"
-          className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-sm sm:mb-8 sm:gap-2 sm:rounded-full"
+          className="mb-6 grid grid-cols-3 gap-1 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-sm sm:mb-8 sm:flex sm:gap-2 sm:overflow-x-auto sm:rounded-full"
         >
           {(
             ["articles", "pages", "people", "newsletter", "affiliates"] as const
@@ -2529,7 +2807,7 @@ export default function AdminDashboard() {
               role="tab"
               aria-selected={activeSection === section}
               onClick={() => setActiveSection(section)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold capitalize transition sm:px-5 ${
+              className={`min-w-0 rounded-full px-3 py-2 text-sm font-semibold capitalize transition sm:shrink-0 sm:px-5 ${
                 activeSection === section
                   ? "bg-zinc-950 text-white"
                   : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
@@ -2555,7 +2833,7 @@ export default function AdminDashboard() {
         {activeSection === "articles" && editingId && (
           <section
             id="admin-article-preview"
-            className="mb-6 scroll-mt-28 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6"
+            className="mb-8 scroll-mt-28 rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-7"
           >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
@@ -2615,7 +2893,7 @@ export default function AdminDashboard() {
         )}
 
         {activeSection === "articles" && editingId && (
-          <section className="mb-6 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+          <section className="mb-8 rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-7">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-700 sm:text-sm">
@@ -2642,7 +2920,7 @@ export default function AdminDashboard() {
                 return (
                   <label
                     key={platform}
-                    className="flex min-w-0 flex-col rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+                    className="flex min-w-0 flex-col rounded-2xl border border-zinc-200 bg-zinc-50 p-5"
                   >
                     <span className="flex items-start justify-between gap-3">
                       <span>
@@ -2695,52 +2973,131 @@ export default function AdminDashboard() {
           </section>
         )}
 
-        {activeSection === "articles" && reviewPosts.length > 0 && (
-          <section className="mb-6 rounded-[1.5rem] border border-lime-300 bg-zinc-950 p-4 text-white shadow-sm sm:rounded-[2rem] sm:p-6">
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+        {activeSection === "articles" && !articleEditorOpen && (
+          <section className="space-y-10">
+            <div className="flex flex-col justify-between gap-5 rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:rounded-[2rem] sm:p-7">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300 sm:text-sm">
-                  Review queue
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-700 sm:text-sm">
+                  Publication library
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                  Articles awaiting review
+                <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-950">
+                  Articles
                 </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
+                  Review queued work first, manage published coverage, or start a
+                  new post.
+                </p>
               </div>
-              <span className="w-fit rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-lime-200">
-                {reviewPosts.length} ready
-              </span>
+              <button
+                type="button"
+                onClick={handleCreateArticle}
+                className="w-full rounded-full bg-zinc-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto"
+              >
+                Create post
+              </button>
             </div>
-            <div className="mt-4 grid gap-2 md:grid-cols-2">
-              {reviewPosts.map((post) => (
-                <button
-                  key={post.id}
-                  type="button"
-                  onClick={() => handleEdit(post)}
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    editingId === post.id
-                      ? "border-lime-300 bg-lime-300 text-zinc-950"
-                      : "border-white/15 bg-white/5 text-white hover:border-lime-300"
-                  }`}
-                >
-                  <span className="block text-xs font-semibold uppercase tracking-[0.16em] opacity-70">
-                    {post.category}
+
+            {reviewPosts.length > 0 && (
+              <section>
+                <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-700 sm:text-sm">
+                      Review queue
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                      Ready for review
+                    </h2>
+                  </div>
+                  <span className="w-fit rounded-full bg-lime-200 px-3 py-1 text-xs font-semibold text-zinc-950">
+                    {reviewPosts.length} ready
                   </span>
-                  <span className="mt-1 block font-semibold leading-6">
-                    {post.title}
+                </div>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {reviewPosts.map((post) => (
+                    <ArticleAdminCard
+                      key={post.id}
+                      post={post}
+                      emphasis="review"
+                      onEdit={() => handleEdit(post)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {posts.length > 0 && (
+              <section>
+                <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 sm:text-sm">
+                      Live publication
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                      Published articles
+                    </h2>
+                  </div>
+                  <span className="text-sm font-medium text-zinc-500">
+                    {publishedPosts.length} published
                   </span>
-                </button>
-              ))}
-            </div>
+                </div>
+                {publishedPosts.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                    {publishedPosts.map((post) => (
+                      <ArticleAdminCard
+                        key={post.id}
+                        post={post}
+                        onEdit={() => handleEdit(post)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-[1.5rem] border border-dashed border-zinc-300 bg-white p-6 text-sm leading-6 text-zinc-600">
+                    No published articles yet. Review and approve a draft before
+                    publishing it.
+                  </p>
+                )}
+              </section>
+            )}
+
+            {otherPosts.length > 0 && (
+              <details className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+                <summary className="cursor-pointer list-none font-semibold text-zinc-950 marker:hidden">
+                  <span className="flex items-center justify-between gap-4">
+                    <span>Drafts, scheduled, and archived</span>
+                    <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">
+                      {otherPosts.length}
+                    </span>
+                  </span>
+                </summary>
+                <div className="mt-6 grid grid-cols-1 gap-5 border-t border-zinc-200 pt-6 md:grid-cols-2 xl:grid-cols-3">
+                  {otherPosts.map((post) => (
+                    <ArticleAdminCard
+                      key={post.id}
+                      post={post}
+                      onEdit={() => handleEdit(post)}
+                    />
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {posts.length === 0 && (
+              <p className="rounded-[1.5rem] border border-dashed border-zinc-300 bg-white p-6 text-sm leading-6 text-zinc-600">
+                No database articles yet. Use Create post to start the first
+                draft.
+              </p>
+            )}
           </section>
         )}
 
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)] xl:gap-8">
-          {activeSection === "articles" && (
+        <div className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)] xl:gap-10">
+          {activeSection === "articles" && articleEditorOpen && (
             <form
+              id="admin-article-editor"
               onSubmit={handleSubmit}
-              className="min-w-0 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6"
+              className="min-w-0 rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-8"
             >
-              <div className="mb-6 flex items-center justify-between gap-4">
+              <div className="mb-8 flex flex-col justify-between gap-4 border-b border-zinc-200 pb-6 sm:flex-row sm:items-center">
                 <div>
                   <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
                     {editingId ? "Edit article" : "New article"}
@@ -2749,18 +3106,18 @@ export default function AdminDashboard() {
                     Use Markdown for headings, lists, bold text, and links.
                   </p>
                 </div>
-                {editingId && (
+                {articleEditorOpen && (
                   <button
                     type="button"
                     onClick={() => resetForm()}
-                    className="text-sm font-semibold text-red-600 hover:text-red-700"
+                    className="w-fit rounded-full border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950"
                   >
-                    Cancel
+                    Close editor
                   </button>
                 )}
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {formData.workflowStatus === "published" && (
                   <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
                     <p className="font-semibold">Published content is locked.</p>
@@ -3731,7 +4088,7 @@ export default function AdminDashboard() {
           {activeSection === "pages" && (
             <form
               onSubmit={handlePageSubmit}
-              className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm"
+              className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-7"
             >
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
@@ -3828,6 +4185,12 @@ export default function AdminDashboard() {
                 >
                   {pageSaving ? "Saving..." : "Update page"}
                 </button>
+
+                <PageLivePreview
+                  pageFormData={pageFormData}
+                  previewContent={pagePreviewContent}
+                  defaults={activePageDefaults}
+                />
               </div>
             </form>
           )}
@@ -4793,9 +5156,13 @@ export default function AdminDashboard() {
             </section>
           )}
 
-          <aside className="min-w-0 space-y-6">
-            {activeSection === "articles" && (
-              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+          <aside
+            className={`min-w-0 space-y-8 ${
+              activeSection === "pages" ? "order-first xl:order-none" : ""
+            }`}
+          >
+            {activeSection === "articles" && articleEditorOpen && (
+              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
                   Affiliate research
                 </p>
@@ -4838,199 +5205,44 @@ export default function AdminDashboard() {
             )}
 
             {activeSection === "pages" && (
-              <>
-                <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-                    Live preview
-                  </p>
-                  <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-zinc-50">
-                    <div className="bg-zinc-950 p-5 text-white">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">
-                        {getPreviewString(
-                          pagePreviewContent,
-                          "eyebrow",
-                          getPreviewString(
-                            activePageDefaults,
-                            "eyebrow",
-                            "Page",
-                          ),
-                        )}
-                      </p>
-                      <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-                        {getPreviewString(
-                          pagePreviewContent,
-                          "heading",
-                          getPreviewString(
-                            activePageDefaults,
-                            "heading",
-                            pageFormData.title,
-                          ),
-                        )}
-                      </h2>
-                      <p className="mt-3 text-sm leading-6 text-zinc-300">
-                        {getPreviewString(
-                          pagePreviewContent,
-                          "intro",
-                          getPreviewString(
-                            activePageDefaults,
-                            "intro",
-                            pageFormData.metaDescription,
-                          ),
-                        )}
-                      </p>
-                    </div>
-                    <div className="p-5">
-                      {pageFormData.slug === "home" && (
-                        <div className="grid grid-cols-2 gap-2">
-                          {getPreviewCategoryEntries(
-                            pagePreviewContent,
-                            activePageDefaults.categoryEntries,
-                          ).map((entry) => (
-                            <span
-                              key={entry.title}
-                              className="rounded-2xl bg-white px-3 py-4 text-sm font-semibold text-zinc-800"
-                            >
-                              {entry.title}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {pageFormData.slug === "global" && (
-                        <div className="space-y-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                            Navigation and footer
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {(Array.isArray(pagePreviewContent?.navItems)
-                              ? pagePreviewContent.navItems
-                              : Array.isArray(activePageDefaults.navItems)
-                                ? activePageDefaults.navItems
-                                : []
-                            ).map((item, index) => {
-                              const label =
-                                item &&
-                                typeof item === "object" &&
-                                "label" in item
-                                  ? String(item.label)
-                                  : `Link ${index + 1}`;
-                              return (
-                                <span
-                                  key={`${label}-${index}`}
-                                  className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-zinc-800"
-                                >
-                                  {label}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {(pageFormData.slug === "blog" ||
-                        pageFormData.slug === "search") && (
-                        <div className="space-y-3">
-                          {BLOG_CATEGORIES.slice(0, 4).map((category) => (
-                            <div
-                              key={category}
-                              className="rounded-2xl bg-white p-4"
-                            >
-                              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                                Category
-                              </p>
-                              <p className="mt-1 font-semibold text-zinc-950">
-                                {category}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {pageFormData.slug === "about" && (
-                        <div className="space-y-3">
-                          {[
-                            "missionHeading",
-                            "standardsHeading",
-                            "independenceHeading",
-                          ].map((key) => (
-                            <div key={key} className="rounded-2xl bg-white p-4">
-                              <p className="font-semibold text-zinc-950">
-                                {getPreviewString(
-                                  pagePreviewContent,
-                                  key,
-                                  getPreviewString(
-                                    activePageDefaults,
-                                    key,
-                                    "About section",
-                                  ),
-                                )}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {(
-                        [
-                          "contact",
-                          "review-methodology",
-                          "editorial-policy",
-                          "affiliate-disclosure",
-                          "terms",
-                          "privacy",
-                        ] as SitePageSlug[]
-                      ).includes(pageFormData.slug) && (
-                        <div className="space-y-3">
-                          {getPreviewSections(pagePreviewContent)
-                            .slice(0, 3)
-                            .map((section) => (
-                              <div
-                                key={section.title}
-                                className="rounded-2xl bg-white p-4"
-                              >
-                                <p className="font-semibold text-zinc-950">
-                                  {section.title}
-                                </p>
-                                <p className="mt-2 line-clamp-2 text-sm text-zinc-600">
-                                  {section.body}
-                                </p>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </div>
+              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6 xl:sticky xl:top-28">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                      Site navigation
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                      Pages
+                    </h2>
                   </div>
+                  <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
+                    {pages.length}
+                  </span>
                 </div>
-
-                <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
-                    Pages
-                  </h2>
-                  <div className="mt-5 space-y-3">
-                    {pages.map((page) => (
-                      <button
-                        key={page.slug}
-                        type="button"
-                        onClick={() => handlePageEdit(page.slug)}
-                        className={`w-full rounded-2xl border p-4 text-left transition ${
-                          pageFormData.slug === page.slug
-                            ? "border-zinc-950 bg-zinc-950 text-white"
-                            : "border-zinc-200 hover:border-zinc-950"
-                        }`}
-                      >
-                        <span className="block text-xs font-semibold uppercase tracking-[0.18em] opacity-60">
-                          {page.slug === "global"
-                            ? "Shared UI"
-                            : `/${page.slug === "home" ? "" : page.slug}`}
-                        </span>
-                        <span className="mt-1 block font-semibold">
-                          {page.title}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="mt-5 max-h-[calc(100vh-13rem)] space-y-3 overflow-y-auto overscroll-contain pr-1">
+                  {pages.map((page) => (
+                    <button
+                      key={page.slug}
+                      type="button"
+                      onClick={() => handlePageEdit(page.slug)}
+                      className={`w-full rounded-2xl border p-4 text-left transition ${
+                        pageFormData.slug === page.slug
+                          ? "border-zinc-950 bg-zinc-950 text-white"
+                          : "border-zinc-200 hover:border-zinc-950"
+                      }`}
+                    >
+                      <span className="block text-xs font-semibold uppercase tracking-[0.18em] opacity-60">
+                        {page.slug === "global"
+                          ? "Shared UI"
+                          : `/${page.slug === "home" ? "" : page.slug}`}
+                      </span>
+                      <span className="mt-1 block font-semibold leading-6">
+                        {page.title}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              </>
+              </div>
             )}
 
             {activeSection === "newsletter" && (
@@ -5049,77 +5261,94 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {activeSection === "articles" && (
-              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
-                  Publish readiness
-                </p>
-                <p className="mt-3 text-sm leading-6 text-zinc-600">
-                  These are editorial warnings, not a ranking score. Resolve
-                  required items and use judgment for the rest.
-                </p>
-                <div className="mt-5 space-y-5">
-                  {[
-                    {
-                      title: "Required before publishing",
-                      checks: requiredChecks,
-                      missingLabel: "Missing",
-                      readyLabel: "Ready",
-                    },
-                    {
-                      title: "Recommended",
-                      checks: recommendedChecks,
-                      missingLabel: "Consider",
-                      readyLabel: "Met",
-                    },
-                    {
-                      title: "Needs human judgment",
-                      checks: humanJudgmentChecks,
-                      missingLabel: "Review",
-                      readyLabel: "Signal found",
-                    },
-                  ].map((group) => (
-                    <section key={group.title}>
-                      <h3 className="text-sm font-semibold text-zinc-950">
-                        {group.title}
-                      </h3>
-                      <ul className="mt-3 space-y-3">
-                        {group.checks.map((check) => (
-                          <li
-                            key={check.label}
-                            className={`rounded-2xl border p-3 text-sm ${
-                              check.passed
-                                ? "border-zinc-200 bg-zinc-50 text-zinc-700"
-                                : "border-amber-200 bg-amber-50 text-amber-900"
-                            }`}
-                          >
-                            <p className="font-semibold">
-                              {check.passed
-                                ? group.readyLabel
-                                : group.missingLabel}
-                              : {check.label}
-                            </p>
-                            <p className="mt-1 text-xs leading-5 opacity-75">
-                              {check.detail}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  ))}
+            {activeSection === "articles" && articleEditorOpen && (
+              <details className="hidden rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm md:block sm:rounded-[2rem] sm:p-6">
+                <summary className="cursor-pointer list-none marker:hidden">
+                  <span className="flex items-center justify-between gap-4">
+                    <span>
+                      <span className="block text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
+                        Publish readiness
+                      </span>
+                      <span className="mt-2 block text-sm leading-6 text-zinc-600">
+                        Open the editorial checklist
+                      </span>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
+                      {requiredChecks.filter((check) => !check.passed).length}{" "}
+                      required
+                    </span>
+                  </span>
+                </summary>
+                <div className="mt-5 border-t border-zinc-200 pt-5">
+                  <p className="text-sm leading-6 text-zinc-600">
+                    These are editorial warnings, not a ranking score. Resolve
+                    required items and use judgment for the rest.
+                  </p>
+                  <div className="mt-5 space-y-6">
+                    {[
+                      {
+                        title: "Required before publishing",
+                        checks: requiredChecks,
+                        missingLabel: "Missing",
+                        readyLabel: "Ready",
+                      },
+                      {
+                        title: "Recommended",
+                        checks: recommendedChecks,
+                        missingLabel: "Consider",
+                        readyLabel: "Met",
+                      },
+                      {
+                        title: "Needs human judgment",
+                        checks: humanJudgmentChecks,
+                        missingLabel: "Review",
+                        readyLabel: "Signal found",
+                      },
+                    ].map((group) => (
+                      <section key={group.title}>
+                        <h3 className="text-sm font-semibold text-zinc-950">
+                          {group.title}
+                        </h3>
+                        <ul className="mt-3 space-y-3">
+                          {group.checks.map((check) => (
+                            <li
+                              key={check.label}
+                              className={`rounded-2xl border p-3 text-sm ${
+                                check.passed
+                                  ? "border-zinc-200 bg-zinc-50 text-zinc-700"
+                                  : "border-amber-200 bg-amber-50 text-amber-900"
+                              }`}
+                            >
+                              <p className="font-semibold">
+                                {check.passed
+                                  ? group.readyLabel
+                                  : group.missingLabel}
+                                : {check.label}
+                              </p>
+                              <p className="mt-1 text-xs leading-5 opacity-75">
+                                {check.detail}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </div>
+                  <div className="mt-5 rounded-2xl bg-zinc-100 p-4 text-sm leading-6 text-zinc-600">
+                    <p>Words: {wordCount}</p>
+                    <p>H2 sections: {h2Count}</p>
+                    <p>Internal links: {internalLinks.length}</p>
+                    <p>
+                      Dofollow external links: {dofollowExternalLinks.length}
+                    </p>
+                    <p>Body images: {bodyImages.length}</p>
+                  </div>
                 </div>
-                <div className="mt-5 rounded-2xl bg-zinc-100 p-4 text-sm leading-6 text-zinc-600">
-                  <p>Words: {wordCount}</p>
-                  <p>H2 sections: {h2Count}</p>
-                  <p>Internal links: {internalLinks.length}</p>
-                  <p>Dofollow external links: {dofollowExternalLinks.length}</p>
-                  <p>Body images: {bodyImages.length}</p>
-                </div>
-              </div>
+              </details>
             )}
 
-            {activeSection === "articles" && (
-              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+            {activeSection === "articles" && articleEditorOpen && (
+              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
                   Structured recommendations
                 </p>
@@ -5421,61 +5650,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {activeSection === "articles" && (
-              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
-                <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
-                  Articles
-                </h2>
-                <div className="mt-5 space-y-3">
-                  {posts.map((post) => (
-                    <article
-                      key={post.id}
-                      className="rounded-2xl border border-zinc-200 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                            {formatWorkflowStatus(post.workflow_status)}
-                          </p>
-                          <h3 className="mt-1 font-semibold leading-6 text-zinc-950">
-                            {post.title}
-                          </h3>
-                        </div>
-                        {post.featured && (
-                          <span className="rounded-full bg-lime-300 px-2 py-1 text-xs font-semibold text-zinc-950">
-                            Featured
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(post)}
-                          className="rounded-full border border-zinc-300 px-3 py-1 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950"
-                        >
-                          Edit
-                        </button>
-                        {post.workflow_status === "published" && (
-                          <Link
-                            href={`/blog/${post.slug}`}
-                            className="rounded-full border border-zinc-300 px-3 py-1 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950"
-                          >
-                            View
-                          </Link>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-
-                  {posts.length === 0 && (
-                    <p className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-600">
-                      No database articles yet. Create the first post after
-                      running the blog SQL setup in Supabase.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
           </aside>
         </div>
       </div>
