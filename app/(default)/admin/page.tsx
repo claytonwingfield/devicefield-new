@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LoadingAnimation from "@/components/loading-animation";
+import NewsletterCampaigns from "@/components/admin/newsletter-campaigns";
 import { createClient } from "@/lib/supabase/client";
 import {
   AFFILIATE_NETWORKS,
@@ -403,6 +404,32 @@ function getMarkdownImages(value: string) {
     alt: match[1],
     src: match[2],
   }));
+}
+
+function formatMarkdownImage(alt: string, src: string) {
+  const safeAlt = alt
+    .replace(/[\[\]\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return `![${safeAlt}](${src})`;
+}
+
+function replaceMarkdownImageAt(
+  value: string,
+  imageIndex: number,
+  image: { alt: string; src: string } | null,
+) {
+  const matches = Array.from(
+    value.matchAll(/!\[([^\]]*)\]\((https?:\/\/[^)]+|\/[^)]+)\)/g),
+  );
+  const match = matches[imageIndex];
+  if (!match || match.index === undefined) return value;
+
+  const replacement = image ? formatMarkdownImage(image.alt, image.src) : "";
+  return `${value.slice(0, match.index)}${replacement}${value.slice(
+    match.index + match[0].length,
+  )}`;
 }
 
 function parseFaqInput(value: string) {
@@ -863,6 +890,9 @@ export default function AdminDashboard() {
     string | null
   >(null);
   const [bodyImageUploading, setBodyImageUploading] = useState(false);
+  const [bodyImageReplacingIndex, setBodyImageReplacingIndex] = useState<
+    number | null
+  >(null);
   const [bodyImageAlt, setBodyImageAlt] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -1628,6 +1658,13 @@ export default function AdminDashboard() {
     event.target.value = "";
     if (!file) return;
 
+    if (formData.workflowStatus === "published") {
+      setErrorMessage(
+        "Unpublish this article to draft before adding an inline image.",
+      );
+      return;
+    }
+
     const alt = bodyImageAlt.trim();
     if (alt.length < 8) {
       setErrorMessage(
@@ -1658,6 +1695,105 @@ export default function AdminDashboard() {
     } finally {
       setBodyImageUploading(false);
     }
+  };
+
+  const handleBodyImageAltChange = (imageIndex: number, alt: string) => {
+    setFormData((current) => {
+      const image = getMarkdownImages(current.content)[imageIndex];
+      if (!image) return current;
+
+      return {
+        ...current,
+        content: replaceMarkdownImageAt(current.content, imageIndex, {
+          ...image,
+          alt,
+        }),
+      };
+    });
+  };
+
+  const handleBodyImageReplace = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    imageIndex: number,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (formData.workflowStatus === "published") {
+      setErrorMessage(
+        "Unpublish this article to draft before replacing an inline image.",
+      );
+      return;
+    }
+
+    const image = getMarkdownImages(formData.content)[imageIndex];
+    if (!image) {
+      setErrorMessage("The inline image could not be found in the article body.");
+      return;
+    }
+
+    if (image.alt.trim().length < 8) {
+      setErrorMessage(
+        "Add descriptive alt text of at least 8 characters before replacing this inline image.",
+      );
+      return;
+    }
+
+    setBodyImageReplacingIndex(imageIndex);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const publicUrl = await uploadArticleImage(file, "body");
+      setFormData((current) => {
+        const currentImage = getMarkdownImages(current.content)[imageIndex];
+        if (!currentImage) return current;
+
+        return {
+          ...current,
+          content: replaceMarkdownImageAt(current.content, imageIndex, {
+            ...currentImage,
+            src: publicUrl,
+          }),
+        };
+      });
+      setSuccessMessage(
+        "Inline image replaced. Save the article to persist the new image URL.",
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to replace the inline image.",
+      );
+    } finally {
+      setBodyImageReplacingIndex(null);
+    }
+  };
+
+  const handleBodyImageRemove = (imageIndex: number) => {
+    if (formData.workflowStatus === "published") {
+      setErrorMessage(
+        "Unpublish this article to draft before removing an inline image.",
+      );
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Remove this image from the article body? The stored file will not be deleted.",
+      )
+    ) {
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      content: replaceMarkdownImageAt(current.content, imageIndex, null),
+    }));
+    setErrorMessage(null);
+    setSuccessMessage("Inline image removed. Save the article to persist the change.");
   };
 
   const handleEdit = (post: BlogPost) => {
@@ -2934,17 +3070,85 @@ export default function AdminDashboard() {
                       separate Cover image alt text field above.
                     </p>
                     {bodyImages.length > 0 ? (
-                      <div className="mt-3 space-y-2 border-t border-zinc-200 pt-3">
+                      <div className="mt-4 space-y-3 border-t border-zinc-200 pt-4">
+                        <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-end">
+                          <div>
+                            <p className="text-sm font-semibold text-zinc-950">
+                              Existing inline images
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-zinc-500">
+                              Edit alt text or replace an image without changing
+                              its position in the article.
+                            </p>
+                          </div>
+                          <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-500">
+                            {bodyImages.length} image
+                            {bodyImages.length === 1 ? "" : "s"}
+                          </span>
+                        </div>
                         {bodyImages.map((image, index) => (
-                          <p
+                          <div
                             key={`${image.src}-${index}`}
-                            className="text-xs leading-5 text-zinc-600"
+                            className="grid gap-4 rounded-2xl border border-zinc-200 bg-white p-3 sm:grid-cols-[9rem_minmax(0,1fr)]"
                           >
-                            <span className="font-semibold text-zinc-800">
-                              Inline image {index + 1} alt:
-                            </span>{" "}
-                            {image.alt || "Missing alt text"}
-                          </p>
+                            <div className="aspect-video overflow-hidden rounded-xl bg-zinc-950">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={image.src}
+                                alt={image.alt}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <label className="block">
+                                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                                  Inline image {index + 1} alt text
+                                </span>
+                                <input
+                                  type="text"
+                                  value={image.alt}
+                                  onChange={(event) =>
+                                    handleBodyImageAltChange(
+                                      index,
+                                      event.target.value,
+                                    )
+                                  }
+                                  className="form-input w-full rounded-xl border-zinc-200 text-sm"
+                                  placeholder="Describe what the image shows"
+                                />
+                              </label>
+                              <p
+                                className="mt-2 truncate text-xs text-zinc-400"
+                                title={image.src}
+                              >
+                                {image.src}
+                              </p>
+                              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                                <label className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full bg-zinc-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">
+                                  {bodyImageReplacingIndex === index
+                                    ? "Replacing..."
+                                    : "Upload replacement"}
+                                  <input
+                                    type="file"
+                                    accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+                                    onChange={(event) =>
+                                      void handleBodyImageReplace(event, index)
+                                    }
+                                    disabled={bodyImageReplacingIndex !== null}
+                                    className="sr-only"
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => handleBodyImageRemove(index)}
+                                  disabled={bodyImageReplacingIndex !== null}
+                                  className="min-h-10 rounded-full border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  Remove from article
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     ) : (
@@ -3782,7 +3986,13 @@ export default function AdminDashboard() {
           )}
 
           {activeSection === "newsletter" && (
-            <section className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
+            <div className="space-y-6">
+              <NewsletterCampaigns
+                posts={posts}
+                affiliateLinks={affiliateLinks}
+                affiliatePrograms={affiliatePrograms}
+              />
+              <section className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-700">
@@ -3879,7 +4089,8 @@ export default function AdminDashboard() {
                   </p>
                 )}
               </div>
-            </section>
+              </section>
+            </div>
           )}
 
           {activeSection === "affiliates" && (

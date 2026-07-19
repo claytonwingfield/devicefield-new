@@ -2,6 +2,7 @@ import "./css/style.css";
 
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
+import Script from "next/script";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -119,6 +120,16 @@ export default function RootLayout({
         className="bg-gray-50 font-space tracking-tight text-gray-900 antialiased"
         suppressHydrationWarning
       >
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-Z7Q33C0BKJ"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){window.dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-Z7Q33C0BKJ');`}
+        </Script>
         <div className="flex min-h-screen flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">
           {children}
         </div>

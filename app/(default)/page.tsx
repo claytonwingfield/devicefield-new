@@ -137,7 +137,12 @@ export default async function Home() {
   const socialProfiles = getObjectArray<NavigationEntry>(
     globalPage.content,
     "socialProfiles",
-    [],
+    getObjectArray<NavigationEntry>(
+      defaultSitePages.global.content,
+      "socialProfiles",
+      [],
+      ["href", "label"],
+    ),
     ["href", "label"],
   );
   const sameAs = getValidProfileUrls(

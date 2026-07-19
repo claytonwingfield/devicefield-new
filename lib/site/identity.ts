@@ -7,6 +7,20 @@ export const SITE_DESCRIPTION =
 export const SITE_LOGO_URL = `${SITE_URL}/images/logo1.PNG`;
 export const SITE_SOCIAL_IMAGE_URL =
   `${SITE_URL}/images/devicefield-social-cover.png`;
+export const SITE_SOCIAL_PROFILES: Array<{
+  href: string;
+  label: string;
+}> = [
+  { href: "https://x.com/devicefieldhq", label: "X" },
+  {
+    href: "https://www.instagram.com/devicefieldhq/",
+    label: "Instagram",
+  },
+  {
+    href: "https://www.facebook.com/profile.php?id=100095303211875",
+    label: "Facebook",
+  },
+];
 
 export const PRIMARY_AUTHOR_NAME = "Clayton Wingfield";
 export const PRIMARY_AUTHOR_SLUG = "clayton-wingfield";

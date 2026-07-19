@@ -10,6 +10,7 @@ import {
   type NavigationEntry,
 } from "@/lib/site/pages";
 import Logo from "./logo";
+import SocialLinks from "./social-links";
 
 export default async function Footer({ border = false }: { border?: boolean }) {
   const [page, posts] = await Promise.all([
@@ -34,6 +35,17 @@ export default async function Footer({ border = false }: { border?: boolean }) {
     getObjectArray<NavigationEntry>(
       defaults,
       "footerPolicyLinks",
+      [],
+      ["href", "label"],
+    ),
+    ["href", "label"],
+  );
+  const socialProfiles = getObjectArray<NavigationEntry>(
+    page.content,
+    "socialProfiles",
+    getObjectArray<NavigationEntry>(
+      defaults,
+      "socialProfiles",
       [],
       ["href", "label"],
     ),
@@ -73,6 +85,14 @@ export default async function Footer({ border = false }: { border?: boolean }) {
                 getString(defaults, "footerDisclosure", ""),
               )}
             </p>
+            {socialProfiles.length > 0 && (
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  Follow Devicefield
+                </p>
+                <SocialLinks profiles={socialProfiles} inverse />
+              </div>
+            )}
           </div>
 
           <FooterList title="Publication" links={publicationLinks} />

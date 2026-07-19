@@ -411,6 +411,11 @@ test("cover and inline image alt text have separate validation paths", async () 
   assert.match(admin, /featured image uses the[\s\S]*Cover image alt text/);
   assert.match(admin, /Generated cover options/);
   assert.match(admin, /select_article_cover_image/);
+  assert.match(admin, /Existing inline images/);
+  assert.match(admin, /handleBodyImageAltChange/);
+  assert.match(admin, /handleBodyImageReplace/);
+  assert.match(admin, /Upload replacement/);
+  assert.match(admin, /Save the article to persist the new image URL/);
   assert.match(admin, /No inline body images are in this article/);
   assert.match(ingest, /Every inline body image must have descriptive alt text/);
   assert.match(ingest, /Exactly three cover image options are required/);
@@ -489,6 +494,27 @@ test("homepage publishes complete website and organization identity schema", asy
   assert.match(home, /sameAs/);
   assert.match(identity, /SITE_NAME = "Devicefield"/);
   assert.match(identity, /SITE_URL = "https:\/\/devicefield\.com"/);
+});
+
+test("verified Devicefield profiles render in the footer, about page, and schema", async () => {
+  const identity = await source("lib/site/identity.ts");
+  const home = await source("app/(default)/page.tsx");
+  const footer = await source("components/ui/footer.tsx");
+  const about = await source("app/(default)/about/page.tsx");
+  const socialLinks = await source("components/ui/social-links.tsx");
+  const migration = await source(
+    "supabase/migrations/20260719011330_sync_site_social_profiles.sql",
+  );
+
+  assert.match(identity, /https:\/\/x\.com\/devicefieldhq/);
+  assert.match(identity, /https:\/\/www\.instagram\.com\/devicefieldhq\//);
+  assert.match(identity, /100095303211875/);
+  assert.match(home, /socialProfiles\.map/);
+  assert.match(footer, /Follow Devicefield/);
+  assert.match(about, /Follow Devicefield/);
+  assert.match(socialLinks, /rel="me noopener noreferrer"/);
+  assert.match(migration, /socialProfiles/);
+  assert.match(migration, /WHERE slug = 'global'/);
 });
 
 test("homepage metadata includes branded large-image social previews and RSS discovery", async () => {

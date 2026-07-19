@@ -12,7 +12,9 @@
     "test:db": "supabase test db",
     "draft:ingest": "node scripts/submit-codex-draft.mjs",
     "codex:inventory": "node scripts/get-codex-article-inventory.mjs",
-    "codex:submit-draft": "node scripts/submit-codex-draft.mjs"
+    "codex:submit-draft": "node scripts/submit-codex-draft.mjs",
+    "codex:newsletter-inventory": "node scripts/get-codex-newsletter-inventory.mjs",
+    "codex:submit-newsletter": "node scripts/submit-codex-newsletter-draft.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

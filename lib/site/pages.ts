@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { SITE_SOCIAL_PROFILES } from "@/lib/site/identity";
 
 export type SitePageSlug =
   | "global"
@@ -70,7 +71,7 @@ const globalContent = {
   footerNewsletterHeading: "Newsletter",
   footerNewsletterText:
     "Get new buying guides, corrections, and practical business technology notes when they publish.",
-  socialProfiles: [] satisfies NavigationEntry[],
+  socialProfiles: SITE_SOCIAL_PROFILES satisfies NavigationEntry[],
 };
 
 const homeContent = {

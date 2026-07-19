@@ -10,8 +10,18 @@ function getProviderConfig() {
   return apiKey && from ? { apiKey, from, siteUrl } : null;
 }
 
+function getBroadcastConfig() {
+  const config = getProviderConfig();
+  const segmentId = process.env.RESEND_NEWSLETTER_SEGMENT_ID;
+  return config && segmentId ? { ...config, segmentId } : null;
+}
+
 export function isNewsletterProviderConfigured() {
   return getProviderConfig() !== null;
+}
+
+export function isNewsletterBroadcastConfigured() {
+  return getBroadcastConfig() !== null;
 }
 
 function escapeHtml(value: string) {
@@ -102,12 +112,19 @@ export async function syncNewsletterContact(
 ) {
   const config = getProviderConfig();
   if (!config) return null;
+  const segmentId = process.env.RESEND_NEWSLETTER_SEGMENT_ID;
 
   let response = await resendRequest(
     "/contacts",
     {
       method: "POST",
-      body: JSON.stringify({ email, unsubscribed }),
+      body: JSON.stringify({
+        email,
+        unsubscribed,
+        ...(!unsubscribed && segmentId
+          ? { segments: [{ id: segmentId }] }
+          : {}),
+      }),
     },
     config.apiKey,
   );
@@ -129,5 +146,60 @@ export async function syncNewsletterContact(
   }
 
   const data = (await response.json()) as { id?: string };
+  if (!unsubscribed && segmentId) {
+    const segmentResponse = await resendRequest(
+      `/contacts/${encodeURIComponent(email)}/segments/${encodeURIComponent(segmentId)}`,
+      { method: "POST" },
+      config.apiKey,
+    );
+    if (!segmentResponse.ok && segmentResponse.status !== 409) {
+      console.warn(
+        "Resend newsletter segment synchronization failed:",
+        segmentResponse.status,
+      );
+      return null;
+    }
+  }
+
   return data.id ?? null;
+}
+
+export async function scheduleNewsletterBroadcast(input: {
+  name: string;
+  subject: string;
+  preheader: string;
+  html: string;
+  text: string;
+  scheduledAt: string;
+}) {
+  const config = getBroadcastConfig();
+  if (!config) return null;
+
+  const response = await resendRequest(
+    "/broadcasts",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        segment_id: config.segmentId,
+        from: config.from,
+        reply_to: "contact@devicefield.com",
+        name: input.name,
+        subject: input.subject,
+        preview_text: input.preheader,
+        html: input.html,
+        text: input.text,
+        send: true,
+        scheduled_at: input.scheduledAt,
+      }),
+    },
+    config.apiKey,
+  );
+
+  if (!response.ok) {
+    console.warn("Resend broadcast scheduling failed:", response.status);
+    return null;
+  }
+
+  const result = (await response.json()) as { id?: string };
+  return result.id ?? null;
 }
